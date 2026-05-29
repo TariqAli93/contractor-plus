@@ -1,0 +1,41 @@
+{
+  "name": "contractor-plus",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Contractor Plus monorepo — Vue/Vite frontend + Fastify/Prisma backend.",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.12.3",
+  "scripts": {
+    "dev": "pnpm build:shared && pnpm -r --parallel --stream dev",
+    "dev:frontend": "pnpm build:shared && pnpm --filter frontend dev",
+    "dev:backend": "pnpm build:shared && pnpm --filter backend dev",
+    "build": "pnpm -r build",
+    "build:shared": "pnpm --filter @contractor-plus/shared build",
+    "build:frontend": "pnpm build:shared && pnpm --filter frontend build",
+    "build:backend": "pnpm build:shared && pnpm --filter backend build",
+    "start": "pnpm --filter backend start",
+    "typecheck": "pnpm build:shared && pnpm -r typecheck",
+    "lint": "eslint \"apps/**/*.{ts,tsx,vue}\" \"packages/**/*.ts\" --max-warnings=0",
+    "lint:fix": "eslint \"apps/**/*.{ts,tsx,vue}\" \"packages/**/*.ts\" --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,vue,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,vue,json,md,yml,yaml}\"",
+    "clean": "pnpm -r exec -- node -e \"require('fs').rmSync('dist',{recursive:true,force:true}); require('fs').rmSync('.tsbuildinfo',{recursive:true,force:true})\"",
+    "prisma:generate": "pnpm --filter backend prisma:generate",
+    "prisma:migrate": "pnpm --filter backend prisma:migrate",
+    "prisma:seed": "pnpm --filter backend prisma:seed",
+    "prisma:studio": "pnpm --filter backend prisma:studio"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.15.0",
+    "@typescript-eslint/parser": "^8.15.0",
+    "eslint": "^9.15.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-vue": "^9.31.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3",
+    "vue-eslint-parser": "^9.4.3"
+  }
+}

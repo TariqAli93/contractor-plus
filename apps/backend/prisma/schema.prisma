@@ -1,0 +1,578 @@
+// ============================================================
+// Contractor Management System — Prisma Schema (MVP)
+// PostgreSQL + Prisma ORM
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// Enums
+// ============================================================
+
+enum RoleName {
+  OWNER
+  ADMIN
+  ACCOUNTANT
+  ENGINEER
+  VIEWER
+}
+
+enum ContractStatus {
+  DRAFT
+  APPROVED
+  CANCELLED
+}
+
+enum ProjectStatus {
+  PLANNED
+  IN_PROGRESS
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  LATE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHECK
+  OTHER
+}
+
+enum ConstructionStepStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum CostCategory {
+  MATERIAL
+  LABOR
+  MACHINERY
+  TRANSPORT
+  MISC
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum CurrencySymbolPosition {
+  BEFORE
+  AFTER
+}
+
+// Phase 3 — DOCX templates the renderer consumes. CONTRACT is the only
+// generator wired today; the other categories are reserved so Phase 4 can
+// add quotations/invoices/reports without a schema migration.
+enum DocumentCategory {
+  CONTRACT
+  QUOTATION
+  INVOICE
+  REPORT
+}
+
+// ============================================================
+// Auth & RBAC
+// ============================================================
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        RoleName @unique
+  description String?
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model User {
+  id            String         @id @default(uuid()) @db.Uuid
+  email         String         @unique
+  passwordHash  String
+  fullName      String
+  phone         String?
+  isActive      Boolean        @default(true)
+  lastLoginAt   DateTime?
+  roleId        String         @db.Uuid
+  role          Role           @relation(fields: [roleId], references: [id])
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+  documentTemplatesCreated DocumentTemplate[] @relation("DocumentTemplateCreator")
+  documentsGenerated       GeneratedDocument[] @relation("GeneratedDocumentCreator")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
+
+  @@index([roleId])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model RefreshToken {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @db.Uuid
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdByIp String?
+  revokedByIp String?
+  userAgent   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+  @@map("refresh_tokens")
+}
+
+// ============================================================
+// Customers
+// ============================================================
+
+model Customer {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  contracts Contract[]
+  generatedDocuments GeneratedDocument[] @relation("GeneratedFromCustomer")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  deletedAt DateTime?
+
+  @@index([name])
+  @@index([phone])
+  @@index([deletedAt])
+  @@map("customers")
+}
+
+// ============================================================
+// Materials (referenced by contract_items & template_items)
+// ============================================================
+
+model Material {
+  id            String                 @id @default(uuid()) @db.Uuid
+  name          String
+  unit          String
+  defaultPrice  Decimal?               @db.Decimal(14, 2)
+  notes         String?
+  isActive      Boolean                @default(true)
+  contractItems ContractItem[]
+  templateItems BuildingTemplateItem[]
+  projectCosts  ProjectCost[]
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  deletedAt     DateTime?
+
+  @@index([name])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("materials")
+}
+
+// ============================================================
+// Building Templates
+// ============================================================
+
+model BuildingTemplate {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  name                  String
+  description           String?
+  estimatedDurationDays Int?
+  suggestedProfitMargin Decimal?               @db.Decimal(5, 2)
+  isActive              Boolean                @default(true)
+  items                 BuildingTemplateItem[]
+  steps                 BuildingTemplateStep[]
+  contracts             Contract[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  deletedAt             DateTime?
+
+  @@index([name])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("building_templates")
+}
+
+model BuildingTemplateItem {
+  id                String           @id @default(uuid()) @db.Uuid
+  templateId        String           @db.Uuid
+  template          BuildingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  materialId        String           @db.Uuid
+  material          Material         @relation(fields: [materialId], references: [id])
+  quantityFormula   String
+  estimatedQuantity Decimal          @db.Decimal(14, 3)
+  estimatedPrice    Decimal          @db.Decimal(14, 2)
+  notes             String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([templateId])
+  @@index([materialId])
+  @@map("building_template_items")
+}
+
+model BuildingTemplateStep {
+  id            String           @id @default(uuid()) @db.Uuid
+  templateId    String           @db.Uuid
+  template      BuildingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  name          String
+  percentage    Decimal          @db.Decimal(5, 2)
+  sortOrder     Int
+  estimatedDays Int?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@unique([templateId, sortOrder])
+  @@index([templateId])
+  @@map("building_template_steps")
+}
+
+// ============================================================
+// Contracts
+// ============================================================
+
+model Contract {
+  id                   String            @id @default(uuid()) @db.Uuid
+  contractNumber       String            @unique
+  customerId           String            @db.Uuid
+  customer             Customer          @relation(fields: [customerId], references: [id])
+  templateId           String?           @db.Uuid
+  template             BuildingTemplate? @relation(fields: [templateId], references: [id])
+  buildingArea         Decimal           @db.Decimal(10, 2)
+  floors               Int               @default(1)
+  meterPrice           Decimal           @db.Decimal(14, 2)
+  totalPrice           Decimal           @db.Decimal(14, 2)
+  expectedProfitMargin Decimal?          @db.Decimal(5, 2)
+  status               ContractStatus    @default(DRAFT)
+  signedAt             DateTime?
+  notes                String?
+  items                ContractItem[]
+  project              Project?
+  generatedDocuments   GeneratedDocument[] @relation("GeneratedFromContract")
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  deletedAt            DateTime?
+
+  @@index([customerId])
+  @@index([templateId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("contracts")
+}
+
+model ContractItem {
+  id             String   @id @default(uuid()) @db.Uuid
+  contractId     String   @db.Uuid
+  contract       Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  materialId     String   @db.Uuid
+  material       Material @relation(fields: [materialId], references: [id])
+  quantity       Decimal  @db.Decimal(14, 3)
+  unit           String
+  estimatedPrice Decimal  @db.Decimal(14, 2)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([contractId])
+  @@index([materialId])
+  @@map("contract_items")
+}
+
+// ============================================================
+// Projects
+// ============================================================
+
+model Project {
+  id                 String             @id @default(uuid()) @db.Uuid
+  contractId         String?            @unique @db.Uuid
+  contract           Contract?          @relation(fields: [contractId], references: [id])
+  name               String
+  startDate          DateTime?
+  deliveryDate       DateTime?
+  progressPercentage Decimal            @default(0) @db.Decimal(5, 2)
+  status             ProjectStatus      @default(PLANNED)
+  notes              String?
+  costs              ProjectCost[]
+  payments           Payment[]
+  steps              ConstructionStep[]
+  generatedDocuments GeneratedDocument[] @relation("GeneratedFromProject")
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  deletedAt          DateTime?
+
+  @@index([status])
+  @@index([startDate])
+  @@index([deliveryDate])
+  @@index([deletedAt])
+  @@map("projects")
+}
+
+model ProjectCost {
+  id          String       @id @default(uuid()) @db.Uuid
+  projectId   String       @db.Uuid
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category    CostCategory
+  materialId  String?      @db.Uuid
+  material    Material?    @relation(fields: [materialId], references: [id])
+  description String
+  quantity    Decimal?     @db.Decimal(14, 3)
+  unit        String?
+  unitPrice   Decimal?     @db.Decimal(14, 2)
+  totalAmount Decimal      @db.Decimal(14, 2)
+  date        DateTime
+  notes       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  @@index([projectId])
+  @@index([category])
+  @@index([materialId])
+  @@index([date])
+  @@index([deletedAt])
+  @@map("project_costs")
+}
+
+model Payment {
+  id          String         @id @default(uuid()) @db.Uuid
+  projectId   String         @db.Uuid
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  amount      Decimal        @db.Decimal(14, 2)
+  dueDate     DateTime
+  paymentDate DateTime?
+  status      PaymentStatus  @default(PENDING)
+  method      PaymentMethod?
+  reference   String?
+  notes       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+
+  @@index([projectId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([deletedAt])
+  @@map("payments")
+}
+
+model ConstructionStep {
+  id          String                 @id @default(uuid()) @db.Uuid
+  projectId   String                 @db.Uuid
+  project     Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  percentage  Decimal                @db.Decimal(5, 2)
+  sortOrder   Int                    @default(0)
+  status      ConstructionStepStatus @default(PENDING)
+  startedAt   DateTime?
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@index([projectId, sortOrder])
+  @@map("construction_steps")
+}
+
+// ============================================================
+// Tunnel — singleton row. Holds only the bits the local agent needs
+// to display status; cloudflared credentials live on disk, the
+// management server owns the rest.
+// ============================================================
+
+model TunnelState {
+  id        String   @id @default(uuid()) @db.Uuid
+  enabled   Boolean  @default(false)
+  subdomain String?
+  publicUrl String?
+  tunnelId  String?
+  lastError String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tunnel_state")
+}
+
+// ============================================================
+// System Settings (Phase 1) — small, typed surface for org-wide
+// configuration. Three storage shapes:
+//   - SystemSetting:   typed key/value bag for misc General toggles.
+//   - Currency:        catalog of currencies with one default at a time.
+//   - CompanyProfile:  singleton row (id = "default") with org details.
+// Money values stored on existing rows are NOT touched by changing the
+// default currency — currency affects DISPLAY formatting only.
+// ============================================================
+
+model SystemSetting {
+  // Free-form key — module-prefixed (e.g. "general.fiscalYearStart").
+  key       String   @id
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+model Currency {
+  id                String                 @id @default(uuid()) @db.Uuid
+  code              String                 @unique // ISO-ish, e.g. "USD", "SAR" — uppercased on write
+  name              String                 // e.g. "US Dollar"
+  symbol            String                 // e.g. "$", "ر.س"
+  symbolPosition    CurrencySymbolPosition @default(BEFORE)
+  decimalPrecision  Int                    @default(2)
+  thousandSeparator String                 @default(",")
+  decimalSeparator  String                 @default(".")
+  isActive          Boolean                @default(true)
+  isDefault         Boolean                @default(false)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  // Partial unique: at most ONE row may have isDefault = true. Postgres
+  // honours unique constraints over (isDefault) WHERE isDefault = true via
+  // a partial unique index — Prisma can't express partials yet, so we
+  // create it manually in the migration. The plain index here keeps
+  // lookups fast; the partial index is layered on top.
+  @@index([isDefault])
+  @@index([isActive])
+  @@map("currencies")
+}
+
+model CompanyProfile {
+  // Singleton — we hard-code id = "default" and refuse extra rows in code.
+  id                 String   @id @default("default")
+  companyName        String   @default("")
+  legalName          String?
+  email              String?
+  phone              String?
+  address            String?
+  taxNumber          String?
+  registrationNumber String?
+  website            String?
+  footerText         String?
+  notes              String?
+  // Asset references — files live on disk under the storage root, we only
+  // persist the relative path + validated mime type. Binary blobs are NEVER
+  // stored in the database.
+  logoPath           String?
+  logoMimeType       String?
+  stampPath          String?
+  stampMimeType      String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("company_profile")
+}
+
+// ============================================================
+// Document templates (Phase 3) — uploaded .docx files used by the
+// generation pipeline to produce contracts/quotations/invoices/reports.
+//
+// Storage: files live under <storage-root>/private/templates/<uuid>.docx
+// and are never served via the public static mount. The `filePath` column
+// holds the relative path inside the private storage tree.
+//
+// `placeholdersJson` is a redundant cache of the {{tokens}} we extracted
+// during upload — purely informational; the renderer reads tokens straight
+// from the file each time it runs.
+// ============================================================
+
+model DocumentTemplate {
+  id               String              @id @default(uuid()) @db.Uuid
+  name             String
+  slug             String              @unique
+  category         DocumentCategory
+  description      String?
+  filePath         String
+  mimeType         String
+  isActive         Boolean             @default(true)
+  isDefault        Boolean             @default(false)
+  placeholdersJson Json?
+  createdBy        String?             @db.Uuid
+  createdByUser    User?               @relation("DocumentTemplateCreator", fields: [createdBy], references: [id])
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  deletedAt        DateTime?
+  generations      GeneratedDocument[]
+
+  @@index([category])
+  @@index([isActive])
+  @@index([isDefault])
+  @@index([deletedAt])
+  @@map("document_templates")
+}
+
+// One generated artefact per render. Immutable — no soft delete column.
+// The on-disk file lives under <storage-root>/private/contracts/<uuid>.docx
+// (or another private bucket once non-contract generation is wired).
+model GeneratedDocument {
+  id           String           @id @default(uuid()) @db.Uuid
+  templateId   String           @db.Uuid
+  template     DocumentTemplate @relation(fields: [templateId], references: [id])
+  contractId   String?          @db.Uuid
+  contract     Contract?        @relation("GeneratedFromContract", fields: [contractId], references: [id])
+  projectId    String?          @db.Uuid
+  project      Project?         @relation("GeneratedFromProject", fields: [projectId], references: [id])
+  customerId   String?          @db.Uuid
+  customer     Customer?        @relation("GeneratedFromCustomer", fields: [customerId], references: [id])
+  filename     String
+  filePath     String
+  mimeType     String
+  size         Int
+  generatedBy  String?          @db.Uuid
+  generatedByUser User?         @relation("GeneratedDocumentCreator", fields: [generatedBy], references: [id])
+  createdAt    DateTime         @default(now())
+
+  @@index([templateId])
+  @@index([contractId])
+  @@index([projectId])
+  @@index([customerId])
+  @@index([createdAt])
+  @@map("generated_documents")
+}
+
+// ============================================================
+// Audit Logs (immutable — no soft delete)
+// ============================================================
+
+model AuditLog {
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String?     @db.Uuid
+  user      User?       @relation(fields: [userId], references: [id])
+  action    AuditAction
+  entity    String
+  entityId  String
+  oldValues Json?
+  newValues Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime    @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

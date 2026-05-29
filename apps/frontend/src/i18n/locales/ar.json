@@ -1,0 +1,926 @@
+{
+  "app": {
+    "name": "Contractor+",
+    "tagline": "إدارة المشاريع والربحية"
+  },
+  "common": {
+    "loading": "جاري التحميل...",
+    "save": "حفظ",
+    "saved": "تم الحفظ",
+    "create": "إنشاء",
+    "update": "تحديث",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "deleted": "تم الحذف",
+    "edit": "تعديل",
+    "search": "بحث",
+    "back": "رجوع",
+    "confirm": "تأكيد",
+    "yes": "نعم",
+    "no": "لا",
+    "empty": "لا توجد بيانات",
+    "error": "حدث خطأ",
+    "retry": "إعادة المحاولة",
+    "language": "اللغة",
+    "logout": "تسجيل الخروج",
+    "comingSoon": "قريباً"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "submit": "دخول",
+    "invalidCredentials": "بيانات الدخول غير صحيحة",
+    "welcome": "مرحباً بعودتك"
+  },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "customers": "العملاء",
+    "materials": "المواد",
+    "templates": "القوالب",
+    "contracts": "العقود",
+    "projects": "المشاريع",
+    "costs": "المصاريف",
+    "payments": "الدفعات",
+    "reports": "التقارير",
+    "audit": "سجل التدقيق",
+    "tunnel": "النفق",
+    "settings": "الإعدادات",
+    "groups": {
+      "operations": "العمليات",
+      "directory": "الدليل",
+      "finance": "المالية",
+      "system": "النظام"
+    }
+  },
+  "customers": {
+    "new": "عميل جديد",
+    "edit": "تعديل العميل",
+    "searchPlaceholder": "ابحث بالاسم أو رقم الهاتف",
+    "deleteConfirmTitle": "حذف هذا العميل؟",
+    "deleteConfirmMessage": "سيتم إخفاء العميل \"{name}\". يمكن استعادته لاحقاً.",
+    "fields": {
+      "name": "الاسم",
+      "phone": "الهاتف",
+      "email": "البريد الإلكتروني",
+      "address": "العنوان",
+      "notes": "ملاحظات",
+      "createdAt": "تاريخ الإنشاء"
+    },
+    "errors": {
+      "email": "صيغة البريد الإلكتروني غير صحيحة"
+    }
+  },
+  "materials": {
+    "new": "مادة جديدة",
+    "edit": "تعديل المادة",
+    "searchPlaceholder": "ابحث بالاسم أو الوحدة",
+    "deleteConfirmTitle": "حذف هذه المادة؟",
+    "deleteConfirmMessage": "سيتم إخفاء المادة \"{name}\". يمكن استعادتها لاحقاً.",
+    "fields": {
+      "name": "الاسم",
+      "unit": "الوحدة",
+      "unitHint": "مثال: كيس، طن، م³، قطعة",
+      "defaultPrice": "السعر الافتراضي",
+      "notes": "ملاحظات",
+      "isActive": "مفعّلة",
+      "createdAt": "تاريخ الإنشاء"
+    },
+    "status": {
+      "active": "مفعّلة",
+      "inactive": "موقوفة"
+    },
+    "filter": {
+      "all": "الكل",
+      "active": "مفعّلة",
+      "inactive": "موقوفة"
+    },
+    "errors": {
+      "price": "السعر يجب أن يكون 0 أو أكثر"
+    }
+  },
+  "templates": {
+    "new": "قالب جديد",
+    "edit": "تعديل القالب",
+    "searchPlaceholder": "ابحث باسم القالب",
+    "saveFirstHint": "احفظ القالب أولاً لإضافة المواد والمراحل وعرض التقدير.",
+    "deleteConfirmTitle": "حذف هذا القالب؟",
+    "deleteConfirmMessage": "سيتم إخفاء القالب \"{name}\". يمكن استعادته لاحقاً.",
+    "tabs": {
+      "general": "عام",
+      "materials": "المواد",
+      "steps": "المراحل",
+      "estimate": "التقدير"
+    },
+    "fields": {
+      "name": "الاسم",
+      "description": "الوصف",
+      "estimatedDurationDays": "المدة (أيام)",
+      "suggestedProfitMargin": "نسبة الربح المقترحة",
+      "isActive": "مفعّل",
+      "createdAt": "تاريخ الإنشاء"
+    },
+    "status": { "active": "مفعّل", "inactive": "موقوف" },
+    "filter": { "all": "الكل", "active": "مفعّل", "inactive": "موقوف" },
+    "items": {
+      "title": "المواد",
+      "addItem": "إضافة مادة",
+      "empty": "لا توجد مواد في هذا القالب بعد.",
+      "deleteConfirmTitle": "حذف هذه المادة؟",
+      "deleteConfirmMessage": "سيتم حذف المادة من القالب.",
+      "fields": {
+        "material": "المادة",
+        "unit": "الوحدة",
+        "quantityFormula": "الصيغة",
+        "estimatedQuantity": "الكمية",
+        "estimatedPrice": "السعر",
+        "notes": "ملاحظات"
+      }
+    },
+    "steps": {
+      "title": "مراحل البناء",
+      "addStep": "إضافة مرحلة",
+      "empty": "لا توجد مراحل بناء في هذا القالب بعد.",
+      "totalPercentage": "مجموع النسبة",
+      "totalDays": "مجموع الأيام",
+      "deleteConfirmTitle": "حذف هذه المرحلة؟",
+      "deleteConfirmMessage": "سيتم حذف المرحلة من القالب.",
+      "fields": {
+        "sortOrder": "الترتيب",
+        "name": "اسم المرحلة",
+        "percentage": "النسبة",
+        "estimatedDays": "الأيام"
+      }
+    },
+    "estimate": {
+      "title": "التقدير",
+      "materialsBreakdown": "تفصيل المواد",
+      "stepsSummary": "ملخص المراحل",
+      "fields": {
+        "materialCost": "كلفة المواد",
+        "profitMargin": "هامش الربح",
+        "profitAmount": "مبلغ الربح",
+        "sellingPrice": "سعر البيع",
+        "durationDays": "المدة (أيام)",
+        "stepsPercentage": "مجموع نسب المراحل",
+        "itemCount": "المواد",
+        "stepCount": "المراحل"
+      }
+    },
+    "errors": {
+      "percentage": "يجب أن تكون بين 0 و 100",
+      "positiveInt": "يجب أن تكون عدداً صحيحاً موجباً"
+    }
+  },
+  "contracts": {
+    "new": "عقد جديد",
+    "edit": "العقد",
+    "searchPlaceholder": "ابحث برقم العقد أو اسم العميل",
+    "saveFirstHint": "احفظ العقد أولاً للوصول إلى المواد والتقدير والمشروع.",
+    "deleteConfirmTitle": "حذف هذا العقد؟",
+    "deleteConfirmMessage": "سيتم إخفاء العقد {number}. يمكن استعادته لاحقاً.",
+    "docx": {
+      "title": "توليد مستند العقد",
+      "template": "القالب",
+      "generate": "توليد DOCX",
+      "generated": "تم توليد المستند.",
+      "noTemplates": "لا توجد قوالب عقود مفعّلة. ارفع قالبًا من الإعدادات ← طباعة العقود.",
+      "openSettings": "فتح الإعدادات",
+      "history": "أحدث المستندات المولّدة",
+      "noHistory": "لم يتم توليد أي مستند لهذا العقد بعد.",
+      "generatedAt": "تاريخ التوليد",
+      "templateColumn": "القالب",
+      "size": "الحجم"
+    },
+    "tabs": {
+      "general": "عام",
+      "items": "المواد",
+      "estimate": "التقدير",
+      "project": "المشروع"
+    },
+    "fields": {
+      "contractNumber": "رقم العقد",
+      "customer": "العميل",
+      "template": "القالب",
+      "buildingArea": "مساحة البناء",
+      "floors": "عدد الطوابق",
+      "meterPrice": "سعر المتر",
+      "totalPrice": "السعر الإجمالي",
+      "expectedProfitMargin": "هامش الربح المتوقع",
+      "signedAt": "تاريخ التوقيع",
+      "status": "الحالة",
+      "notes": "ملاحظات",
+      "createdAt": "تاريخ الإنشاء"
+    },
+    "status": {
+      "DRAFT": "مسودة",
+      "APPROVED": "معتمد",
+      "CANCELLED": "ملغى"
+    },
+    "filter": { "all": "الكل" },
+    "locked": {
+      "approved": "هذا العقد معتمد. الحقول المالية مقفلة. استخدم الإجراءات أعلاه لإدارة المشروع أو إلغاء العقد.",
+      "cancelled": "هذا العقد ملغى وللقراءة فقط."
+    },
+    "actions": {
+      "generateEstimate": "توليد التقدير",
+      "approve": "اعتماد",
+      "cancel": "إلغاء العقد",
+      "createProject": "إنشاء مشروع",
+      "viewProject": "عرض المشروع"
+    },
+    "tooltips": {
+      "cannotCancelWithProject": "لا يمكن إلغاء عقد معتمد له مشروع قائم."
+    },
+    "dialogs": {
+      "regenerateTitle": "استبدال المواد الحالية؟",
+      "regenerateMessage": "سيؤدي توليد التقدير إلى حذف مواد العقد الحالية واستبدالها بقيم مقاسة من القالب.",
+      "approveTitle": "اعتماد هذا العقد؟",
+      "approveMessage": "الاعتماد يقفل الحقول المالية. يمكنك إلغاء العقد لاحقاً ما لم يكن له مشروع.",
+      "cancelTitle": "إلغاء هذا العقد؟",
+      "cancelMessage": "العقود الملغاة للقراءة فقط. لا يمكن التراجع عن هذا الإجراء.",
+      "cancelReason": "السبب (اختياري)",
+      "createProjectTitle": "إنشاء مشروع من هذا العقد؟",
+      "projectName": "اسم المشروع",
+      "startDate": "تاريخ البدء",
+      "deliveryDate": "تاريخ التسليم",
+      "projectNotes": "ملاحظات"
+    },
+    "toasts": {
+      "estimateGenerated": "تم توليد التقدير",
+      "approved": "تم اعتماد العقد",
+      "cancelled": "تم إلغاء العقد",
+      "projectCreated": "تم إنشاء المشروع"
+    },
+    "summary": {
+      "title": "ملخص",
+      "totalPrice": "السعر الإجمالي",
+      "meterPrice": "سعر المتر",
+      "builtArea": "المساحة المبنية",
+      "profitMargin": "هامش الربح",
+      "items": "المواد",
+      "project": "المشروع"
+    },
+    "items": {
+      "title": "مواد العقد",
+      "readOnlyHint": "المواد تُولَّد من القالب — استخدم تبويب التقدير لإعادة التوليد.",
+      "empty": "لا توجد مواد بعد.",
+      "emptyHint": "ولّد التقدير لتعبئة المواد من القالب.",
+      "noTemplateHint": "هذا العقد بلا قالب. أضف قالباً في تبويب العام.",
+      "cancelledHint": "هذا العقد ملغى — المواد للقراءة فقط.",
+      "totalEstimated": "إجمالي التقدير",
+      "fields": {
+        "material": "المادة",
+        "unit": "الوحدة",
+        "quantity": "الكمية",
+        "estimatedPrice": "السعر المقدّر",
+        "notes": "ملاحظات"
+      }
+    },
+    "estimate": {
+      "title": "التقدير",
+      "empty": "لم يُحسب التقدير بعد",
+      "emptyHint": "اضغط على توليد لحساب التقدير من القالب.",
+      "lockedApproved": "لا يمكن إعادة توليد التقدير بعد الاعتماد — الحقول المالية مقفلة.",
+      "lockedCancelled": "التقدير غير متاح للعقود الملغاة.",
+      "noTemplate": "أضف قالباً في تبويب العام لتوليد التقدير.",
+      "priceDiverged": "سعر المتر المقترح ({suggested}) يختلف عن الحالي ({current}).",
+      "fields": {
+        "materialCost": "كلفة المواد",
+        "profitMargin": "هامش الربح",
+        "profitAmount": "مبلغ الربح",
+        "suggestedSellingPrice": "سعر البيع المقترح",
+        "suggestedMeterPrice": "سعر المتر المقترح",
+        "currentTotalPrice": "الإجمالي الحالي",
+        "scaleFactor": "معامل التحجيم",
+        "itemsReplaced": "المواد المكتوبة"
+      }
+    },
+    "project": {
+      "title": "المشروع المرتبط",
+      "draftHint": "اعتمد العقد لتفعيل إنشاء المشروع.",
+      "approvedHint": "اضغط على 'إنشاء مشروع' في شريط الإجراءات أعلاه.",
+      "cancelledHint": "لا يمكن إنشاء مشروع لعقد ملغى.",
+      "fields": {
+        "name": "الاسم",
+        "status": "الحالة",
+        "startDate": "تاريخ البدء",
+        "deliveryDate": "تاريخ التسليم",
+        "progress": "نسبة الإنجاز"
+      }
+    },
+    "errors": {
+      "positive": "يجب أن تكون أكبر من 0",
+      "nonNegative": "يجب أن تكون 0 أو أكثر",
+      "percentage": "يجب أن تكون بين 0 و 100",
+      "noTemplate": "أضف قالباً قبل توليد التقدير",
+      "failedToLoadCustomers": "تعذّر تحميل العملاء.",
+      "failedToLoadTemplates": "تعذّر تحميل القوالب."
+    }
+  },
+  "projects": {
+    "new": "مشروع جديد",
+    "edit": "المشروع",
+    "searchPlaceholder": "ابحث باسم المشروع أو رقم العقد",
+    "saveFirstHint": "احفظ المشروع أولاً للوصول إلى تبويبات المصاريف والدفعات والتقدم.",
+    "deleteConfirmTitle": "حذف هذا المشروع؟",
+    "deleteConfirmMessage": "سيتم إخفاء المشروع \"{name}\". الحذف مرفوض إذا كانت توجد مصاريف أو دفعات.",
+    "delayedBy": "هذا المشروع متأخر {days} يوم.",
+    "tabs": {
+      "general": "عام",
+      "costs": "المصاريف",
+      "payments": "الدفعات",
+      "progress": "التقدم"
+    },
+    "fields": {
+      "name": "الاسم",
+      "customer": "العميل",
+      "contract": "العقد",
+      "status": "الحالة",
+      "progress": "نسبة الإنجاز",
+      "startDate": "تاريخ البدء",
+      "deliveryDate": "تاريخ التسليم",
+      "notes": "ملاحظات",
+      "createdAt": "تاريخ الإنشاء"
+    },
+    "status": {
+      "PLANNED": "مخطط",
+      "IN_PROGRESS": "قيد التنفيذ",
+      "PAUSED": "متوقف",
+      "COMPLETED": "مكتمل",
+      "CANCELLED": "ملغى"
+    },
+    "filter": {
+      "delayedOnly": "المتأخرة فقط"
+    },
+    "locked": {
+      "completed": "هذا المشروع مكتمل وللقراءة فقط.",
+      "cancelled": "هذا المشروع ملغى وللقراءة فقط."
+    },
+    "actions": {
+      "start": "بدء",
+      "pause": "إيقاف مؤقت",
+      "resume": "استئناف",
+      "complete": "إكمال",
+      "cancel": "إلغاء المشروع"
+    },
+    "dialogs": {
+      "startTitle": "بدء هذا المشروع؟",
+      "startMessage": "ينقل المشروع من مخطط إلى قيد التنفيذ. سيتم تعيين تاريخ البدء تلقائياً إن لم يكن محدداً.",
+      "pauseTitle": "إيقاف هذا المشروع مؤقتاً؟",
+      "pauseMessage": "يمكن استئناف العمل لاحقاً. يحتفظ المشروع بتقدمه الحالي.",
+      "resumeTitle": "استئناف هذا المشروع؟",
+      "resumeMessage": "يعيد المشروع إلى قيد التنفيذ.",
+      "completeTitle": "تأكيد إكمال هذا المشروع؟",
+      "completeMessage": "ستُضبط نسبة الإنجاز على 100%. يصبح المشروع للقراءة فقط.",
+      "cancelTitle": "إلغاء هذا المشروع؟",
+      "cancelMessage": "المشاريع الملغاة للقراءة فقط. لا يمكن التراجع.",
+      "cancelReason": "السبب (اختياري)"
+    },
+    "toasts": {
+      "startd": "تم بدء المشروع",
+      "paused": "تم إيقاف المشروع",
+      "resumed": "تم استئناف المشروع",
+      "completed": "تم إكمال المشروع",
+      "cancelled": "تم إلغاء المشروع"
+    },
+    "progress": {
+      "title": "نسبة الإنجاز",
+      "current": "التقدم الحالي",
+      "totalDays": "إجمالي الأيام",
+      "elapsedDays": "المنقضية",
+      "remainingDays": "المتبقية"
+    },
+    "summary": {
+      "title": "الملخص المالي",
+      "contractValue": "قيمة العقد",
+      "totalCosts": "إجمالي المصاريف",
+      "totalPaid": "إجمالي المدفوع",
+      "remainingBalance": "الرصيد المتبقي",
+      "profitEstimate": "الربح (تقديري)",
+      "cashPosition": "الوضع النقدي"
+    },
+    "costs": {
+      "title": "مصاريف المشروع",
+      "latest": "أحدث المصاريف",
+      "empty": "لا توجد مصاريف بعد.",
+      "addCost": "إضافة مصروف",
+      "addCostTitle": "إضافة مصروف لهذا المشروع",
+      "costCreated": "تمت إضافة المصروف.",
+      "summary": {
+        "totalCosts": "إجمالي المصاريف",
+        "materials": "مواد",
+        "labor": "عمالة",
+        "machinery": "آلات",
+        "transport": "نقل",
+        "misc": "متفرقات",
+        "count": "العدد"
+      },
+      "fields": {
+        "date": "التاريخ",
+        "category": "الفئة",
+        "description": "الوصف",
+        "quantity": "الكمية",
+        "unitPrice": "سعر الوحدة",
+        "totalAmount": "الإجمالي"
+      }
+    },
+    "payments": {
+      "title": "الدفعات",
+      "latest": "أحدث الدفعات",
+      "empty": "لا توجد دفعات بعد.",
+      "addPayment": "إضافة دفعة",
+      "addPaymentTitle": "إضافة دفعة لهذا المشروع",
+      "paymentCreated": "تمت إضافة الدفعة.",
+      "summary": {
+        "contractTotal": "إجمالي العقد",
+        "totalPaid": "إجمالي المدفوع",
+        "remaining": "المتبقي",
+        "collection": "نسبة التحصيل",
+        "pending": "معلقة",
+        "late": "متأخرة",
+        "paid": "مدفوعة",
+        "cancelled": "ملغاة"
+      },
+      "fields": {
+        "dueDate": "تاريخ الاستحقاق",
+        "amount": "المبلغ",
+        "status": "الحالة",
+        "paymentDate": "تاريخ الدفع",
+        "method": "الطريقة",
+        "reference": "المرجع"
+      }
+    },
+    "errors": {
+      "percentage": "يجب أن تكون بين 0 و 100"
+    }
+  },
+  "dashboard": {
+    "refresh": "تحديث",
+    "viewAll": "عرض الكل",
+    "asOf": "محدث في",
+    "metrics": {
+      "activeProjects": "المشاريع النشطة",
+      "delayedProjects": "المشاريع المتأخرة",
+      "overduePayments": "الدفعات المتأخرة",
+      "pendingCollections": "تحصيلات معلقة",
+      "monthlyRevenue": "إيرادات الشهر",
+      "monthlyCosts": "مصاريف الشهر",
+      "monthlyProfit": "ربح الشهر",
+      "cashCollected": "إجمالي النقد المحصّل"
+    },
+    "delayed": {
+      "title": "المشاريع المتأخرة",
+      "empty": "لا توجد مشاريع متأخرة — كل شيء في الموعد.",
+      "daysLate": "متأخر {days} يوم",
+      "invoiceCount": "{n} فاتورة"
+    },
+    "overdue": {
+      "title": "الدفعات المتأخرة",
+      "empty": "لا توجد دفعات متأخرة — التحصيلات منتظمة.",
+      "invoiceCount": "{n} فاتورة"
+    },
+    "recent": {
+      "projects": "أحدث المشاريع",
+      "payments": "أحدث الدفعات",
+      "empty": "لا يوجد بعد."
+    },
+    "quickActions": {
+      "title": "إجراءات سريعة",
+      "newContract": "عقد جديد",
+      "newProject": "مشروع جديد",
+      "newCustomer": "عميل جديد",
+      "newMaterial": "مادة جديدة",
+      "newTemplate": "قالب جديد"
+    }
+  },
+  "tunnel": {
+    "page": {
+      "title": "الوصول عن بُعد",
+      "subtitle": "اسمح للآخرين باستخدام النظام من خارج مكتبك دون الحاجة إلى ضبط إعدادات الراوتر."
+    },
+    "status": {
+      "label": "الحالة",
+      "on": "مفعّل",
+      "off": "متوقف",
+      "starting": "قيد التشغيل",
+      "warning": "تنبيه",
+      "error": "خطأ",
+      "refreshing": "جارٍ التحديث",
+      "description": {
+        "on": "الوصول عن بُعد يعمل. الرابط أدناه يفتح النظام من أي جهاز.",
+        "off": "الوصول عن بُعد متوقف. فعّله لمشاركة الرابط أدناه.",
+        "starting": "الوصول عن بُعد مفعّل، لكن العملية المحلية لم تبدأ بعد. انتظر بضع ثوانٍ.",
+        "warning": "الوصول عن بُعد يعمل بشكل جزئي. راجع التفاصيل أدناه.",
+        "error": "حدث خطأ في الوصول عن بُعد. راجع التفاصيل والاقتراح أدناه."
+      }
+    },
+    "actions": {
+      "title": "التحكم",
+      "subtitle": "شغّل الوصول عن بُعد عند الحاجة لمشاركة الرابط، وأوقفه عند الانتهاء.",
+      "enable": "تفعيل",
+      "disable": "إيقاف",
+      "refresh": "تحديث",
+      "manage": "إدارة",
+      "copyUrl": "نسخ الرابط",
+      "openUrl": "فتح",
+      "alreadyEnabled": "الوصول عن بُعد مفعّل مسبقًا.",
+      "actingHint": "جارٍ تنفيذ العملية…"
+    },
+    "confirm": {
+      "disableTitle": "إيقاف الوصول عن بُعد؟",
+      "disableMessage": "سيتوقف الرابط العام فورًا. يمكنك إعادة تفعيله في أي وقت."
+    },
+    "toast": {
+      "enabled": "الوصول عن بُعد مفعّل.",
+      "disabled": "تم إيقاف الوصول عن بُعد.",
+      "disabledLocalOnly": "تم الإيقاف محليًا، لكن خادم الإدارة لم يؤكد. أعد المحاولة لاحقًا إذا بقي الرابط يعمل.",
+      "copied": "تم نسخ الرابط.",
+      "copyFailed": "تعذّر النسخ. حدد الرابط يدويًا."
+    },
+    "diagnostics": {
+      "title": "التفاصيل",
+      "subdomain": "النطاق الفرعي",
+      "tunnelId": "معرّف النفق",
+      "machineId": "معرّف الجهاز",
+      "cloudflaredAvailable": "ملف cloudflared موجود",
+      "configExists": "ملف الإعدادات المحلي موجود",
+      "running": "العملية تعمل",
+      "lastUpdated": "آخر تحديث",
+      "lastError": "آخر خطأ"
+    },
+    "errors": {
+      "binaryMissing": {
+        "title": "ملف cloudflared غير موجود",
+        "body": "البرنامج الذي ينشئ الرابط الآمن غير مثبت في المكان المتوقع. لا يمكن تشغيل الوصول عن بُعد بدونه.",
+        "hint": "أعد تثبيت Contractor+، أو تواصل مع الدعم وأبلغهم بـ \"cloudflared missing\"."
+      },
+      "managementApi": {
+        "title": "تعذّر الاتصال بخادم الوصول عن بُعد",
+        "body": "لم يتمكن جهازك من الوصول إلى الخدمة التي تنشئ الرابط العام. عادةً يعني هذا انقطاع الشبكة أو الخدمة.",
+        "hint": "تحقق من اتصالك بالإنترنت ثم اضغط تفعيل مرة أخرى بعد قليل."
+      },
+      "configMissing": {
+        "title": "ملف الإعدادات المحلي مفقود",
+        "body": "الوصول عن بُعد مفعّل، لكن ملف الاعتمادات على هذا الجهاز غير موجود. لا يمكن تشغيل الرابط بدونه.",
+        "hint": "اضغط إيقاف ثم تفعيل مرة أخرى لإعادة إنشاء النفق."
+      },
+      "runtimeStopped": {
+        "title": "توقّفت عملية النفق",
+        "body": "الوصول عن بُعد مفعّل لكن العملية المحلية لا تعمل. لن يعمل الرابط حتى تُعاد العملية.",
+        "hint": "اضغط إيقاف ثم تفعيل. إن تكرّر الأمر تواصل مع الدعم مع تضمين الخطأ أدناه."
+      },
+      "generic": {
+        "title": "الوصول عن بُعد أبلغ عن خطأ",
+        "body": "لم تكتمل العملية الأخيرة بنجاح. راجع الرسالة الكاملة في قسم التفاصيل أدناه.",
+        "hint": "جرّب التحديث أولًا. إن استمر الخطأ فاضغط إيقاف ثم تفعيل."
+      }
+    }
+  },
+  "errors": {
+    "notFound": "الصفحة غير موجودة",
+    "forbidden": "ليست لديك صلاحية للوصول",
+    "network": "تعذر الاتصال بالخادم"
+  },
+  "costs": {
+    "new": "مصروف جديد",
+    "edit": "تعديل المصروف",
+    "searchPlaceholder": "ابحث بالوصف",
+    "deleteConfirmTitle": "حذف هذا المصروف؟",
+    "deleteConfirmMessage": "سيتم إخفاء المصروف \"{description}\".",
+    "fields": {
+      "project": "المشروع",
+      "category": "الفئة",
+      "material": "المادة",
+      "description": "الوصف",
+      "quantity": "الكمية",
+      "unit": "الوحدة",
+      "unitPrice": "سعر الوحدة",
+      "totalAmount": "الإجمالي",
+      "date": "التاريخ",
+      "notes": "ملاحظات"
+    },
+    "category": {
+      "MATERIAL": "مواد",
+      "LABOR": "عمالة",
+      "MACHINERY": "آليات",
+      "TRANSPORT": "نقل",
+      "MISC": "أخرى"
+    },
+    "filter": {
+      "project": "المشروع",
+      "allProjects": "كل المشاريع",
+      "allCategories": "كل الفئات",
+      "dateFrom": "من",
+      "dateTo": "إلى"
+    },
+    "form": {
+      "noMaterial": "بدون مادة",
+      "totalHint": "اتركه فارغًا ليُحسب من الكمية × سعر الوحدة.",
+      "derivedTotalHint": "سيُحسب إلى {value} إذا تُرك فارغًا."
+    }
+  },
+  "payments": {
+    "new": "دفعة جديدة",
+    "edit": "تعديل الدفعة",
+    "searchPlaceholder": "ابحث بالمرجع أو الملاحظات",
+    "deleteConfirmTitle": "حذف هذه الدفعة؟",
+    "deleteConfirmMessage": "سيتم إخفاء الدفعة. يمكن حذف الدفعات المعلقة أو المتأخرة فقط.",
+    "fields": {
+      "project": "المشروع",
+      "amount": "المبلغ",
+      "dueDate": "تاريخ الاستحقاق",
+      "paymentDate": "تاريخ السداد",
+      "status": "الحالة",
+      "method": "الوسيلة",
+      "reference": "المرجع",
+      "notes": "ملاحظات"
+    },
+    "status": {
+      "PENDING": "معلقة",
+      "PAID": "مدفوعة",
+      "LATE": "متأخرة",
+      "CANCELLED": "ملغاة"
+    },
+    "method": {
+      "unset": "غير محدد",
+      "CASH": "نقدي",
+      "BANK_TRANSFER": "تحويل بنكي",
+      "CHECK": "شيك",
+      "OTHER": "أخرى"
+    },
+    "filter": {
+      "project": "المشروع",
+      "allProjects": "كل المشاريع",
+      "allStatuses": "كل الحالات",
+      "dueFrom": "الاستحقاق من",
+      "dueTo": "الاستحقاق إلى",
+      "lateOnly": "المتأخرة فقط"
+    },
+    "markPaid": {
+      "title": "تسجيل كمدفوعة",
+      "confirm": "تسجيل"
+    },
+    "cancel": {
+      "title": "إلغاء هذه الدفعة؟",
+      "message": "الدفعات الملغاة لا يمكن تعديلها أو تسجيلها كمدفوعة لاحقًا.",
+      "confirm": "إلغاء الدفعة"
+    },
+    "toasts": {
+      "marked": "تم تسجيل الدفعة كمدفوعة.",
+      "cancelled": "تم إلغاء الدفعة."
+    },
+    "errors": {
+      "positiveAmount": "يجب أن يكون المبلغ أكبر من 0"
+    }
+  },
+  "reports": {
+    "subtitle": "عروض قراءة فقط عبر المشاريع والتدفق النقدي والذمم المتأخرة.",
+    "cards": {
+      "profitability": {
+        "title": "ربحية المشاريع",
+        "desc": "قيمة العقد مقابل المصاريف والمحصّل، لكل مشروع."
+      },
+      "cashFlow": {
+        "title": "التدفق النقدي",
+        "desc": "الإيرادات والمحصلات والمصاريف وصافي التدفق ضمن فترة."
+      },
+      "overdue": {
+        "title": "الدفعات المتأخرة",
+        "desc": "الذمم المستحقة مجمّعة حسب المشروع مع أيام التأخر."
+      },
+      "delayed": {
+        "title": "المشاريع المتأخرة",
+        "desc": "المشاريع التي تجاوزت تاريخ التسليم ولا تزال نشطة."
+      }
+    },
+    "profitability": {
+      "title": "ربحية المشاريع",
+      "empty": "لا توجد مشاريع لعرضها.",
+      "columns": {
+        "project": "المشروع",
+        "customer": "العميل",
+        "status": "الحالة",
+        "contract": "العقد",
+        "costs": "المصاريف",
+        "paid": "المحصّل",
+        "profit": "الربح"
+      },
+      "filter": { "all": "كل الحالات" }
+    },
+    "cashFlow": {
+      "title": "التدفق النقدي",
+      "dateFrom": "من",
+      "dateTo": "إلى",
+      "period": "الفترة",
+      "totalRevenue": "إجمالي الإيرادات",
+      "totalCollected": "إجمالي المحصّل",
+      "outstanding": "المستحق",
+      "totalCosts": "إجمالي المصاريف",
+      "netCashFlow": "صافي التدفق النقدي"
+    },
+    "overdue": {
+      "title": "الدفعات المتأخرة",
+      "empty": "لا توجد دفعات متأخرة.",
+      "invoiceCount": "{n} دفعة",
+      "oldest": "الأقدم:",
+      "daysLate": "أيام التأخر"
+    },
+    "delayed": {
+      "title": "المشاريع المتأخرة",
+      "empty": "لا توجد مشاريع متأخرة.",
+      "columns": {
+        "project": "المشروع",
+        "customer": "العميل",
+        "status": "الحالة",
+        "deliveryDate": "تاريخ التسليم",
+        "daysDelayed": "أيام التأخر",
+        "progress": "التقدم"
+      }
+    }
+  },
+  "audit": {
+    "empty": "لا توجد سجلات تطابق هذه المرشحات.",
+    "fields": {
+      "createdAt": "متى",
+      "actor": "المستخدم",
+      "action": "العملية",
+      "entity": "الكيان",
+      "entityId": "معرّف الكيان",
+      "ip": "IP",
+      "oldValues": "قبل",
+      "newValues": "بعد"
+    },
+    "filter": {
+      "entity": "الكيان",
+      "userId": "معرّف المستخدم",
+      "dateFrom": "من",
+      "dateTo": "إلى",
+      "allActions": "كل العمليات"
+    },
+    "entity": {
+      "title": "سجل الكيان",
+      "empty": "لا يوجد سجل لهذا الكيان بعد."
+    },
+    "user": {
+      "title": "نشاط المستخدم",
+      "empty": "لا يوجد نشاط لهذا المستخدم."
+    }
+  },
+  "settings": {
+    "placeholder": "ستضاف إعدادات إضافية لاحقًا. في الوقت الحالي يمكنك إدارة الوصول عن بُعد ومراجعة سجل التدقيق.",
+    "user": {
+      "title": "مسجل الدخول كـ",
+      "fullName": "الاسم",
+      "email": "البريد",
+      "role": "الدور",
+      "lastLogin": "آخر دخول"
+    },
+    "env": {
+      "title": "البيئة",
+      "app": "التطبيق",
+      "version": "الإصدار",
+      "api": "عنوان الـ API",
+      "mode": "وضع البناء",
+      "locale": "اللغة",
+      "direction": "الاتجاه"
+    },
+    "links": {
+      "title": "روابط سريعة",
+      "tunnel": "الوصول عن بُعد",
+      "tunnelDesc": "تفعيل ومراقبة الرابط العام لهذا الجهاز.",
+      "audit": "سجل التدقيق",
+      "auditDesc": "مراجعة كل تغيير تم عبر التطبيق."
+    },
+    "tabs": {
+      "general": "عام",
+      "company": "الشركة",
+      "currency": "العملات",
+      "contractTemplates": "طباعة العقود",
+      "links": "روابط سريعة"
+    },
+    "subtitle": "إدارة إعدادات المنظمة",
+    "unsaved": "لديك تغييرات غير محفوظة",
+    "saveChanges": "حفظ التغييرات",
+    "discard": "تجاهل",
+    "saved": "تم حفظ الإعدادات",
+    "general": {
+      "title": "الإعدادات العامة",
+      "description": "تفضيلات التطبيق الأساسية.",
+      "appName": "اسم التطبيق",
+      "fiscalYearStartMonth": "بداية السنة المالية",
+      "defaultLocale": "اللغة الافتراضية",
+      "dateFormat": "تنسيق التاريخ",
+      "months": {
+        "1": "يناير", "2": "فبراير", "3": "مارس", "4": "أبريل",
+        "5": "مايو", "6": "يونيو", "7": "يوليو", "8": "أغسطس",
+        "9": "سبتمبر", "10": "أكتوبر", "11": "نوفمبر", "12": "ديسمبر"
+      }
+    },
+    "company": {
+      "title": "بيانات الشركة",
+      "description": "تظهر في العقود والتقارير والفواتير.",
+      "companyName": "اسم الشركة",
+      "legalName": "الاسم القانوني",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "address": "العنوان",
+      "taxNumber": "الرقم الضريبي",
+      "registrationNumber": "رقم السجل التجاري",
+      "website": "الموقع الإلكتروني",
+      "footerText": "نص تذييل المستند",
+      "notes": "ملاحظات داخلية",
+      "logoPhase2": "رفع الشعار والختم سيتاح في الإصدار القادم.",
+      "assets": {
+        "logoTitle": "شعار الشركة",
+        "logoHint": "PNG أو JPG أو WebP. حتى 5 ميجابايت. يُفضّل صورة مربّعة.",
+        "stampTitle": "ختم الشركة",
+        "stampHint": "يُفضّل PNG بخلفية شفافة. حتى 5 ميجابايت.",
+        "dropOrClick": "أفلت ملفًا أو انقر للرفع",
+        "upload": "رفع",
+        "replace": "استبدال",
+        "uploaded": "تم رفع الصورة.",
+        "deleteConfirmTitle": "إزالة هذه الصورة؟",
+        "deleteConfirmMessage": "سيُحذف الملف نهائيًا من الخادم."
+      }
+    },
+    "currency": {
+      "title": "العملات",
+      "description": "إدارة العملات المتاحة في هذا الحساب.",
+      "addNew": "إضافة عملة",
+      "edit": "تعديل العملة",
+      "code": "الرمز",
+      "name": "الاسم",
+      "symbol": "الرمز التعبيري",
+      "symbolPosition": "موضع الرمز",
+      "positionBefore": "قبل الرقم (مثال: $100)",
+      "positionAfter": "بعد الرقم (مثال: 100 ر.س)",
+      "decimalPrecision": "الخانات العشرية",
+      "thousandSeparator": "فاصل الآلاف",
+      "decimalSeparator": "الفاصل العشري",
+      "isActive": "نشطة",
+      "isDefault": "افتراضية",
+      "setDefault": "تعيين كافتراضية",
+      "activate": "تفعيل",
+      "deactivate": "إيقاف",
+      "preview": "معاينة",
+      "previewDescription": "طريقة عرض المبالغ:",
+      "deleteConfirmTitle": "حذف هذه العملة؟",
+      "deleteConfirmMessage": "سيتم حذف العملة \"{code}\" نهائيًا.",
+      "defaultBadge": "افتراضية",
+      "inactiveBadge": "موقوفة",
+      "empty": "لم يتم إعداد أي عملات بعد.",
+      "errors": {
+        "defaultMustBeActive": "يجب أن تبقى العملة الافتراضية نشطة.",
+        "cannotDeleteDefault": "لا يمكن حذف العملة الافتراضية.",
+        "codeDuplicate": "يوجد عملة بنفس الرمز."
+      }
+    },
+    "phase2Note": "رفع الشعار والختم وقوالب DOCX وتصدير PDF ستضاف في المرحلة الثانية."
+  },
+  "documentTemplates": {
+    "title": "قوالب العقود",
+    "description": "ارفع ملفات DOCX تحتوي على {'{placeholders}'} وسيقوم النظام بتعبئتها عند توليد العقد.",
+    "upload": "رفع قالب",
+    "uploadTitle": "رفع قالب جديد",
+    "save": "حفظ القالب",
+    "empty": "لا توجد قوالب عقود مرفوعة بعد.",
+    "dropOrClick": "أفلت ملف .docx هنا أو انقر للاختيار",
+    "acceptHint": "DOCX فقط، حتى 5 ميغابايت.",
+    "setDefault": "تعيين كافتراضي",
+    "activate": "تفعيل",
+    "deactivate": "تعطيل",
+    "defaultBadge": "افتراضي",
+    "inactiveBadge": "معطّل",
+    "deleteConfirmTitle": "حذف هذا القالب؟",
+    "deleteConfirmMessage": "سيتم حذف القالب \"{name}\".",
+    "placeholdersFound": "{count} عنصر نائب",
+    "fields": {
+      "name": "اسم العرض",
+      "slug": "المعرّف",
+      "slugHint": "أحرف لاتينية صغيرة وأرقام وشرطات فقط.",
+      "description": "الوصف"
+    },
+    "toast": {
+      "uploaded": "تم رفع القالب.",
+      "defaultSet": "تم تحديث القالب الافتراضي."
+    },
+    "errors": {
+      "cannotDeleteDefault": "عيّن قالبًا آخر كافتراضي قبل حذف هذا."
+    },
+    "placeholders": {
+      "eyebrow": "المرجع",
+      "title": "العناصر النائبة المدعومة",
+      "description": "انقر أي عنصر لنسخه. ضعه في ملف .docx كما هو.",
+      "copyHint": "نسخ",
+      "copied": "تم النسخ.",
+      "groups": {
+        "company": "الشركة",
+        "customer": "العميل",
+        "project": "المشروع",
+        "contract": "العقد",
+        "currency": "العملة"
+      }
+    }
+  }
+}

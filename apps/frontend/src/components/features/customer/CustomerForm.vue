@@ -1,0 +1,72 @@
+<script setup lang="ts">
+import { onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useCustomerForm } from '@/composables/useCustomerForm';
+
+const props = defineProps<{ id?: string }>();
+const { t } = useI18n();
+const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } = useCustomerForm(
+  props.id,
+);
+
+onMounted(load);
+
+const requiredRule = (v: unknown) => !!v || ' ';
+const emailRule = (v: string | null | undefined) =>
+  !v || /.+@.+\..+/.test(v) || t('customers.errors.email');
+</script>
+
+<template>
+  <v-card :loading="loading">
+    <v-form @submit.prevent="submit">
+      <v-card-text class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <v-text-field
+          v-model="form.name"
+          :label="t('customers.fields.name')"
+          :rules="[requiredRule]"
+          :error-messages="fieldErrors.name"
+          autofocus
+          required
+        />
+        <v-text-field
+          v-model="form.phone"
+          :label="t('customers.fields.phone')"
+          :error-messages="fieldErrors.phone"
+        />
+        <v-text-field
+          v-model="form.email"
+          :label="t('customers.fields.email')"
+          type="email"
+          :rules="[emailRule]"
+          :error-messages="fieldErrors.email"
+        />
+        <v-text-field
+          v-model="form.address"
+          :label="t('customers.fields.address')"
+          :error-messages="fieldErrors.address"
+          class="md:col-span-2"
+        />
+        <v-textarea
+          v-model="form.notes"
+          :label="t('customers.fields.notes')"
+          :error-messages="fieldErrors.notes"
+          rows="3"
+          auto-grow
+          class="md:col-span-2"
+        />
+      </v-card-text>
+
+      <v-divider />
+
+      <v-card-actions class="px-4 py-3">
+        <v-btn variant="text" :disabled="submitting" @click="cancel">
+          {{ t('common.cancel') }}
+        </v-btn>
+        <v-spacer />
+        <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
+          {{ isEdit ? t('common.update') : t('common.create') }}
+        </v-btn>
+      </v-card-actions>
+    </v-form>
+  </v-card>
+</template>

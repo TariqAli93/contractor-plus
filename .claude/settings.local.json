@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm --version)",
+      "Bash(rm -f apps/frontend/pnpm-lock.yaml apps/backend/pnpm-lock.yaml)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm --filter @contractor-plus/shared build)",
+      "Bash(pnpm --filter backend typecheck)",
+      "Bash(pnpm --filter backend prisma:generate)",
+      "Bash(pnpm --filter frontend typecheck)",
+      "Bash(pnpm build:shared)",
+      "Bash(pnpm -r typecheck)",
+      "Bash(pnpm --filter frontend exec vite build)",
+      "Bash(pnpm --filter backend exec tsc --noEmit --pretty false)",
+      "Bash(pnpm --filter @contractor-plus/shared clean)",
+      "Bash(pnpm --filter backend exec tsc --noEmit src/shared/types/prisma-enum-guard.ts --moduleResolution NodeNext --module NodeNext --target ES2022 --strict --esModuleInterop --skipLibCheck)",
+      "Bash(node --input-type=module -e \"import\\('@contractor-plus/shared'\\).then\\(m => console.log\\(Object.keys\\(m\\).sort\\(\\).join\\('\\\\n'\\)\\)\\)\")",
+      "Bash(pnpm --filter backend exec prisma generate)",
+      "Bash(pnpm --filter backend exec prisma -v)",
+      "Bash(pnpm --filter backend exec prisma migrate dev --name simplify_tunnel_state)",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm --filter frontend exec vue-tsc --noEmit)",
+      "Bash(pnpm --filter backend exec node --input-type=module -e \"import\\('./src/lib/cloudflared-path.ts'\\).catch\\(\\(\\)=>{}\\); import\\('@contractor-plus/shared'\\).then\\(m=>console.log\\('shared keys:', Object.keys\\(m\\).filter\\(k=>k.toLowerCase\\(\\).includes\\('tunnel'\\)\\)\\)\\)\")",
+      "Bash(pnpm --filter contractor-plus-frontend exec vue-tsc --noEmit)",
+      "Bash(pnpm --filter contractor-plus-backend exec tsc --noEmit --pretty false)",
+      "Bash(pnpm --filter contractor-plus-backend exec tsc --noEmit)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('D:/dev_projects/contractor-plus/apps/frontend/src/i18n/locales/en.json','utf8'\\)\\); JSON.parse\\(require\\('fs'\\).readFileSync\\('D:/dev_projects/contractor-plus/apps/frontend/src/i18n/locales/ar.json','utf8'\\)\\); console.log\\('ok'\\)\")",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm dev *)",
+      "PowerShell(Get-Process *)",
+      "Bash(pnpm view *)",
+      "Bash(pnpm --filter frontend remove vite-plugin-vue-devtools)",
+      "Bash(pnpm --filter frontend add -D vite-plugin-vue-devtools@7.7.9)",
+      "Bash(pnpm --filter frontend list vite vite-plugin-vue-devtools vite-plugin-inspect @vue/devtools-core vue)",
+      "Bash(pnpm --filter frontend list vite-plugin-inspect --depth Infinity)",
+      "Bash(pnpm dev:frontend)"
+    ]
+  }
+}

@@ -1,0 +1,101 @@
+<script setup lang="ts">
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth.store';
+import { useUiStore } from '@/stores/ui.store';
+import { setI18nLocale } from '@/plugins/i18n';
+import { setVuetifyLocale } from '@/plugins/vuetify';
+import TunnelStatusChip from './TunnelStatusChip.vue';
+
+const auth = useAuthStore();
+const ui = useUiStore();
+const router = useRouter();
+const { t } = useI18n();
+
+function toggleLocale() {
+  const next = ui.locale === 'ar' ? 'en' : 'ar';
+  ui.setLocale(next);
+  setI18nLocale(next);
+  setVuetifyLocale(next);
+}
+
+async function handleLogout() {
+  await auth.logout();
+  router.push({ name: 'login' });
+}
+
+const userInitial = computed(() => (auth.user?.fullName ?? '?').charAt(0).toUpperCase());
+const otherLocaleLabel = computed(() => (ui.locale === 'ar' ? 'EN' : 'AR'));
+</script>
+
+<template>
+  <v-app-bar flat color="surface" :height="64" class="cp-topbar">
+    <v-btn
+      icon
+      variant="text"
+      class="ms-1"
+      :aria-label="t('common.language')"
+      @click="ui.toggleSidebar"
+    >
+      <v-icon>{{ ui.sidebarCollapsed ? 'mdi-menu' : 'mdi-menu-open' }}</v-icon>
+    </v-btn>
+
+    <v-spacer />
+
+    <TunnelStatusChip class="me-2" />
+
+    <v-btn
+      variant="text"
+      size="small"
+      class="me-1 font-medium"
+      :aria-label="t('common.language')"
+      @click="toggleLocale"
+    >
+      <v-icon start size="18">mdi-translate</v-icon>
+      {{ otherLocaleLabel }}
+    </v-btn>
+
+    <v-menu offset="10" location="bottom end">
+      <template #activator="{ props }">
+        <v-btn
+          v-bind="props"
+          variant="text"
+          class="me-2 px-2"
+          :aria-label="auth.user?.fullName ?? ''"
+        >
+          <v-avatar size="34" class="cp-avatar">
+            <span class="text-sm font-semibold">{{ userInitial }}</span>
+          </v-avatar>
+        </v-btn>
+      </template>
+      <v-list density="comfortable" min-width="240" class="rounded-lg">
+        <v-list-item class="py-3">
+          <template #prepend>
+            <v-avatar size="40" color="primary" class="me-3">
+              <span class="text-sm font-semibold">{{ userInitial }}</span>
+            </v-avatar>
+          </template>
+          <v-list-item-title class="font-medium">{{ auth.user?.fullName }}</v-list-item-title>
+          <v-list-item-subtitle class="text-medium-emphasis">
+            {{ auth.user?.email }}
+          </v-list-item-subtitle>
+        </v-list-item>
+        <v-divider class="my-1" />
+        <v-list-item
+          prepend-icon="mdi-logout"
+          :title="t('common.logout')"
+          @click="handleLogout"
+        />
+      </v-list>
+    </v-menu>
+  </v-app-bar>
+</template>
+
+<style scoped>
+.cp-avatar {
+  background: linear-gradient(135deg, #1e5f8c 0%, #2a7ab5 100%);
+  color: #fff;
+  box-shadow: 0 4px 10px -3px rgba(30, 95, 140, 0.4);
+}
+</style>

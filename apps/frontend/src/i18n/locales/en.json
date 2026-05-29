@@ -1,0 +1,926 @@
+{
+  "app": {
+    "name": "Contractor+",
+    "tagline": "Project & profitability management"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "saved": "Saved",
+    "create": "Create",
+    "update": "Update",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleted": "Deleted",
+    "edit": "Edit",
+    "search": "Search",
+    "back": "Back",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "empty": "No data",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "language": "Language",
+    "logout": "Logout",
+    "comingSoon": "Coming soon"
+  },
+  "auth": {
+    "login": "Login",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "invalidCredentials": "Invalid credentials",
+    "welcome": "Welcome back"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "customers": "Customers",
+    "materials": "Materials",
+    "templates": "Templates",
+    "contracts": "Contracts",
+    "projects": "Projects",
+    "costs": "Costs",
+    "payments": "Payments",
+    "reports": "Reports",
+    "audit": "Audit",
+    "tunnel": "Tunnel",
+    "settings": "Settings",
+    "groups": {
+      "operations": "Operations",
+      "directory": "Directory",
+      "finance": "Finance",
+      "system": "System"
+    }
+  },
+  "customers": {
+    "new": "New customer",
+    "edit": "Edit customer",
+    "searchPlaceholder": "Search by name or phone",
+    "deleteConfirmTitle": "Delete this customer?",
+    "deleteConfirmMessage": "Customer \"{name}\" will be hidden. You can restore it later.",
+    "fields": {
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "address": "Address",
+      "notes": "Notes",
+      "createdAt": "Created at"
+    },
+    "errors": {
+      "email": "Invalid email format"
+    }
+  },
+  "materials": {
+    "new": "New material",
+    "edit": "Edit material",
+    "searchPlaceholder": "Search by name or unit",
+    "deleteConfirmTitle": "Delete this material?",
+    "deleteConfirmMessage": "Material \"{name}\" will be hidden. You can restore it later.",
+    "fields": {
+      "name": "Name",
+      "unit": "Unit",
+      "unitHint": "e.g. bag, ton, m³, piece",
+      "defaultPrice": "Default price",
+      "notes": "Notes",
+      "isActive": "Active",
+      "createdAt": "Created at"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "filter": {
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "errors": {
+      "price": "Price must be 0 or greater"
+    }
+  },
+  "templates": {
+    "new": "New template",
+    "edit": "Edit template",
+    "searchPlaceholder": "Search by template name",
+    "saveFirstHint": "Save the template first to add materials, steps, and view the estimate.",
+    "deleteConfirmTitle": "Delete this template?",
+    "deleteConfirmMessage": "Template \"{name}\" will be hidden. You can restore it later.",
+    "tabs": {
+      "general": "General",
+      "materials": "Materials",
+      "steps": "Steps",
+      "estimate": "Estimate"
+    },
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "estimatedDurationDays": "Duration (days)",
+      "suggestedProfitMargin": "Suggested margin",
+      "isActive": "Active",
+      "createdAt": "Created at"
+    },
+    "status": { "active": "Active", "inactive": "Inactive" },
+    "filter": { "all": "All", "active": "Active", "inactive": "Inactive" },
+    "items": {
+      "title": "Materials",
+      "addItem": "Add item",
+      "empty": "No materials in this template yet.",
+      "deleteConfirmTitle": "Remove this item?",
+      "deleteConfirmMessage": "This item will be removed from the template.",
+      "fields": {
+        "material": "Material",
+        "unit": "Unit",
+        "quantityFormula": "Formula",
+        "estimatedQuantity": "Quantity",
+        "estimatedPrice": "Price",
+        "notes": "Notes"
+      }
+    },
+    "steps": {
+      "title": "Construction steps",
+      "addStep": "Add step",
+      "empty": "No construction steps in this template yet.",
+      "totalPercentage": "Total %",
+      "totalDays": "Total days",
+      "deleteConfirmTitle": "Remove this step?",
+      "deleteConfirmMessage": "This step will be removed from the template.",
+      "fields": {
+        "sortOrder": "Order",
+        "name": "Step name",
+        "percentage": "%",
+        "estimatedDays": "Days"
+      }
+    },
+    "estimate": {
+      "title": "Estimate",
+      "materialsBreakdown": "Materials breakdown",
+      "stepsSummary": "Steps summary",
+      "fields": {
+        "materialCost": "Material cost",
+        "profitMargin": "Profit margin",
+        "profitAmount": "Profit amount",
+        "sellingPrice": "Selling price",
+        "durationDays": "Duration (days)",
+        "stepsPercentage": "Steps total %",
+        "itemCount": "Items",
+        "stepCount": "Steps"
+      }
+    },
+    "errors": {
+      "percentage": "Must be between 0 and 100",
+      "positiveInt": "Must be a positive integer"
+    }
+  },
+  "contracts": {
+    "new": "New contract",
+    "edit": "Contract",
+    "searchPlaceholder": "Search by contract number or customer name",
+    "saveFirstHint": "Save the contract first to access items, estimate, and project tabs.",
+    "deleteConfirmTitle": "Delete this contract?",
+    "deleteConfirmMessage": "Contract {number} will be hidden. You can restore it later.",
+    "docx": {
+      "title": "Generate contract document",
+      "template": "Template",
+      "generate": "Generate DOCX",
+      "generated": "DOCX generated.",
+      "noTemplates": "No active contract templates yet. Upload one from Settings → Contract printing.",
+      "openSettings": "Open Settings",
+      "history": "Recent generations",
+      "noHistory": "No documents generated for this contract yet.",
+      "generatedAt": "Generated at",
+      "templateColumn": "Template",
+      "size": "Size"
+    },
+    "tabs": {
+      "general": "General",
+      "items": "Items",
+      "estimate": "Estimate",
+      "project": "Project"
+    },
+    "fields": {
+      "contractNumber": "Contract #",
+      "customer": "Customer",
+      "template": "Template",
+      "buildingArea": "Building area",
+      "floors": "Floors",
+      "meterPrice": "Meter price",
+      "totalPrice": "Total price",
+      "expectedProfitMargin": "Expected margin",
+      "signedAt": "Signed at",
+      "status": "Status",
+      "notes": "Notes",
+      "createdAt": "Created at"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "APPROVED": "Approved",
+      "CANCELLED": "Cancelled"
+    },
+    "filter": { "all": "All" },
+    "locked": {
+      "approved": "This contract is APPROVED. Financial fields are locked. Use the actions above to manage the project or cancel.",
+      "cancelled": "This contract is CANCELLED and is read-only."
+    },
+    "actions": {
+      "generateEstimate": "Generate estimate",
+      "approve": "Approve",
+      "cancel": "Cancel contract",
+      "createProject": "Create project",
+      "viewProject": "View project"
+    },
+    "tooltips": {
+      "cannotCancelWithProject": "Cannot cancel an approved contract that already has a project."
+    },
+    "dialogs": {
+      "regenerateTitle": "Replace existing items?",
+      "regenerateMessage": "Generating the estimate will delete existing contract items and replace them with scaled values from the template.",
+      "approveTitle": "Approve this contract?",
+      "approveMessage": "Approving locks the financial fields. You will still be able to cancel it as long as no project exists.",
+      "cancelTitle": "Cancel this contract?",
+      "cancelMessage": "Cancelled contracts are read-only. This action cannot be undone.",
+      "cancelReason": "Reason (optional)",
+      "createProjectTitle": "Create project from this contract?",
+      "projectName": "Project name",
+      "startDate": "Start date",
+      "deliveryDate": "Delivery date",
+      "projectNotes": "Notes"
+    },
+    "toasts": {
+      "estimateGenerated": "Estimate generated",
+      "approved": "Contract approved",
+      "cancelled": "Contract cancelled",
+      "projectCreated": "Project created"
+    },
+    "summary": {
+      "title": "Summary",
+      "totalPrice": "Total price",
+      "meterPrice": "Meter price",
+      "builtArea": "Built area",
+      "profitMargin": "Profit margin",
+      "items": "Items",
+      "project": "Project"
+    },
+    "items": {
+      "title": "Contract items",
+      "readOnlyHint": "Items are generated from the template — use Estimate tab to regenerate.",
+      "empty": "No items yet.",
+      "emptyHint": "Generate the estimate to populate items from the template.",
+      "noTemplateHint": "This contract has no template linked. Add a template in the General tab.",
+      "cancelledHint": "This contract is cancelled — items are read-only.",
+      "totalEstimated": "Estimated total",
+      "fields": {
+        "material": "Material",
+        "unit": "Unit",
+        "quantity": "Quantity",
+        "estimatedPrice": "Estimated price",
+        "notes": "Notes"
+      }
+    },
+    "estimate": {
+      "title": "Estimate",
+      "empty": "No estimate computed yet",
+      "emptyHint": "Click Generate to compute the estimate from the template.",
+      "lockedApproved": "Estimate cannot be regenerated after approval — financials are locked.",
+      "lockedCancelled": "Estimate is unavailable for cancelled contracts.",
+      "noTemplate": "Add a template in the General tab to generate an estimate.",
+      "priceDiverged": "Suggested meter price ({suggested}) differs from current ({current}).",
+      "fields": {
+        "materialCost": "Material cost",
+        "profitMargin": "Profit margin",
+        "profitAmount": "Profit amount",
+        "suggestedSellingPrice": "Suggested selling price",
+        "suggestedMeterPrice": "Suggested meter price",
+        "currentTotalPrice": "Current total",
+        "scaleFactor": "Scale factor",
+        "itemsReplaced": "Items written"
+      }
+    },
+    "project": {
+      "title": "Linked project",
+      "draftHint": "Approve the contract to enable project creation.",
+      "approvedHint": "Click 'Create project' in the toolbar above.",
+      "cancelledHint": "Cancelled contracts cannot have projects.",
+      "fields": {
+        "name": "Name",
+        "status": "Status",
+        "startDate": "Start date",
+        "deliveryDate": "Delivery date",
+        "progress": "Progress"
+      }
+    },
+    "errors": {
+      "positive": "Must be greater than 0",
+      "nonNegative": "Must be 0 or greater",
+      "percentage": "Must be between 0 and 100",
+      "noTemplate": "Add a template before generating the estimate",
+      "failedToLoadCustomers": "Couldn't load customers.",
+      "failedToLoadTemplates": "Couldn't load templates."
+    }
+  },
+  "projects": {
+    "new": "New project",
+    "edit": "Project",
+    "searchPlaceholder": "Search by project name or contract number",
+    "saveFirstHint": "Save the project first to access costs, payments, and progress tabs.",
+    "deleteConfirmTitle": "Delete this project?",
+    "deleteConfirmMessage": "Project \"{name}\" will be hidden. Deletion is rejected if costs or payments exist.",
+    "delayedBy": "This project is {days} day(s) delayed.",
+    "tabs": {
+      "general": "General",
+      "costs": "Costs",
+      "payments": "Payments",
+      "progress": "Progress"
+    },
+    "fields": {
+      "name": "Name",
+      "customer": "Customer",
+      "contract": "Contract",
+      "status": "Status",
+      "progress": "Progress",
+      "startDate": "Start date",
+      "deliveryDate": "Delivery date",
+      "notes": "Notes",
+      "createdAt": "Created at"
+    },
+    "status": {
+      "PLANNED": "Planned",
+      "IN_PROGRESS": "In progress",
+      "PAUSED": "Paused",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    },
+    "filter": {
+      "delayedOnly": "Delayed only"
+    },
+    "locked": {
+      "completed": "This project is completed and read-only.",
+      "cancelled": "This project is cancelled and read-only."
+    },
+    "actions": {
+      "start": "Start",
+      "pause": "Pause",
+      "resume": "Resume",
+      "complete": "Complete",
+      "cancel": "Cancel project"
+    },
+    "dialogs": {
+      "startTitle": "Start this project?",
+      "startMessage": "Moves the project from PLANNED to IN_PROGRESS. The start date will be set automatically if empty.",
+      "pauseTitle": "Pause this project?",
+      "pauseMessage": "Work can be resumed later. The project will keep its current progress.",
+      "resumeTitle": "Resume this project?",
+      "resumeMessage": "Moves the project back to IN_PROGRESS.",
+      "completeTitle": "Mark this project as complete?",
+      "completeMessage": "Progress will be set to 100%. The project becomes read-only.",
+      "cancelTitle": "Cancel this project?",
+      "cancelMessage": "Cancelled projects are read-only. This action cannot be undone.",
+      "cancelReason": "Reason (optional)"
+    },
+    "toasts": {
+      "startd": "Project started",
+      "paused": "Project paused",
+      "resumed": "Project resumed",
+      "completed": "Project completed",
+      "cancelled": "Project cancelled"
+    },
+    "progress": {
+      "title": "Progress",
+      "current": "Current progress",
+      "totalDays": "Total days",
+      "elapsedDays": "Elapsed",
+      "remainingDays": "Remaining"
+    },
+    "summary": {
+      "title": "Financial summary",
+      "contractValue": "Contract value",
+      "totalCosts": "Total costs",
+      "totalPaid": "Total paid",
+      "remainingBalance": "Remaining balance",
+      "profitEstimate": "Profit (estimate)",
+      "cashPosition": "Cash position"
+    },
+    "costs": {
+      "title": "Project costs",
+      "latest": "Latest costs",
+      "empty": "No costs recorded yet.",
+      "addCost": "Add cost",
+      "addCostTitle": "Add a cost to this project",
+      "costCreated": "Cost added.",
+      "summary": {
+        "totalCosts": "Total costs",
+        "materials": "Materials",
+        "labor": "Labor",
+        "machinery": "Machinery",
+        "transport": "Transport",
+        "misc": "Misc",
+        "count": "Entries"
+      },
+      "fields": {
+        "date": "Date",
+        "category": "Category",
+        "description": "Description",
+        "quantity": "Qty",
+        "unitPrice": "Unit price",
+        "totalAmount": "Total"
+      }
+    },
+    "payments": {
+      "title": "Payments",
+      "latest": "Latest payments",
+      "empty": "No payments recorded yet.",
+      "addPayment": "Add payment",
+      "addPaymentTitle": "Add a payment to this project",
+      "paymentCreated": "Payment added.",
+      "summary": {
+        "contractTotal": "Contract total",
+        "totalPaid": "Total paid",
+        "remaining": "Remaining",
+        "collection": "Collection %",
+        "pending": "Pending",
+        "late": "Late",
+        "paid": "Paid",
+        "cancelled": "Cancelled"
+      },
+      "fields": {
+        "dueDate": "Due date",
+        "amount": "Amount",
+        "status": "Status",
+        "paymentDate": "Paid on",
+        "method": "Method",
+        "reference": "Reference"
+      }
+    },
+    "errors": {
+      "percentage": "Must be between 0 and 100"
+    }
+  },
+  "dashboard": {
+    "refresh": "Refresh",
+    "viewAll": "View all",
+    "asOf": "As of",
+    "metrics": {
+      "activeProjects": "Active projects",
+      "delayedProjects": "Delayed projects",
+      "overduePayments": "Overdue payments",
+      "pendingCollections": "Pending collections",
+      "monthlyRevenue": "Revenue (this month)",
+      "monthlyCosts": "Costs (this month)",
+      "monthlyProfit": "Profit (this month)",
+      "cashCollected": "Total cash collected"
+    },
+    "delayed": {
+      "title": "Delayed projects",
+      "empty": "No delayed projects — on track.",
+      "daysLate": "{days}d late",
+      "invoiceCount": "{n} invoices"
+    },
+    "overdue": {
+      "title": "Overdue payments",
+      "empty": "No overdue payments — collections current.",
+      "invoiceCount": "{n} invoices"
+    },
+    "recent": {
+      "projects": "Recent projects",
+      "payments": "Recent payments",
+      "empty": "Nothing yet."
+    },
+    "quickActions": {
+      "title": "Quick actions",
+      "newContract": "New contract",
+      "newProject": "New project",
+      "newCustomer": "New customer",
+      "newMaterial": "New material",
+      "newTemplate": "New template"
+    }
+  },
+  "tunnel": {
+    "page": {
+      "title": "Remote access",
+      "subtitle": "Let people use this system from outside your office, without router configuration."
+    },
+    "status": {
+      "label": "Status",
+      "on": "On",
+      "off": "Off",
+      "starting": "Starting",
+      "warning": "Warning",
+      "error": "Error",
+      "refreshing": "Refreshing",
+      "description": {
+        "on": "Remote access is active. The link below opens this app on any device.",
+        "off": "Remote access is off. Enable it to share the link below.",
+        "starting": "Remote access is on, but the local tunnel process isn't reporting yet. Give it a few seconds.",
+        "warning": "Remote access is partially working. See details below.",
+        "error": "Something went wrong with remote access. See the details and suggestion below."
+      }
+    },
+    "actions": {
+      "title": "Controls",
+      "subtitle": "Turn remote access on when you want to share the link, off when you're done.",
+      "enable": "Enable",
+      "disable": "Disable",
+      "refresh": "Refresh",
+      "manage": "Manage",
+      "copyUrl": "Copy link",
+      "openUrl": "Open",
+      "alreadyEnabled": "Remote access is already on.",
+      "actingHint": "An action is in progress…"
+    },
+    "confirm": {
+      "disableTitle": "Turn off remote access?",
+      "disableMessage": "The public link will stop working immediately. You can turn it back on at any time."
+    },
+    "toast": {
+      "enabled": "Remote access is on.",
+      "disabled": "Remote access is off.",
+      "disabledLocalOnly": "Stopped locally, but the management server didn't confirm. Try again later if the link is still reachable.",
+      "copied": "Link copied to clipboard.",
+      "copyFailed": "Could not copy. Select the link manually."
+    },
+    "diagnostics": {
+      "title": "Details",
+      "subdomain": "Subdomain",
+      "tunnelId": "Tunnel ID",
+      "machineId": "Machine ID",
+      "cloudflaredAvailable": "cloudflared installed",
+      "configExists": "Local config present",
+      "running": "Process running",
+      "lastUpdated": "Last updated",
+      "lastError": "Last error"
+    },
+    "errors": {
+      "binaryMissing": {
+        "title": "cloudflared is missing",
+        "body": "The program that creates the secure link isn't installed in the expected place. Remote access can't start without it.",
+        "hint": "Reinstall Contractor+, or contact support and mention \"cloudflared missing\"."
+      },
+      "managementApi": {
+        "title": "Couldn't reach the remote-access server",
+        "body": "Your machine couldn't contact the service that provisions the public link. This usually means a network or service outage.",
+        "hint": "Check your internet connection and try Enable again in a moment."
+      },
+      "configMissing": {
+        "title": "Local configuration is missing",
+        "body": "Remote access is marked on, but the credentials file on this machine is gone. The link cannot start without it.",
+        "hint": "Click Disable, then Enable again to re-provision the tunnel."
+      },
+      "runtimeStopped": {
+        "title": "The tunnel process stopped",
+        "body": "Remote access is enabled but the local tunnel process isn't running. The link won't work until it restarts.",
+        "hint": "Click Disable, then Enable again. If it keeps happening, contact support with the error below."
+      },
+      "generic": {
+        "title": "Remote access reported an error",
+        "body": "The last operation didn't complete successfully. See the full message in Details below.",
+        "hint": "Try Refresh first. If the error persists, Disable then Enable again."
+      }
+    }
+  },
+  "errors": {
+    "notFound": "Page not found",
+    "forbidden": "You don't have permission to access this page",
+    "network": "Could not reach the server"
+  },
+  "costs": {
+    "new": "New cost",
+    "edit": "Edit cost",
+    "searchPlaceholder": "Search by description",
+    "deleteConfirmTitle": "Delete this cost?",
+    "deleteConfirmMessage": "Cost \"{description}\" will be hidden.",
+    "fields": {
+      "project": "Project",
+      "category": "Category",
+      "material": "Material",
+      "description": "Description",
+      "quantity": "Qty",
+      "unit": "Unit",
+      "unitPrice": "Unit price",
+      "totalAmount": "Total",
+      "date": "Date",
+      "notes": "Notes"
+    },
+    "category": {
+      "MATERIAL": "Material",
+      "LABOR": "Labor",
+      "MACHINERY": "Machinery",
+      "TRANSPORT": "Transport",
+      "MISC": "Misc"
+    },
+    "filter": {
+      "project": "Project",
+      "allProjects": "All projects",
+      "allCategories": "All categories",
+      "dateFrom": "From",
+      "dateTo": "To"
+    },
+    "form": {
+      "noMaterial": "No material",
+      "totalHint": "Leave empty to compute from quantity × unit price.",
+      "derivedTotalHint": "Will compute to {value} if left empty."
+    }
+  },
+  "payments": {
+    "new": "New payment",
+    "edit": "Edit payment",
+    "searchPlaceholder": "Search by reference or notes",
+    "deleteConfirmTitle": "Delete this payment?",
+    "deleteConfirmMessage": "The payment will be hidden. Only pending or late payments can be deleted.",
+    "fields": {
+      "project": "Project",
+      "amount": "Amount",
+      "dueDate": "Due date",
+      "paymentDate": "Paid on",
+      "status": "Status",
+      "method": "Method",
+      "reference": "Reference",
+      "notes": "Notes"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "PAID": "Paid",
+      "LATE": "Late",
+      "CANCELLED": "Cancelled"
+    },
+    "method": {
+      "unset": "Unspecified",
+      "CASH": "Cash",
+      "BANK_TRANSFER": "Bank transfer",
+      "CHECK": "Check",
+      "OTHER": "Other"
+    },
+    "filter": {
+      "project": "Project",
+      "allProjects": "All projects",
+      "allStatuses": "All statuses",
+      "dueFrom": "Due from",
+      "dueTo": "Due to",
+      "lateOnly": "Late only"
+    },
+    "markPaid": {
+      "title": "Mark as paid",
+      "confirm": "Mark paid"
+    },
+    "cancel": {
+      "title": "Cancel this payment?",
+      "message": "Cancelled payments cannot be edited or marked paid later.",
+      "confirm": "Cancel payment"
+    },
+    "toasts": {
+      "marked": "Payment marked as paid.",
+      "cancelled": "Payment cancelled."
+    },
+    "errors": {
+      "positiveAmount": "Amount must be greater than 0"
+    }
+  },
+  "reports": {
+    "subtitle": "Read-only views across projects, cash flow, and overdue receivables.",
+    "cards": {
+      "profitability": {
+        "title": "Project profitability",
+        "desc": "Contract value vs. costs and collected cash, per project."
+      },
+      "cashFlow": {
+        "title": "Cash flow",
+        "desc": "Revenue, collections, costs, and net cash flow for a date range."
+      },
+      "overdue": {
+        "title": "Overdue payments",
+        "desc": "Outstanding receivables grouped by project, with days overdue."
+      },
+      "delayed": {
+        "title": "Delayed projects",
+        "desc": "Projects past their delivery date that are still active."
+      }
+    },
+    "profitability": {
+      "title": "Project profitability",
+      "empty": "No projects to report.",
+      "columns": {
+        "project": "Project",
+        "customer": "Customer",
+        "status": "Status",
+        "contract": "Contract",
+        "costs": "Costs",
+        "paid": "Paid",
+        "profit": "Profit"
+      },
+      "filter": { "all": "All statuses" }
+    },
+    "cashFlow": {
+      "title": "Cash flow",
+      "dateFrom": "From",
+      "dateTo": "To",
+      "period": "Period",
+      "totalRevenue": "Total revenue",
+      "totalCollected": "Total collected",
+      "outstanding": "Outstanding",
+      "totalCosts": "Total costs",
+      "netCashFlow": "Net cash flow"
+    },
+    "overdue": {
+      "title": "Overdue payments",
+      "empty": "No overdue payments — collections current.",
+      "invoiceCount": "{n} invoices",
+      "oldest": "oldest:",
+      "daysLate": "Days late"
+    },
+    "delayed": {
+      "title": "Delayed projects",
+      "empty": "No delayed projects — all on track.",
+      "columns": {
+        "project": "Project",
+        "customer": "Customer",
+        "status": "Status",
+        "deliveryDate": "Delivery date",
+        "daysDelayed": "Days late",
+        "progress": "Progress"
+      }
+    }
+  },
+  "audit": {
+    "empty": "No audit entries match these filters.",
+    "fields": {
+      "createdAt": "When",
+      "actor": "User",
+      "action": "Action",
+      "entity": "Entity",
+      "entityId": "Entity ID",
+      "ip": "IP",
+      "oldValues": "Before",
+      "newValues": "After"
+    },
+    "filter": {
+      "entity": "Entity",
+      "userId": "User ID",
+      "dateFrom": "From",
+      "dateTo": "To",
+      "allActions": "All actions"
+    },
+    "entity": {
+      "title": "Entity history",
+      "empty": "No history recorded for this entity yet."
+    },
+    "user": {
+      "title": "User activity",
+      "empty": "No activity recorded for this user."
+    }
+  },
+  "settings": {
+    "placeholder": "More settings are coming. For now, you can manage remote access and review the audit log.",
+    "user": {
+      "title": "Signed in as",
+      "fullName": "Name",
+      "email": "Email",
+      "role": "Role",
+      "lastLogin": "Last login"
+    },
+    "env": {
+      "title": "Environment",
+      "app": "Application",
+      "version": "Version",
+      "api": "API base URL",
+      "mode": "Build mode",
+      "locale": "Locale",
+      "direction": "Direction"
+    },
+    "links": {
+      "title": "Quick links",
+      "tunnel": "Remote access",
+      "tunnelDesc": "Enable and monitor the public link for this machine.",
+      "audit": "Audit log",
+      "auditDesc": "Review every change made through the app."
+    },
+    "tabs": {
+      "general": "General",
+      "company": "Company",
+      "currency": "Currency",
+      "contractTemplates": "Contract printing",
+      "links": "Quick links"
+    },
+    "subtitle": "Manage organisation-wide configuration",
+    "unsaved": "You have unsaved changes",
+    "saveChanges": "Save changes",
+    "discard": "Discard",
+    "saved": "Settings saved",
+    "general": {
+      "title": "General settings",
+      "description": "Basic application preferences.",
+      "appName": "Application name",
+      "fiscalYearStartMonth": "Fiscal year start month",
+      "defaultLocale": "Default language",
+      "dateFormat": "Date format",
+      "months": {
+        "1": "January", "2": "February", "3": "March", "4": "April",
+        "5": "May", "6": "June", "7": "July", "8": "August",
+        "9": "September", "10": "October", "11": "November", "12": "December"
+      }
+    },
+    "company": {
+      "title": "Company information",
+      "description": "Displayed on contracts, reports and invoices.",
+      "companyName": "Company name",
+      "legalName": "Legal name",
+      "email": "Email",
+      "phone": "Phone",
+      "address": "Address",
+      "taxNumber": "Tax number",
+      "registrationNumber": "Registration number",
+      "website": "Website",
+      "footerText": "Document footer text",
+      "notes": "Internal notes",
+      "logoPhase2": "Logo and stamp uploads will be available in the next release.",
+      "assets": {
+        "logoTitle": "Company logo",
+        "logoHint": "PNG, JPG, or WebP. Up to 5 MB. A square image works best.",
+        "stampTitle": "Company stamp / seal",
+        "stampHint": "Transparent PNG recommended. Up to 5 MB.",
+        "dropOrClick": "Drop a file or click to upload",
+        "upload": "Upload",
+        "replace": "Replace",
+        "uploaded": "Image uploaded.",
+        "deleteConfirmTitle": "Remove this image?",
+        "deleteConfirmMessage": "The file will be permanently deleted from the server."
+      }
+    },
+    "currency": {
+      "title": "Currencies",
+      "description": "Manage the currencies available in this workspace.",
+      "addNew": "Add currency",
+      "edit": "Edit currency",
+      "code": "Code",
+      "name": "Name",
+      "symbol": "Symbol",
+      "symbolPosition": "Symbol position",
+      "positionBefore": "Before amount (e.g. $100)",
+      "positionAfter": "After amount (e.g. 100 ر.س)",
+      "decimalPrecision": "Decimal places",
+      "thousandSeparator": "Thousand separator",
+      "decimalSeparator": "Decimal separator",
+      "isActive": "Active",
+      "isDefault": "Default",
+      "setDefault": "Set as default",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "preview": "Preview",
+      "previewDescription": "How amounts will be displayed:",
+      "deleteConfirmTitle": "Delete this currency?",
+      "deleteConfirmMessage": "Currency \"{code}\" will be permanently removed.",
+      "defaultBadge": "Default",
+      "inactiveBadge": "Inactive",
+      "empty": "No currencies configured yet.",
+      "errors": {
+        "defaultMustBeActive": "The default currency must remain active.",
+        "cannotDeleteDefault": "You cannot delete the default currency.",
+        "codeDuplicate": "A currency with this code already exists."
+      }
+    },
+    "phase2Note": "Logo upload, stamp upload, DOCX templates and PDF export will follow in Phase 2."
+  },
+  "documentTemplates": {
+    "title": "Contract templates",
+    "description": "Upload DOCX templates with {'{placeholders}'} the system will fill in when you generate a contract.",
+    "upload": "Upload template",
+    "uploadTitle": "Upload a new template",
+    "save": "Save template",
+    "empty": "No contract templates uploaded yet.",
+    "dropOrClick": "Drop a .docx file here or click to browse",
+    "acceptHint": "DOCX only, up to 5 MB.",
+    "setDefault": "Set as default",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "defaultBadge": "Default",
+    "inactiveBadge": "Inactive",
+    "deleteConfirmTitle": "Delete this template?",
+    "deleteConfirmMessage": "Template \"{name}\" will be removed.",
+    "placeholdersFound": "{count} placeholders",
+    "fields": {
+      "name": "Display name",
+      "slug": "Slug",
+      "slugHint": "Lowercase letters, numbers, and dashes only.",
+      "description": "Description"
+    },
+    "toast": {
+      "uploaded": "Template uploaded.",
+      "defaultSet": "Default template updated."
+    },
+    "errors": {
+      "cannotDeleteDefault": "Set another template as default before deleting this one."
+    },
+    "placeholders": {
+      "eyebrow": "Reference",
+      "title": "Supported placeholders",
+      "description": "Click any token to copy it. Drop it into your .docx exactly as shown.",
+      "copyHint": "Copy to clipboard",
+      "copied": "Copied to clipboard.",
+      "groups": {
+        "company": "Company",
+        "customer": "Customer",
+        "project": "Project",
+        "contract": "Contract",
+        "currency": "Currency"
+      }
+    }
+  }
+}

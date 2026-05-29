@@ -1,0 +1,275 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------- design tokens ---------- */
+:root {
+  /* Surfaces — kept aligned with Vuetify theme (primary #1E5F8C) but pulled
+     into CSS so non-Vuetify chrome (sidebar, panels) can stay coherent. */
+  --cp-bg: #f6f8fb;
+  --cp-bg-soft: #eef2f7;
+  --cp-surface: #ffffff;
+  --cp-surface-2: #fafbfd;
+  --cp-border: #e3e8ef;
+  --cp-border-strong: #cbd5e1;
+  --cp-text: #0f172a;
+  --cp-text-muted: #64748b;
+  --cp-text-subtle: #94a3b8;
+  --cp-primary: #1e5f8c;
+  --cp-primary-soft: #eaf2f9;
+  --cp-accent: #d97706;
+  --cp-success: #16a34a;
+  --cp-success-soft: #e7f6ec;
+  --cp-warning: #f59e0b;
+  --cp-warning-soft: #fef3e1;
+  --cp-error: #dc2626;
+  --cp-error-soft: #fdecec;
+
+  /* Elevation — soft, layered shadows tuned for light surfaces. */
+  --cp-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --cp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --cp-shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
+  --cp-shadow-lg: 0 12px 24px -8px rgba(15, 23, 42, 0.14), 0 4px 8px -4px rgba(15, 23, 42, 0.08);
+
+  /* Radii. */
+  --cp-radius-sm: 8px;
+  --cp-radius-md: 12px;
+  --cp-radius-lg: 16px;
+  --cp-radius-xl: 20px;
+
+  /* Motion. */
+  --cp-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --cp-dur-fast: 120ms;
+  --cp-dur-base: 180ms;
+  --cp-dur-slow: 260ms;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+}
+
+body {
+  background: var(--cp-bg);
+  color: var(--cp-text);
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------- vuetify surface tuning ----------
+   Vuetify default cards apply a hard mid-grey border with variant="outlined".
+   We soften the border, drop the corner radius into our token scale, and
+   layer in soft shadow on the elevated variant so the dashboard reads as
+   one cohesive surface instead of a grid of boxed crates. */
+.v-card.v-card--variant-outlined {
+  border-color: var(--cp-border);
+  background: var(--cp-surface);
+}
+
+.v-card.v-card--variant-elevated {
+  box-shadow: var(--cp-shadow-sm);
+}
+
+.v-app-bar {
+  box-shadow: none !important;
+}
+
+/* RTL-safe nudge: keep nav drawer border crisp. */
+.v-navigation-drawer {
+  border-color: var(--cp-border) !important;
+}
+
+/* ---------- reusable primitives ---------- */
+.cp-panel {
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-lg);
+  box-shadow: var(--cp-shadow-xs);
+  transition: box-shadow var(--cp-dur-base) var(--cp-ease),
+    border-color var(--cp-dur-base) var(--cp-ease);
+}
+
+.cp-panel-hover:hover {
+  box-shadow: var(--cp-shadow-md);
+  border-color: var(--cp-border-strong);
+}
+
+.cp-row-button {
+  display: block;
+  width: 100%;
+  text-align: start;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--cp-border);
+  transition: background-color var(--cp-dur-fast) var(--cp-ease);
+}
+.cp-row-button:last-child {
+  border-bottom: 0;
+}
+.cp-row-button:hover {
+  background: var(--cp-surface-2);
+}
+.cp-row-button:focus-visible {
+  outline: 2px solid var(--cp-primary);
+  outline-offset: -2px;
+  background: var(--cp-surface-2);
+}
+
+.cp-icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--cp-radius-sm);
+  background: var(--cp-primary-soft);
+  color: var(--cp-primary);
+  flex-shrink: 0;
+}
+.cp-icon-tile--success { background: var(--cp-success-soft); color: var(--cp-success); }
+.cp-icon-tile--warning { background: var(--cp-warning-soft); color: var(--cp-warning); }
+.cp-icon-tile--error   { background: var(--cp-error-soft);   color: var(--cp-error); }
+.cp-icon-tile--neutral { background: var(--cp-bg-soft);      color: var(--cp-text-muted); }
+
+.cp-section-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--cp-text);
+}
+
+.cp-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cp-text-muted);
+}
+
+.cp-metric-value {
+  font-size: 1.625rem;
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--cp-text);
+}
+
+/* Subtle slide-fade for content swaps (loading→loaded). */
+.cp-fade-enter-active,
+.cp-fade-leave-active {
+  transition: opacity var(--cp-dur-base) var(--cp-ease),
+    transform var(--cp-dur-base) var(--cp-ease);
+}
+.cp-fade-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.cp-fade-leave-to {
+  opacity: 0;
+}
+
+/* Status orb used by tunnel / health indicators. */
+.cp-orb {
+  position: relative;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--cp-text-subtle);
+}
+.cp-orb--success { background: var(--cp-success); }
+.cp-orb--warning { background: var(--cp-warning); }
+.cp-orb--error   { background: var(--cp-error); }
+.cp-orb--pulse::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  background: inherit;
+  opacity: 0.35;
+  animation: cp-pulse 1.6s var(--cp-ease) infinite;
+}
+@keyframes cp-pulse {
+  0%   { transform: scale(0.6); opacity: 0.5; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* Sidebar item polish — Vuetify's v-list-item active uses primary-ish but
+   leaves the inactive items flat. Add a soft hover ring + an accent rail on
+   the active item. Scoped to .cp-nav so we don't touch other v-list usages. */
+.cp-nav .v-list-item {
+  margin: 2px 8px;
+  border-radius: var(--cp-radius-sm);
+  min-height: 40px;
+  transition: background-color var(--cp-dur-fast) var(--cp-ease),
+    color var(--cp-dur-fast) var(--cp-ease);
+}
+.cp-nav .v-list-item--active {
+  background: var(--cp-primary-soft);
+  color: var(--cp-primary);
+  font-weight: 600;
+}
+.cp-nav .v-list-item--active .v-list-item__prepend > .v-icon {
+  color: var(--cp-primary);
+  opacity: 1;
+}
+.cp-nav .v-list-item:hover:not(.v-list-item--active) {
+  background: var(--cp-surface-2);
+}
+
+.cp-nav-group-label {
+  padding: 14px 20px 6px;
+  color: var(--cp-text-subtle);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* When sidebar is rail-collapsed, hide group labels (they don't fit). */
+.v-navigation-drawer--rail .cp-nav-group-label {
+  display: none;
+}
+
+/* Brand block at the top of the drawer. */
+.cp-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--cp-text);
+}
+.cp-brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--cp-primary) 0%, #2a7ab5 100%);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  box-shadow: 0 4px 10px -3px rgba(30, 95, 140, 0.45);
+}
+.v-navigation-drawer--rail .cp-brand-text { display: none; }
+
+/* Top bar refinement — keep Vuetify structure, just lift the visual layer. */
+.cp-topbar {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: saturate(180%) blur(8px);
+  -webkit-backdrop-filter: saturate(180%) blur(8px);
+  border-bottom: 1px solid var(--cp-border) !important;
+}
+
+/* Skeleton shimmer — Vuetify's default sometimes shows a hard grey. */
+.v-skeleton-loader__text {
+  border-radius: 6px;
+}
