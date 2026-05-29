@@ -23,7 +23,9 @@ export interface DashboardSummary {
 
 export interface RecentProject extends Project {
   contract:
-    | (Pick<Contract, 'id' | 'contractNumber'> & { customer: Pick<Customer, 'id' | 'name'> })
+    | (Pick<Contract, 'id' | 'contractNumber' | 'totalPrice'> & {
+        customer: Pick<Customer, 'id' | 'name'>;
+      })
     | null;
 }
 

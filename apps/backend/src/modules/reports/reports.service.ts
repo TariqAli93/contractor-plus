@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
-import { ReportsRepository } from './reports.repository.js';
+import { ProjectWithContractSummary, ReportsRepository } from './reports.repository.js';
 import { NotFoundError } from '../../shared/errors/not-found.error.js';
 import { buildPaginated, toSkipTake } from '../../shared/utils/pagination.js';
 import type { Paginated } from '../../shared/types/pagination.js';
@@ -104,7 +104,7 @@ export class ReportsService {
       this.repo.sumPaidByProject(projectIds),
     ]);
 
-    const items = projects.map((p) =>
+    const items = projects.map((p: ProjectWithContractSummary) =>
       this.composeProfitability(p, costMap.get(p.id) ?? 0, paymentMap.get(p.id) ?? 0),
     );
     return buildPaginated(items, total, query);
@@ -148,9 +148,7 @@ export class ReportsService {
 
   // ---------- Overdue payments ----------
 
-  async getOverduePayments(
-    query: OverduePaymentsQuery,
-  ): Promise<OverduePaymentsByProject[]> {
+  async getOverduePayments(query: OverduePaymentsQuery): Promise<OverduePaymentsByProject[]> {
     const now = new Date();
     const payments = await this.repo.findOverduePayments(now, {
       customerId: query.customerId,
@@ -195,9 +193,7 @@ export class ReportsService {
 
   // ---------- Delayed projects ----------
 
-  async getDelayedProjects(
-    query: DelayedProjectsQuery,
-  ): Promise<DelayedProjectRow[]> {
+  async getDelayedProjects(query: DelayedProjectsQuery): Promise<DelayedProjectRow[]> {
     const now = new Date();
     const projects = await this.repo.findDelayedProjects(now, {
       customerId: query.customerId,
@@ -249,8 +245,7 @@ export class ReportsService {
       contractValue,
       totalCosts: round2(totalCosts),
       totalPaid: round2(totalPaid),
-      remainingBalance:
-        contractValue !== null ? round2(contractValue - totalPaid) : null,
+      remainingBalance: contractValue !== null ? round2(contractValue - totalPaid) : null,
       profit: contractValue !== null ? round2(contractValue - totalCosts) : null,
       cashPosition: round2(totalPaid - totalCosts),
       progressPercentage: Number(project.progressPercentage),

@@ -32,9 +32,7 @@ export interface DelayedFilter {
   customerId?: string;
 }
 
-export type ProjectWithContractSummary = Awaited<
-  ReturnType<PrismaClient['project']['findFirst']>
-> &
+export type ProjectWithContractSummary = Awaited<ReturnType<PrismaClient['project']['findFirst']>> &
   RecentProject;
 
 type PaymentWithProject = Payment & {
@@ -45,6 +43,7 @@ type PaymentWithProject = Payment & {
       id: string;
       contractNumber: string;
       customer: { id: string; name: string };
+      totalPrice: Prisma.Decimal;
     } | null;
   };
 };
@@ -104,9 +103,7 @@ export class ReportsRepository {
       .aggregate({
         where: {
           deletedAt: null,
-          ...(from || to
-            ? { date: { ...(from && { gte: from }), ...(to && { lte: to }) } }
-            : {}),
+          ...(from || to ? { date: { ...(from && { gte: from }), ...(to && { lte: to }) } } : {}),
         },
         _sum: { totalAmount: true },
       })
@@ -152,7 +149,16 @@ export class ReportsRepository {
       where: { deletedAt: null },
       orderBy: { createdAt: 'desc' },
       take,
-      include: { contract: { select: { id: true, contractNumber: true, customer: { select: { id: true, name: true } } } } },
+      include: {
+        contract: {
+          select: {
+            id: true,
+            contractNumber: true,
+            customer: { select: { id: true, name: true } },
+            totalPrice: true,
+          },
+        },
+      },
     });
   }
 
@@ -176,7 +182,16 @@ export class ReportsRepository {
     return this.prisma.project.findMany({
       where: this.buildProjectProfitabilityWhere(filter),
       orderBy: { [sortBy]: sortDir },
-      include: { contract: { select: { id: true, contractNumber: true, totalPrice: true, customer: { select: { id: true, name: true } } } } } as Prisma.ProjectInclude,
+      include: {
+        contract: {
+          select: {
+            id: true,
+            contractNumber: true,
+            totalPrice: true,
+            customer: { select: { id: true, name: true } },
+          },
+        },
+      } as Prisma.ProjectInclude,
       skip,
       take,
     }) as unknown as Promise<RecentProject[]>;
@@ -212,10 +227,7 @@ export class ReportsRepository {
         where: { projectId: { in: projectIds }, deletedAt: null },
         _sum: { totalAmount: true },
       })
-      .then(
-        (rows) =>
-          new Map(rows.map((r) => [r.projectId, Number(r._sum.totalAmount ?? 0)])),
-      );
+      .then((rows) => new Map(rows.map((r) => [r.projectId, Number(r._sum.totalAmount ?? 0)])));
   }
 
   sumPaidByProject(projectIds: string[]): Promise<Map<string, number>> {
@@ -230,10 +242,7 @@ export class ReportsRepository {
         },
         _sum: { amount: true },
       })
-      .then(
-        (rows) =>
-          new Map(rows.map((r) => [r.projectId, Number(r._sum.amount ?? 0)])),
-      );
+      .then((rows) => new Map(rows.map((r) => [r.projectId, Number(r._sum.amount ?? 0)])));
   }
 
   // ---------- Overdue payments ----------
@@ -246,9 +255,7 @@ export class ReportsRepository {
           { status: PaymentStatus.PENDING, dueDate: { lt: now } },
           { status: PaymentStatus.LATE },
         ],
-        ...(filter.customerId
-          ? { project: { contract: { customerId: filter.customerId } } }
-          : {}),
+        ...(filter.customerId ? { project: { contract: { customerId: filter.customerId } } } : {}),
       },
       orderBy: { dueDate: 'asc' },
       include: {
@@ -271,12 +278,19 @@ export class ReportsRepository {
         deletedAt: null,
         deliveryDate: { lt: now },
         status: { notIn: TERMINAL_PROJECT_STATUSES },
-        ...(filter.customerId
-          ? { contract: { customerId: filter.customerId } }
-          : {}),
+        ...(filter.customerId ? { contract: { customerId: filter.customerId } } : {}),
       },
       orderBy: { deliveryDate: 'asc' },
-      include: { contract: { select: { id: true, contractNumber: true, customer: { select: { id: true, name: true } } } } },
+      include: {
+        contract: {
+          select: {
+            id: true,
+            contractNumber: true,
+            totalPrice: true,
+            customer: { select: { id: true, name: true } },
+          },
+        },
+      },
     });
   }
 
