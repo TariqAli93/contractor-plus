@@ -1,24 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUiStore } from '@/stores/ui.store';
-import { setI18nLocale } from '@/plugins/i18n';
-import { setVuetifyLocale } from '@/plugins/vuetify';
+import { useThemeStore } from '@/stores/theme.store';
 import TunnelStatusChip from './TunnelStatusChip.vue';
 
 const auth = useAuthStore();
 const ui = useUiStore();
+const theme = useThemeStore();
 const router = useRouter();
-const { t } = useI18n();
-
-function toggleLocale() {
-  const next = ui.locale === 'ar' ? 'en' : 'ar';
-  ui.setLocale(next);
-  setI18nLocale(next);
-  setVuetifyLocale(next);
-}
 
 async function handleLogout() {
   await auth.logout();
@@ -26,7 +18,6 @@ async function handleLogout() {
 }
 
 const userInitial = computed(() => (auth.user?.fullName ?? '?').charAt(0).toUpperCase());
-const otherLocaleLabel = computed(() => (ui.locale === 'ar' ? 'EN' : 'AR'));
 </script>
 
 <template>
@@ -46,14 +37,13 @@ const otherLocaleLabel = computed(() => (ui.locale === 'ar' ? 'EN' : 'AR'));
     <TunnelStatusChip class="me-2" />
 
     <v-btn
+      icon
       variant="text"
-      size="small"
-      class="me-1 font-medium"
-      :aria-label="t('common.language')"
-      @click="toggleLocale"
+      class="me-1"
+      :aria-label="t('appearance.toggle')"
+      @click="theme.toggleTheme"
     >
-      <v-icon start size="18">mdi-translate</v-icon>
-      {{ otherLocaleLabel }}
+      <v-icon>{{ theme.isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
     </v-btn>
 
     <v-menu offset="10" location="bottom end">

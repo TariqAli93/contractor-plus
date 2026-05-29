@@ -60,7 +60,9 @@ function formatNumber(
   const abs = Math.abs(n);
   const fixed = abs.toFixed(precision);
   const [intPart, fracPart] = fixed.split('.');
-  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, thousandSep);
+  // toFixed() always yields an integer part; `?? ''` only satisfies the
+  // noUncheckedIndexedAccess type guard and changes no behavior.
+  const grouped = (intPart ?? '').replace(/\B(?=(\d{3})+(?!\d))/g, thousandSep);
   const body = precision > 0 && fracPart ? `${grouped}${decimalSep}${fracPart}` : grouped;
   return negative ? `-${body}` : body;
 }

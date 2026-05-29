@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { reportsApi } from '@/services/api/reports.api';
 import { ApiError } from '@/types/api';
 import { ProjectStatus } from '@/types/enums';
@@ -12,7 +12,6 @@ import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import ProjectStatusBadge from '@/components/features/project/ProjectStatusBadge.vue';
 
 const router = useRouter();
-const { t } = useI18n();
 
 const items = ref<ProjectProfitability[]>([]);
 const total = ref(0);

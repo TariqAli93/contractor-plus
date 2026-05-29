@@ -28,6 +28,13 @@ const ITEM = 'BuildingTemplateItem';
 const STEP = 'BuildingTemplateStep';
 const PERCENTAGE_EPSILON = 0.01;
 
+// Synthesizes the legacy quantityFormula from a per-100m² quantity. Estimates
+// don't parse this — it's stored only to satisfy the NOT-NULL column and to
+// document that the quantity is a per-100m² baseline.
+function quantityPer100Formula(estimatedQuantity: number): string {
+  return `per_100m2:${estimatedQuantity}`;
+}
+
 export class TemplatesService {
   private readonly repo: TemplatesRepository;
   private readonly audit: AuditService;
@@ -132,7 +139,9 @@ export class TemplatesService {
         {
           templateId,
           materialId: data.materialId,
-          quantityFormula: data.quantityFormula,
+          // Estimates scale estimatedQuantity directly; the formula is only a
+          // legacy record, so synthesize one when the caller omits it.
+          quantityFormula: data.quantityFormula ?? quantityPer100Formula(data.estimatedQuantity),
           estimatedQuantity: data.estimatedQuantity,
           estimatedPrice: data.estimatedPrice,
           notes: data.notes,
@@ -164,7 +173,14 @@ export class TemplatesService {
         await this.assertMaterialExists(tx, data.materialId);
       }
 
-      const updated = await this.repo.updateItem(itemId, data, tx);
+      // Keep the legacy formula consistent when the quantity changes and the
+      // caller didn't supply one (the UI never does anymore).
+      const patch =
+        data.estimatedQuantity !== undefined && data.quantityFormula === undefined
+          ? { ...data, quantityFormula: quantityPer100Formula(data.estimatedQuantity) }
+          : data;
+
+      const updated = await this.repo.updateItem(itemId, patch, tx);
       await this.audit.log(
         actor,
         {

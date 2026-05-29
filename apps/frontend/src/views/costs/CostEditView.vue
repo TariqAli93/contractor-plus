@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import CostForm from '@/components/features/cost/CostForm.vue';
 
 const route = useRoute();
-const { t } = useI18n();
 
 const costId = computed(() => {
   const id = route.params.id;

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { reportsApi } from '@/services/api/reports.api';
 import { ApiError } from '@/types/api';
 import type { OverduePaymentsByProject } from '@/types/report';
@@ -8,8 +8,6 @@ import ErrorState from '@/components/shared/ErrorState.vue';
 import EmptyState from '@/components/shared/EmptyState.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
-
-const { t } = useI18n();
 
 const groups = ref<OverduePaymentsByProject[]>([]);
 const loading = ref(false);

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import type { ProjectWithContract } from '@/types/project';
 import type { ProjectCostSummary } from '@/types/cost';
 import type { ProjectPaymentSummary } from '@/types/payment';
@@ -11,8 +11,6 @@ const props = defineProps<{
   costSummary: ProjectCostSummary | null;
   paymentSummary: ProjectPaymentSummary | null;
 }>();
-
-const { t } = useI18n();
 
 const contractValue = computed(() =>
   props.paymentSummary?.contractTotal !== undefined &&

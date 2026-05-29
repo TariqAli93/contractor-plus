@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
-
-const { t } = useI18n();
+import { t } from '@/i18n';
 
 // Hub page — links to the four detail reports. The home dashboard already
 // surfaces the summary cards; this page is a navigable index.

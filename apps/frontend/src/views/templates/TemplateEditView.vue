@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import TemplateGeneralTab from '@/components/features/template/TemplateGeneralTab.vue';
 import TemplateMaterialsTab from '@/components/features/template/TemplateMaterialsTab.vue';
 import TemplateStepsTab from '@/components/features/template/TemplateStepsTab.vue';
 import TemplateEstimateTab from '@/components/features/template/TemplateEstimateTab.vue';
 
 const route = useRoute();
-const { t } = useI18n();
 
 const templateId = computed(() => {
   const id = route.params.id;

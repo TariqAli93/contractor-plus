@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { projectsApi } from '@/services/api/projects.api';
 import { costsApi } from '@/services/api/costs.api';
 import { paymentsApi } from '@/services/api/payments.api';
@@ -20,7 +20,6 @@ import ProjectPaymentsTab from '@/components/features/project/ProjectPaymentsTab
 import ProjectProgressTab from '@/components/features/project/ProjectProgressTab.vue';
 
 const route = useRoute();
-const { t } = useI18n();
 const { handle } = useApiError();
 
 const projectId = computed(() => {

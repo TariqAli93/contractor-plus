@@ -2,10 +2,11 @@ import 'vuetify/styles';
 import '@mdi/font/css/materialdesignicons.css';
 import { createVuetify } from 'vuetify';
 import { aliases, mdi } from 'vuetify/iconsets/mdi';
-import { ar, en } from 'vuetify/locale';
+import { ar } from 'vuetify/locale';
 
-const defaultLocale =
-  (globalThis.localStorage?.getItem('contractor-plus.locale') as 'ar' | 'en' | null) ?? 'ar';
+// Theme names referenced by the theme store.
+export const LIGHT_THEME = 'contractorPlus';
+export const DARK_THEME = 'contractorPlusDark';
 
 export const vuetify = createVuetify({
   icons: { defaultSet: 'mdi', aliases, sets: { mdi } },
@@ -17,9 +18,9 @@ export const vuetify = createVuetify({
     VCard: { rounded: 'lg' },
   },
   theme: {
-    defaultTheme: 'contractorPlus',
+    defaultTheme: LIGHT_THEME,
     themes: {
-      contractorPlus: {
+      [LIGHT_THEME]: {
         dark: false,
         colors: {
           primary: '#1E5F8C',
@@ -33,19 +34,30 @@ export const vuetify = createVuetify({
           surface: '#FFFFFF',
         },
       },
+      // Clean dark theme — slate surfaces (no pure black), lightened brand
+      // colors for readable contrast on dark backgrounds.
+      [DARK_THEME]: {
+        dark: true,
+        colors: {
+          primary: '#4F9BD0',
+          secondary: '#94A3B8',
+          accent: '#F59E0B',
+          success: '#22C55E',
+          warning: '#FBBF24',
+          error: '#F87171',
+          info: '#38BDF8',
+          background: '#0F172A',
+          surface: '#1E293B',
+        },
+      },
     },
   },
   locale: {
-    // Register Vuetify's official locale messages so internal strings like
-    // "$vuetify.input.clear" resolve in Arabic. English stays as the fallback
-    // for any keys an upstream component adds before they reach the AR bundle.
-    locale: defaultLocale,
-    fallback: 'en',
-    messages: { ar, en },
-    rtl: { ar: true, en: false },
+    // Arabic-only app. Register Vuetify's official Arabic locale so internal
+    // strings like "$vuetify.input.clear" render in Arabic, and force RTL.
+    locale: 'ar',
+    fallback: 'ar',
+    messages: { ar },
+    rtl: { ar: true },
   },
 });
-
-export function setVuetifyLocale(locale: 'ar' | 'en') {
-  vuetify.locale.current.value = locale;
-}

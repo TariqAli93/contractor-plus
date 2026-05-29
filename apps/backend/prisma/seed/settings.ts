@@ -1,42 +1,39 @@
 import type { PrismaClient } from '@prisma/client';
 
 // Seed the initial settings rows.
-//   - Saudi Riyal (SAR) as the default currency. RTL-friendly, matches the
-//     app's primary locale.
+//   - Iraqi Dinar (IQD) as the single, default currency. Symbol after the
+//     amount, no decimal places (dinars are not fractioned in practice).
 //   - A blank CompanyProfile singleton (id = "default") — the user fills it
 //     in via the Settings UI.
-// Idempotent: re-running the full seed won't duplicate rows because we use
-// upserts keyed by id / unique code.
+// Idempotent: legacy SAR/USD rows are removed first, then IQD is upserted as
+// the sole default so re-running the seed converges on the Iraqi setup.
 export async function seedSettings(prisma: PrismaClient) {
+  // Drop any previously seeded foreign currencies. Removing the old default
+  // before setting IQD's avoids tripping the "single default" partial index.
+  await prisma.currency.deleteMany({ where: { code: { in: ['SAR', 'USD'] } } });
+
   await prisma.currency.upsert({
-    where: { code: 'SAR' },
-    update: {},
-    create: {
-      code: 'SAR',
-      name: 'Saudi Riyal',
-      symbol: 'ر.س',
+    where: { code: 'IQD' },
+    update: {
+      name: 'Iraqi Dinar',
+      symbol: 'د.ع',
       symbolPosition: 'AFTER',
-      decimalPrecision: 2,
+      decimalPrecision: 0,
       thousandSeparator: ',',
       decimalSeparator: '.',
       isActive: true,
       isDefault: true,
     },
-  });
-
-  await prisma.currency.upsert({
-    where: { code: 'USD' },
-    update: {},
     create: {
-      code: 'USD',
-      name: 'US Dollar',
-      symbol: '$',
-      symbolPosition: 'BEFORE',
-      decimalPrecision: 2,
+      code: 'IQD',
+      name: 'Iraqi Dinar',
+      symbol: 'د.ع',
+      symbolPosition: 'AFTER',
+      decimalPrecision: 0,
       thousandSeparator: ',',
       decimalSeparator: '.',
       isActive: true,
-      isDefault: false,
+      isDefault: true,
     },
   });
 

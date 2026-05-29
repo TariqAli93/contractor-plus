@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useProjectForm } from '@/composables/useProjectForm';
 import { useCan } from '@/composables/useCan';
 import { ProjectStatus, RoleName } from '@/types/enums';
@@ -13,7 +13,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{ saved: [] }>();
 
-const { t } = useI18n();
 const { can } = useCan();
 const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } =
   useProjectForm(props.id);

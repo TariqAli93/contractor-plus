@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { reportsApi } from '@/services/api/reports.api';
 import { ApiError } from '@/types/api';
 import type { CashFlowReport } from '@/types/report';
@@ -8,8 +8,6 @@ import ErrorState from '@/components/shared/ErrorState.vue';
 import SummaryCard from '@/components/shared/SummaryCard.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
-
-const { t } = useI18n();
 
 const data = ref<CashFlowReport | null>(null);
 const loading = ref(false);

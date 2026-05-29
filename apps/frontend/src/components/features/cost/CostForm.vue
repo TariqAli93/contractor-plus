@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useCostForm } from '@/composables/useCostForm';
 import { projectsApi } from '@/services/api/projects.api';
 import { materialsApi } from '@/services/api/materials.api';
@@ -9,7 +9,6 @@ import type { ProjectWithContract } from '@/types/project';
 import type { Material } from '@/types/material';
 
 const props = defineProps<{ id?: string; initialProjectId?: string }>();
-const { t } = useI18n();
 const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } = useCostForm(
   props.id,
   props.initialProjectId,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useAuthStore } from '@/stores/auth.store';
 import { useSettingsStore } from '@/stores/settings.store';
 import { useApiError } from '@/composables/useApiError';
@@ -11,7 +11,6 @@ const auth = useAuthStore();
 const settings = useSettingsStore();
 const route = useRoute();
 const router = useRouter();
-const { t } = useI18n();
 const { fieldErrors, handle, clear } = useApiError();
 
 const email = ref('');

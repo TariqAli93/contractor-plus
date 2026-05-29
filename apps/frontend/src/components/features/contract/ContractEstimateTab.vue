@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useContractEstimate } from '@/composables/useContractEstimate';
 import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
@@ -14,7 +14,6 @@ import ErrorState from '@/components/shared/ErrorState.vue';
 const props = defineProps<{ contract: ContractWithRelations }>();
 const emit = defineEmits<{ refetch: [] }>();
 
-const { t } = useI18n();
 const { confirm } = useConfirm();
 const toast = useToast();
 const { handle } = useApiError();

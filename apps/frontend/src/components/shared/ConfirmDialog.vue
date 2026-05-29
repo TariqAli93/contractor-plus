@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useConfirm } from '@/composables/useConfirm';
 
 const { state, resolve } = useConfirm();
-const { t } = useI18n();
 </script>
 
 <template>

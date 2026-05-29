@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import type { ContractWithRelations } from '@/types/contract';
 import { ContractStatus } from '@/types/enums';
 import EmptyState from '@/components/shared/EmptyState.vue';
@@ -8,7 +8,6 @@ import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import ContractItemRow from './ContractItemRow.vue';
 
 const props = defineProps<{ contract: ContractWithRelations }>();
-const { t } = useI18n();
 
 const totalCost = computed(() =>
   props.contract.items.reduce((s, i) => s + Number(i.estimatedPrice), 0),

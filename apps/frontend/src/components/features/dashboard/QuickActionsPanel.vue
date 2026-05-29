@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useCan } from '@/composables/useCan';
 import { RoleName } from '@/types/enums';
 import DashboardSection from './DashboardSection.vue';
 import QuickActionButton from './QuickActionButton.vue';
 
-const { t } = useI18n();
 const { can } = useCan();
 
 const WRITE_CUSTOMERS: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ACCOUNTANT];

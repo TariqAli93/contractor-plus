@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useTunnel } from '@/composables/useTunnel';
 import { useTunnelStore } from '@/stores/tunnel.store';
 
@@ -8,7 +8,6 @@ import { useTunnelStore } from '@/stores/tunnel.store';
 // maps it to a Vuetify color + an Arabic/English description that matches
 // the dot. The actual buttons live next door in TunnelActionPanel.
 
-const { t } = useI18n();
 const { toneLabel, copyPublicUrl, openPublicUrl } = useTunnel();
 const store = useTunnelStore();
 

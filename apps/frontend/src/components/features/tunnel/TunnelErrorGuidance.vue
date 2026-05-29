@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useTunnel } from '@/composables/useTunnel';
 
 // Translates a single classified failureKind into a panel with one of four
 // sets of copy. At most one panel renders at a time so the page is never
 // noisier than the underlying root cause.
 
-const { t } = useI18n();
 const { failureKind } = useTunnel();
 
 interface GuidanceCopy {

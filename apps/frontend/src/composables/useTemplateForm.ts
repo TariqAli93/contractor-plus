@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { templatesApi } from '@/services/api/templates.api';
 import { useApiError } from './useApiError';
 import { useToast } from './useToast';
@@ -15,7 +15,6 @@ import type { CreateTemplateInput } from '@/types/template';
 export function useTemplateForm(id?: string) {
   const router = useRouter();
   const toast = useToast();
-  const { t } = useI18n();
   const { fieldErrors, handle, clear } = useApiError();
 
   const isEdit = Boolean(id);

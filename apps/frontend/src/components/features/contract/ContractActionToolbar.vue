@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { contractsApi } from '@/services/api/contracts.api';
 import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
@@ -17,7 +17,6 @@ const emit = defineEmits<{
 }>();
 
 const router = useRouter();
-const { t } = useI18n();
 const { confirm } = useConfirm();
 const toast = useToast();
 const { handle } = useApiError();

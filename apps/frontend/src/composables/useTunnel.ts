@@ -1,10 +1,29 @@
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
+import { ApiError } from '@/types/api';
 import { tunnelApi } from '@/services/api/tunnel.api';
 import { useTunnelStore } from '@/stores/tunnel.store';
 import { useApiError } from './useApiError';
 import { useConfirm } from './useConfirm';
 import { useToast } from './useToast';
+
+// Maps a failed enable response to a clear Arabic message. Returns null when
+// the error isn't a recognised tunnel-enable conflict so the caller can fall
+// back to the generic handler. We key off the server-provided error `code`
+// (server stays authoritative) rather than the raw English message.
+function enableErrorMessage(e: unknown): string | null {
+  if (!(e instanceof ApiError)) return null;
+  switch (e.code) {
+    case 'CLOUDFLARED_MISSING':
+      return t('tunnel.enableErrors.cloudflaredMissing');
+    case 'TUNNEL_MGMT_CONFLICT':
+      return t('tunnel.enableErrors.mgmtConflict');
+    case 'TUNNEL_ENABLE_FAILED':
+      return t('tunnel.enableErrors.enableFailed');
+    default:
+      return e.statusCode === 409 ? t('tunnel.enableErrors.genericConflict') : null;
+  }
+}
 
 // Single entrypoint every tunnel UI shares. Owns the fetch/enable/disable
 // calls, in-flight flags, derived labels, and the disable confirmation.
@@ -24,7 +43,6 @@ export function useTunnel() {
   const { handle } = useApiError();
   const { confirm } = useConfirm();
   const toast = useToast();
-  const { t } = useI18n();
 
   async function refresh(options: { silent?: boolean } = {}): Promise<void> {
     if (store.refreshing) return;
@@ -42,12 +60,25 @@ export function useTunnel() {
   async function enable(): Promise<void> {
     if (store.acting) return;
     store.acting = true;
+    const wasEnabled = store.enabled;
     try {
       const res = await tunnelApi.enable();
       store.setStatus(res);
-      toast.success(t('tunnel.toast.enabled'));
+      // Backend enable is idempotent: if it was already up, say so instead of
+      // implying we just turned it on.
+      if (wasEnabled && res.enabled && res.running) {
+        toast.info(t('tunnel.actions.alreadyEnabled'));
+      } else {
+        toast.success(t('tunnel.toast.enabled'));
+      }
     } catch (e) {
-      handle(e);
+      // Prefer a specific Arabic message over the raw English server error.
+      const message = enableErrorMessage(e);
+      if (message) {
+        toast.error(message, e instanceof ApiError ? e.reqId : undefined);
+      } else {
+        handle(e);
+      }
       // Best-effort refresh so the panel reflects any partial state the
       // server persisted (e.g. lastError set).
       void refresh({ silent: true });

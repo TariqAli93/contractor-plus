@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import GeneralSettingsTab from '@/components/features/settings/GeneralSettingsTab.vue';
 import CompanyProfileTab from '@/components/features/settings/CompanyProfileTab.vue';
 import CurrencyTab from '@/components/features/settings/CurrencyTab.vue';
 import ContractTemplatesTab from '@/components/features/settings/ContractTemplatesTab.vue';
+import AppearanceSettingsTab from '@/components/features/settings/AppearanceSettingsTab.vue';
 import CompanyLogo from '@/components/shared/CompanyLogo.vue';
 
-const { t } = useI18n();
 const activeTab = ref<
-  'general' | 'company' | 'currency' | 'contractTemplates' | 'links'
+  'general' | 'appearance' | 'company' | 'currency' | 'contractTemplates' | 'links'
 >('general');
 </script>
 
@@ -37,6 +37,9 @@ const activeTab = ref<
       <v-tab value="general" prepend-icon="mdi-tune">
         {{ t('settings.tabs.general') }}
       </v-tab>
+      <v-tab value="appearance" prepend-icon="mdi-palette-outline">
+        {{ t('settings.tabs.appearance') }}
+      </v-tab>
       <v-tab value="currency" prepend-icon="mdi-currency-usd">
         {{ t('settings.tabs.currency') }}
       </v-tab>
@@ -54,6 +57,10 @@ const activeTab = ref<
     <v-window v-model="activeTab" class="cp-settings__window">
       <v-window-item value="general">
         <GeneralSettingsTab />
+      </v-window-item>
+
+      <v-window-item value="appearance">
+        <AppearanceSettingsTab />
       </v-window-item>
 
       <v-window-item value="currency">

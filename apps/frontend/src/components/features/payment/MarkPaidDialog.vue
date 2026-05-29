@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { PaymentMethod } from '@/types/enums';
 import type { MarkPaidBody } from '@/types/payment';
 
@@ -13,8 +13,6 @@ const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void;
   (e: 'confirm', body: MarkPaidBody): void;
 }>();
-
-const { t } = useI18n();
 
 const paymentDate = ref<string>(new Date().toISOString().slice(0, 10));
 const method = ref<PaymentMethod | undefined>(undefined);

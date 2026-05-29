@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { templatesApi } from '@/services/api/templates.api';
 import { useConfirm } from '@/composables/useConfirm';
 import { useApiError } from '@/composables/useApiError';
@@ -19,7 +19,6 @@ const emit = defineEmits<{
   removed: [];
 }>();
 
-const { t } = useI18n();
 const { confirm } = useConfirm();
 const { fieldErrors, handle, clear } = useApiError();
 const toast = useToast();

@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { usePaymentForm } from '@/composables/usePaymentForm';
 import { projectsApi } from '@/services/api/projects.api';
 import { PaymentMethod } from '@/types/enums';
 import type { ProjectWithContract } from '@/types/project';
 
 const props = defineProps<{ id?: string; initialProjectId?: string }>();
-const { t } = useI18n();
 const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } = usePaymentForm(
   props.id,
   props.initialProjectId,

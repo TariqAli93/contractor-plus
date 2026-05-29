@@ -42,8 +42,20 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   }
 
   if (!res.ok) {
-    const obj = (parsed ?? {}) as { error?: string; message?: string };
-    const detail = obj.error ?? obj.message ?? `${res.status} ${res.statusText}`;
+    const obj = (parsed ?? {}) as { error?: unknown; message?: unknown };
+    // The management API may return `error`/`message` as a string or a nested
+    // object. Stringify objects so the surfaced detail stays useful instead of
+    // collapsing to "[object Object]".
+    const pick = (v: unknown): string | null => {
+      if (typeof v === 'string' && v.trim().length > 0) return v;
+      if (v && typeof v === 'object') return JSON.stringify(v);
+      return null;
+    };
+    const detail =
+      pick(obj.error) ??
+      pick(obj.message) ??
+      (parsed && typeof parsed === 'object' ? JSON.stringify(parsed) : null) ??
+      `${res.status} ${res.statusText}`;
     throw new ManagementApiError(
       `management API POST ${path} failed: ${detail}`,
       res.status,

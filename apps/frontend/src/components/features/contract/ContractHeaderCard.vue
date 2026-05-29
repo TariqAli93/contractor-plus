@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useRouter } from 'vue-router';
 import type { ContractWithRelations } from '@/types/contract';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 
 defineProps<{ contract: ContractWithRelations }>();
-const { t } = useI18n();
 const router = useRouter();
 </script>
 

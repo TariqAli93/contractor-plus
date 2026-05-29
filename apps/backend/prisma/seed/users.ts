@@ -4,6 +4,9 @@ import bcrypt from 'bcrypt';
 // Shared password for demo. Print it after seeding so the operator can log in.
 export const DEMO_PASSWORD = 'demo1234';
 
+// Iraqi staff. Phone format: +964 mobile (770/780 prefixes). The login
+// structure (emails + roles) is unchanged so existing demo accounts keep
+// working.
 const DEMO_USERS: Array<{
   email: string;
   fullName: string;
@@ -12,32 +15,32 @@ const DEMO_USERS: Array<{
 }> = [
   {
     email: 'owner@contractor.demo',
-    fullName: 'Khalil Owner',
-    phone: '+96170100001',
+    fullName: 'طارق علي',
+    phone: '+9647701000001',
     role: RoleName.OWNER,
   },
   {
     email: 'admin@contractor.demo',
-    fullName: 'Sara Admin',
-    phone: '+96170100002',
+    fullName: 'علي جاسم',
+    phone: '+9647801000002',
     role: RoleName.ADMIN,
   },
   {
     email: 'accountant@contractor.demo',
-    fullName: 'Nour Accountant',
-    phone: '+96170100003',
+    fullName: 'محمد كريم',
+    phone: '+9647701000003',
     role: RoleName.ACCOUNTANT,
   },
   {
     email: 'engineer@contractor.demo',
-    fullName: 'Walid Engineer',
-    phone: '+96170100004',
+    fullName: 'حسين كاظم',
+    phone: '+9647801000004',
     role: RoleName.ENGINEER,
   },
   {
     email: 'viewer@contractor.demo',
-    fullName: 'Lina Viewer',
-    phone: '+96170100005',
+    fullName: 'سجاد مهدي',
+    phone: '+9647701000005',
     role: RoleName.VIEWER,
   },
 ];

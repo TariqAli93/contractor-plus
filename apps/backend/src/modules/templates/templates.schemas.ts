@@ -98,7 +98,16 @@ export const listTemplatesQuerySchema = paginationQuerySchema.extend({
 
 export const createTemplateItemSchema = z.object({
   materialId: uuidSchema,
-  quantityFormula: z.string().trim().min(1).max(500),
+  // Legacy/internal field. The UI no longer collects it; the service
+  // auto-generates a value from estimatedQuantity when omitted so the
+  // NOT-NULL DB column stays populated. Kept optional for back-compat with
+  // any caller that still sends a formula.
+  quantityFormula: z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .transform((v) => (v ? v : undefined)),
   estimatedQuantity: nonNegativeNumber('estimatedQuantity'),
   estimatedPrice: nonNegativeNumber('estimatedPrice'),
   notes: nullableString(2000),

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { contractsApi } from '@/services/api/contracts.api';
 import { useApiError } from '@/composables/useApiError';
 import type { ContractWithRelations } from '@/types/contract';
@@ -16,7 +16,6 @@ import ContractProjectTab from '@/components/features/contract/ContractProjectTa
 import ContractGenerateDocxPanel from '@/components/features/contract/ContractGenerateDocxPanel.vue';
 
 const route = useRoute();
-const { t } = useI18n();
 const { handle } = useApiError();
 
 const contractId = computed(() => {

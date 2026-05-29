@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { documentTemplatesApi } from '@/services/api/document-templates.api';
 import { useApiError } from '@/composables/useApiError';
 import { useConfirm } from '@/composables/useConfirm';
@@ -18,7 +18,6 @@ import EmptyState from '@/components/shared/EmptyState.vue';
 // three categories so future tabs can reuse the same component with a
 // different `category` prop.
 
-const { t } = useI18n();
 const { handle } = useApiError();
 const { confirm } = useConfirm();
 const toast = useToast();

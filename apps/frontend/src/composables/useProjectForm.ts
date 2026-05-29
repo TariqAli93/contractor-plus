@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { projectsApi } from '@/services/api/projects.api';
 import { useApiError } from './useApiError';
 import { useToast } from './useToast';
@@ -12,7 +12,6 @@ import type { CreateProjectInput } from '@/types/project';
 export function useProjectForm(id?: string) {
   const router = useRouter();
   const toast = useToast();
-  const { t } = useI18n();
   const { fieldErrors, handle, clear } = useApiError();
 
   const isEdit = Boolean(id);

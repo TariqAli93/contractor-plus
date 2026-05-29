@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 
 const props = defineProps<{ modelValue: string; placeholder?: string }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: string): void }>();
-const { t } = useI18n();
 
 function onInput(v: string) {
   emit('update:modelValue', v);

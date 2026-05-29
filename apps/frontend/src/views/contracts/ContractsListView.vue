@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useContracts } from '@/composables/useContracts';
 import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
@@ -18,7 +18,6 @@ import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import ContractStatusBadge from '@/components/features/contract/ContractStatusBadge.vue';
 
 const router = useRouter();
-const { t } = useI18n();
 const toast = useToast();
 const { confirm } = useConfirm();
 const { handle } = useApiError();
@@ -70,8 +69,17 @@ function onTableUpdate(opts: {
   }
 }
 
+// Row shape as the data-table renders it (Contract plus the joined customer).
+type ContractRow = Contract & { customer?: { name: string } };
+
 function openEdit(contract: Contract) {
   void router.push(`/contracts/${contract.id}`);
+}
+
+// Inline-typed arrow handlers in templates don't parse under vue-tsc, so the
+// row click handler lives here with explicit types.
+function onRowClick(_e: unknown, row: { item: Contract }) {
+  openEdit(row.item);
 }
 
 async function handleDelete(contract: Contract) {
@@ -143,10 +151,10 @@ async function handleDelete(contract: Contract) {
         item-value="id"
         hover
         @update:options="onTableUpdate"
-        @click:row="(_e: unknown, row: { item: Contract }) => openEdit(row.item)"
+        @click:row="onRowClick"
       >
         <template #[`item.customer`]="{ item }">
-          {{ (item as Contract & { customer?: { name: string } }).customer?.name ?? '—' }}
+          {{ (item as ContractRow).customer?.name ?? '—' }}
         </template>
         <template #[`item.totalPrice`]="{ item }">
           <MoneyDisplay :amount="item.totalPrice" />

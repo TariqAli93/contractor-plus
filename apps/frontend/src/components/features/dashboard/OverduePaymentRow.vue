@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import type { OverduePaymentsGroup } from '@/types/dashboard';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 
 const props = defineProps<{ group: OverduePaymentsGroup }>();
 const router = useRouter();
-const { t } = useI18n();
 
 function open() {
   void router.push(`/projects/${props.group.projectId}`);

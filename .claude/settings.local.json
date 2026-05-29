@@ -33,7 +33,10 @@
       "Bash(pnpm --filter frontend add -D vite-plugin-vue-devtools@7.7.9)",
       "Bash(pnpm --filter frontend list vite vite-plugin-vue-devtools vite-plugin-inspect @vue/devtools-core vue)",
       "Bash(pnpm --filter frontend list vite-plugin-inspect --depth Infinity)",
-      "Bash(pnpm dev:frontend)"
+      "Bash(pnpm dev:frontend)",
+      "PowerShell(Remove-Item *)",
+      "PowerShell(Test-NetConnection *)",
+      "PowerShell($body = $null; try { $r = Invoke-WebRequest -Uri \"http://localhost:5173/api/v1/materials?pageSize=1000&isActive=true&sortBy=name&sortDir=asc\" -UseBasicParsing -TimeoutSec 10; Write-Output \"STATUS via vite proxy: $\\($r.StatusCode\\)\" } catch { Write-Output \"vite proxy err: $\\($_.Exception.Message\\)\" })"
     ]
   }
 }

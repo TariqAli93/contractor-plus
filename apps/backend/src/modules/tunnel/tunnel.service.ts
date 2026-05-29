@@ -59,6 +59,15 @@ export class TunnelService {
   }
 
   private async enableInternal(actor: AuditActor): Promise<TunnelStatusResponse> {
+    const state = await this.repo.getOrCreate();
+
+    // Idempotent: if it's already enabled and the local process is alive,
+    // return current status instead of re-provisioning (avoids a needless
+    // management-API round-trip and a spurious 409).
+    if (state.enabled && isRunning()) {
+      return this.toResponse(state);
+    }
+
     const cloudflared = resolveCloudflaredPath();
     if (cloudflared.status !== 'found') {
       const checked = cloudflared.checked.map((c) => `  - ${c.path} (${c.note})`).join('\n');
@@ -68,7 +77,6 @@ export class TunnelService {
       );
     }
 
-    const state = await this.repo.getOrCreate();
     const machineId = getOrCreateMachineId();
     const localServiceUrl = env.LOCAL_SERVICE_URL ?? `http://localhost:${env.PORT}`;
 
@@ -86,7 +94,14 @@ export class TunnelService {
         entityId: state.id,
         newValues: toJsonValue({ event: 'error', attemptedOperation: 'enable', error: message }),
       });
-      throw new ConflictError(`Tunnel enable failed: ${message}`, 'TUNNEL_ENABLE_FAILED');
+      // Distinguish a management-side conflict (HTTP 409 — e.g. the tunnel is
+      // already provisioned for this machine) from a generic enable failure so
+      // the UI can show a specific message. The structured message is kept.
+      const code =
+        err instanceof ManagementApiError && err.status === 409
+          ? 'TUNNEL_MGMT_CONFLICT'
+          : 'TUNNEL_ENABLE_FAILED';
+      throw new ConflictError(`Tunnel enable failed: ${message}`, code);
     }
 
     if (!response || response.enabled !== true || !response.tunnel_id || !response.credentials) {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import type { DashboardSummary } from '@/types/dashboard';
 import SummaryMetricCard from './SummaryMetricCard.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
@@ -9,8 +9,6 @@ const props = defineProps<{
   summary: DashboardSummary | null;
   loading: boolean;
 }>();
-
-const { t } = useI18n();
 
 const profitTone = computed<'positive' | 'urgent' | 'neutral'>(() => {
   const v = props.summary?.monthlyProfit;

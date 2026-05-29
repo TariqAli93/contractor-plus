@@ -2,10 +2,9 @@ import { createApp } from "vue";
 import { createPinia } from "pinia";
 import App from "./App.vue";
 import { router } from "./router";
-import { vuetify, setVuetifyLocale } from "./plugins/vuetify";
-import { i18n, setI18nLocale } from "./plugins/i18n";
+import { vuetify } from "./plugins/vuetify";
 import { useAuthStore } from "./stores/auth.store";
-import { useUiStore } from "./stores/ui.store";
+import { useThemeStore } from "./stores/theme.store";
 import { registerAuthBindings } from "./services/api/client";
 
 import "./assets/styles/main.css";
@@ -17,16 +16,16 @@ async function bootstrap() {
   // 1. Pinia must be installed before any store is used.
   app.use(pinia);
 
-  // 2. Sync UI store's locale with Vuetify + vue-i18n + <html> dir.
-  const ui = useUiStore();
-  setI18nLocale(ui.locale);
-  setVuetifyLocale(ui.locale);
-  document.documentElement.lang = ui.locale;
-  document.documentElement.dir = ui.locale === "ar" ? "rtl" : "ltr";
+  // 2. Arabic-only, RTL. (index.html already sets these, but keep them
+  //    authoritative here in case the document is reused.)
+  document.documentElement.lang = "ar";
+  document.documentElement.dir = "rtl";
 
   // 3. Plugins.
   app.use(vuetify);
-  app.use(i18n);
+
+  // 3b. Apply the persisted/system theme and start watching OS changes.
+  useThemeStore().initializeTheme();
 
   // 4. Wire the axios client to the auth store (avoids circular import).
   const auth = useAuthStore();

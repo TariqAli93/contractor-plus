@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useProjects } from '@/composables/useProjects';
 import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
@@ -18,7 +18,6 @@ import ProjectStatusBadge from '@/components/features/project/ProjectStatusBadge
 import ProjectProgressBar from '@/components/features/project/ProjectProgressBar.vue';
 
 const router = useRouter();
-const { t } = useI18n();
 const toast = useToast();
 const { confirm } = useConfirm();
 const { handle } = useApiError();
@@ -85,6 +84,10 @@ function onTableUpdate(opts: {
 
 function openProject(project: ProjectWithContract) {
   void router.push(`/projects/${project.id}`);
+}
+
+function onRowClick(_e: unknown, row: { item: ProjectWithContract }) {
+  openProject(row.item);
 }
 
 async function handleDelete(project: ProjectWithContract) {
@@ -171,7 +174,7 @@ async function handleDelete(project: ProjectWithContract) {
         item-value="id"
         hover
         @update:options="onTableUpdate"
-        @click:row="(_e: unknown, row: { item: ProjectWithContract }) => openProject(row.item)"
+        @click:row="onRowClick"
       >
         <template #[`item.customer`]="{ item }">
           {{ item.contract?.customer.name ?? '—' }}

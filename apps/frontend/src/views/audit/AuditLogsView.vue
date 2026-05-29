@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useAuditLogs } from '@/composables/useAuditLogs';
 import { AuditAction } from '@/types/enums';
 import type { AuditLog } from '@/types/audit';
@@ -12,7 +12,6 @@ import AuditActionBadge from '@/components/features/audit/AuditActionBadge.vue';
 import AuditDiffPanel from '@/components/features/audit/AuditDiffPanel.vue';
 
 const router = useRouter();
-const { t } = useI18n();
 const {
   items,
   total,

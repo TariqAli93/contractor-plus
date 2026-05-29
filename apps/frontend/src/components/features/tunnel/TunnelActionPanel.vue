@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useTunnel } from '@/composables/useTunnel';
 import { useTunnelStore } from '@/stores/tunnel.store';
 
-const { t } = useI18n();
 const { enable, disable } = useTunnel();
 const store = useTunnelStore();
 

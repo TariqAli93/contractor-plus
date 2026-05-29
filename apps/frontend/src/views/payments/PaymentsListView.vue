@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { usePayments } from '@/composables/usePayments';
 import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
@@ -22,7 +22,6 @@ import MarkPaidDialog from '@/components/features/payment/MarkPaidDialog.vue';
 
 const router = useRouter();
 const route = useRoute();
-const { t } = useI18n();
 const toast = useToast();
 const { confirm } = useConfirm();
 const { handle } = useApiError();

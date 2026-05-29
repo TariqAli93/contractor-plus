@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import MaterialForm from '@/components/features/material/MaterialForm.vue';
 
 const route = useRoute();
-const { t } = useI18n();
 
 const materialId = computed(() => {
   const id = route.params.id;

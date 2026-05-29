@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useContractForm } from '@/composables/useContractForm';
 import { customersApi } from '@/services/api/customers.api';
 import { templatesApi } from '@/services/api/templates.api';
@@ -15,7 +15,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{ saved: [] }>();
 
-const { t } = useI18n();
 const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } =
   useContractForm(props.id);
 

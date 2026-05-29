@@ -50,7 +50,7 @@ function buildCandidates(): string[] {
   // 3. Dev monorepo — from apps/backend/src/lib/ five levels up == repo root.
   pushIf(
     candidates,
-    path.join(__dirname, '..', '..', '..', '..', '..', 'tools', 'cloudflared', BINARY_NAME),
+    path.join(__dirname, '..', '..', '..', '..', 'tools', 'cloudflared', BINARY_NAME),
   );
 
   // 4. cwd fallbacks

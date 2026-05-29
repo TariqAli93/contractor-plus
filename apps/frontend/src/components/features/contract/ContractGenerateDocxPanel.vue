@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import {
   contractDocxApi,
   documentTemplatesApi,
@@ -25,7 +25,6 @@ import RoleGate from '@/components/shared/RoleGate.vue';
 
 const props = defineProps<{ contractId: string }>();
 
-const { t } = useI18n();
 const { handle } = useApiError();
 const toast = useToast();
 const { can } = useCan();

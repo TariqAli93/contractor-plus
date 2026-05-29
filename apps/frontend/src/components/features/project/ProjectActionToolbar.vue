@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { projectsApi } from '@/services/api/projects.api';
 import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
@@ -13,7 +13,6 @@ import ProjectStatusBadge from './ProjectStatusBadge.vue';
 const props = defineProps<{ project: ProjectWithContract }>();
 const emit = defineEmits<{ refetch: [] }>();
 
-const { t } = useI18n();
 const { confirm } = useConfirm();
 const toast = useToast();
 const { handle } = useApiError();

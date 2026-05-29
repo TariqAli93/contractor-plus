@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import type { DelayedProjectRow } from '@/types/dashboard';
 import ProjectStatusBadge from '@/components/features/project/ProjectStatusBadge.vue';
 import ProjectProgressBar from '@/components/features/project/ProjectProgressBar.vue';
@@ -8,7 +8,6 @@ import DateDisplay from '@/components/shared/DateDisplay.vue';
 
 const props = defineProps<{ row: DelayedProjectRow }>();
 const router = useRouter();
-const { t } = useI18n();
 
 function open() {
   void router.push(`/projects/${props.row.projectId}`);

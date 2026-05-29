@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useTemplateEstimate } from '@/composables/useTemplateEstimate';
 import SummaryCard from '@/components/shared/SummaryCard.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
@@ -8,7 +8,6 @@ import EmptyState from '@/components/shared/EmptyState.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 
 const props = defineProps<{ templateId: string }>();
-const { t } = useI18n();
 
 const { data, loading, error, fetch } = useTemplateEstimate(props.templateId);
 
@@ -99,8 +98,7 @@ onMounted(fetch);
             <tr>
               <th class="text-start">{{ t('templates.items.fields.material') }}</th>
               <th class="text-start" style="width: 90px">{{ t('templates.items.fields.unit') }}</th>
-              <th class="text-start">{{ t('templates.items.fields.quantityFormula') }}</th>
-              <th class="text-end" style="width: 140px">{{ t('templates.items.fields.estimatedQuantity') }}</th>
+              <th class="text-end" style="width: 180px">{{ t('templates.items.fields.quantityPer100m2') }}</th>
               <th class="text-end" style="width: 160px">{{ t('templates.items.fields.estimatedPrice') }}</th>
             </tr>
           </thead>
@@ -108,7 +106,6 @@ onMounted(fetch);
             <tr v-for="m in data.materials" :key="m.itemId">
               <td>{{ m.materialName }}</td>
               <td>{{ m.unit }}</td>
-              <td>{{ m.quantityFormula }}</td>
               <td class="text-end">{{ m.estimatedQuantity }}</td>
               <td class="text-end"><MoneyDisplay :amount="m.estimatedPrice" /></td>
             </tr>

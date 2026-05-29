@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { templatesApi } from '@/services/api/templates.api';
 import { useApiError } from '@/composables/useApiError';
 import type { TemplateStep } from '@/types/template';
@@ -9,7 +9,6 @@ import EmptyState from '@/components/shared/EmptyState.vue';
 import TemplateStepRow from './TemplateStepRow.vue';
 
 const props = defineProps<{ templateId: string }>();
-const { t } = useI18n();
 const { handle } = useApiError();
 
 const steps = ref<TemplateStep[]>([]);

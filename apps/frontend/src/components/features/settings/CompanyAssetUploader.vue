@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { uploadsApi, type UploadedAssetResponse } from '@/services/api/uploads.api';
 import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
@@ -31,7 +31,6 @@ const emit = defineEmits<{
   (e: 'deleted'): void;
 }>();
 
-const { t } = useI18n();
 const { confirm } = useConfirm();
 const toast = useToast();
 

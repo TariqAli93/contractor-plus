@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { templatesApi } from '@/services/api/templates.api';
 import { materialsApi } from '@/services/api/materials.api';
 import { useApiError } from '@/composables/useApiError';
@@ -11,7 +11,6 @@ import EmptyState from '@/components/shared/EmptyState.vue';
 import TemplateMaterialRow from './TemplateMaterialRow.vue';
 
 const props = defineProps<{ templateId: string }>();
-const { t } = useI18n();
 const { handle } = useApiError();
 
 const items = ref<TemplateItem[]>([]);
@@ -79,8 +78,7 @@ function onCancelledNew() {
           <tr>
             <th class="text-start">{{ t('templates.items.fields.material') }}</th>
             <th class="text-start" style="width: 90px">{{ t('templates.items.fields.unit') }}</th>
-            <th class="text-start">{{ t('templates.items.fields.quantityFormula') }}</th>
-            <th class="text-end" style="width: 130px">{{ t('templates.items.fields.estimatedQuantity') }}</th>
+            <th class="text-end" style="width: 180px">{{ t('templates.items.fields.quantityPer100m2') }}</th>
             <th class="text-end" style="width: 140px">{{ t('templates.items.fields.estimatedPrice') }}</th>
             <th class="text-start">{{ t('templates.items.fields.notes') }}</th>
             <th class="text-end" style="width: 110px"></th>

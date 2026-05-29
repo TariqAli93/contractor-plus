@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { settingsApi } from '@/services/api/settings.api';
 import type { UploadedAssetResponse } from '@/services/api/uploads.api';
 import { useToast } from '@/composables/useToast';
@@ -11,7 +11,6 @@ import SettingsCard from './SettingsCard.vue';
 import CompanyAssetUploader from './CompanyAssetUploader.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
 
-const { t } = useI18n();
 const toast = useToast();
 const { handle, fieldErrors, clear: clearErrors } = useApiError();
 

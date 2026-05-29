@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { projectsApi } from '@/services/api/projects.api';
 import { useApiError } from '@/composables/useApiError';
 import { useToast } from '@/composables/useToast';
@@ -13,7 +13,6 @@ import RoleGate from '@/components/shared/RoleGate.vue';
 const props = defineProps<{ project: ProjectWithContract }>();
 const emit = defineEmits<{ refetch: [] }>();
 
-const { t } = useI18n();
 const { handle } = useApiError();
 const toast = useToast();
 const { can } = useCan();

@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { ContractStatus } from '@/types/enums';
 import type { ContractWithRelations } from '@/types/contract';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 
 const props = defineProps<{ contract: ContractWithRelations }>();
-const { t } = useI18n();
 
 const hasProject = computed(() => props.contract.project !== null);
 

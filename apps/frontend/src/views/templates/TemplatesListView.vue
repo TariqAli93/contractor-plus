@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useTemplates } from '@/composables/useTemplates';
 import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
@@ -16,7 +16,6 @@ import RoleGate from '@/components/shared/RoleGate.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 
 const router = useRouter();
-const { t } = useI18n();
 const toast = useToast();
 const { confirm } = useConfirm();
 const { handle } = useApiError();
@@ -73,6 +72,10 @@ function onTableUpdate(opts: {
 
 function openEdit(template: BuildingTemplate) {
   void router.push(`/templates/${template.id}`);
+}
+
+function onRowClick(_e: unknown, row: { item: BuildingTemplate }) {
+  openEdit(row.item);
 }
 
 async function handleDelete(template: BuildingTemplate) {
@@ -137,7 +140,7 @@ async function handleDelete(template: BuildingTemplate) {
         item-value="id"
         hover
         @update:options="onTableUpdate"
-        @click:row="(_e: unknown, row: { item: BuildingTemplate }) => openEdit(row.item)"
+        @click:row="onRowClick"
       >
         <template #[`item.estimatedDurationDays`]="{ item }">
           {{ item.estimatedDurationDays ?? '—' }}

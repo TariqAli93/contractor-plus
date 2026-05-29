@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useToast } from '@/composables/useToast';
 
 // Read-only reference of every {{token}} the renderer supports. Grouping
@@ -47,7 +47,6 @@ const GROUPS: PlaceholderGroup[] = [
   },
 ];
 
-const { t } = useI18n();
 const toast = useToast();
 const copied = ref<string | null>(null);
 

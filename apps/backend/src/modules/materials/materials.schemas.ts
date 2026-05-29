@@ -41,6 +41,9 @@ const stringBool = z
   .transform((v) => v === 'true');
 
 export const listMaterialsQuerySchema = paginationQuerySchema.extend({
+  // Materials feed pickers (template/contract item editors) that need the full
+  // active list in one request, so allow a larger page than the shared default.
+  pageSize: z.coerce.number().int().min(1).max(1000).default(20),
   search: z.string().trim().min(1).optional(),
   isActive: stringBool.optional(),
   sortBy: z.enum(['name', 'createdAt', 'defaultPrice']).default('name'),

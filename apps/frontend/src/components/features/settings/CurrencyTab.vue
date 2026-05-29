@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { settingsApi } from '@/services/api/settings.api';
 import { useToast } from '@/composables/useToast';
 import { useApiError } from '@/composables/useApiError';
@@ -13,7 +13,6 @@ import CurrencyDialog from './CurrencyDialog.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
 import EmptyState from '@/components/shared/EmptyState.vue';
 
-const { t } = useI18n();
 const toast = useToast();
 const { handle } = useApiError();
 const { confirm } = useConfirm();

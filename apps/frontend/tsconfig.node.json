@@ -7,8 +7,11 @@
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
-    "noEmit": true,
-    "types": ["node"]
+    "types": ["node"],
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "./node_modules/.tmp/tsconfig.node",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node/.tsbuildinfo"
   },
   "include": ["vite.config.ts"]
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import type { DashboardRecentProject } from '@/types/dashboard';
 import DashboardSection from './DashboardSection.vue';
 import RecentProjectCard from './RecentProjectCard.vue';
@@ -11,7 +11,6 @@ const props = defineProps<{
   loading: boolean;
 }>();
 
-const { t } = useI18n();
 const top = computed(() => props.projects.slice(0, 5));
 </script>
 

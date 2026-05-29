@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useDashboard } from '@/composables/useDashboard';
 import { useAuthStore } from '@/stores/auth.store';
 import TopSummaryCards from '@/components/features/dashboard/TopSummaryCards.vue';
@@ -14,7 +14,6 @@ import TunnelStatusWidget from '@/components/features/dashboard/TunnelStatusWidg
 import ErrorState from '@/components/shared/ErrorState.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 
-const { t } = useI18n();
 const auth = useAuthStore();
 const { summary, delayed, overdue, loading, error, fetch } = useDashboard();
 

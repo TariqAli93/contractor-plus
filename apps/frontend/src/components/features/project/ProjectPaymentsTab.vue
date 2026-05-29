@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { paymentsApi } from '@/services/api/payments.api';
 import { useApiError } from '@/composables/useApiError';
 import { PaymentStatus, RoleName } from '@/types/enums';
@@ -15,7 +15,6 @@ import AddPaymentDialog from './AddPaymentDialog.vue';
 
 const props = defineProps<{ projectId: string }>();
 const emit = defineEmits<{ (e: 'changed'): void }>();
-const { t } = useI18n();
 const { handle } = useApiError();
 
 // Payments are finance-only — engineers and viewers can read the panel but

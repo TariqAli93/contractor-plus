@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onActivated, onMounted, onUnmounted } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useEventListener } from '@vueuse/core';
 import { useTunnel } from '@/composables/useTunnel';
 import { useTunnelStore } from '@/stores/tunnel.store';
@@ -9,7 +9,6 @@ import TunnelActionPanel from '@/components/features/tunnel/TunnelActionPanel.vu
 import TunnelErrorGuidance from '@/components/features/tunnel/TunnelErrorGuidance.vue';
 import TunnelDiagnostics from '@/components/features/tunnel/TunnelDiagnostics.vue';
 
-const { t } = useI18n();
 const { refresh } = useTunnel();
 const store = useTunnelStore();
 

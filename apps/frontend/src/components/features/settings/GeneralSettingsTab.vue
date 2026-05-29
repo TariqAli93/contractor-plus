@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { settingsApi } from '@/services/api/settings.api';
 import { useToast } from '@/composables/useToast';
 import { useApiError } from '@/composables/useApiError';
@@ -8,7 +8,6 @@ import type { GeneralSettings } from '@/types/settings';
 import SettingsCard from './SettingsCard.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
 
-const { t } = useI18n();
 const toast = useToast();
 const { handle } = useApiError();
 

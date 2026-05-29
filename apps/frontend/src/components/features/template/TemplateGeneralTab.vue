@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useTemplateForm } from '@/composables/useTemplateForm';
 
 const props = defineProps<{ id?: string }>();
-const { t } = useI18n();
 const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } =
   useTemplateForm(props.id);
 

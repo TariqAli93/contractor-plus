@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { paymentsApi } from '@/services/api/payments.api';
 import { useApiError } from '@/composables/useApiError';
 import { useToast } from '@/composables/useToast';
@@ -21,7 +21,6 @@ const emit = defineEmits<{
   (e: 'created'): void;
 }>();
 
-const { t } = useI18n();
 const { fieldErrors, handle, clear } = useApiError();
 const toast = useToast();
 

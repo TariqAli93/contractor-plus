@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { auditApi } from '@/services/api/audit.api';
 import { ApiError } from '@/types/api';
 import { AuditAction } from '@/types/enums';
@@ -13,7 +13,6 @@ import AuditActionBadge from '@/components/features/audit/AuditActionBadge.vue';
 import AuditDiffPanel from '@/components/features/audit/AuditDiffPanel.vue';
 
 const route = useRoute();
-const { t } = useI18n();
 
 const userId = computed(() => String(route.params.userId ?? ''));
 

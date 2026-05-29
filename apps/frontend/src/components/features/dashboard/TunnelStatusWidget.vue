@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useTunnel } from '@/composables/useTunnel';
 import { useTunnelStore } from '@/stores/tunnel.store';
 import { useCan } from '@/composables/useCan';
 import { RoleName } from '@/types/enums';
 import DashboardSection from './DashboardSection.vue';
 
-const { t } = useI18n();
 const { refresh, toneLabel, copyPublicUrl } = useTunnel();
 const store = useTunnelStore();
 const { can } = useCan();

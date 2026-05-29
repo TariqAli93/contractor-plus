@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t, te } from '@/i18n';
 import { useUiStore } from '@/stores/ui.store';
 import { useCan } from '@/composables/useCan';
 import { RoleName } from '@/types/enums';
@@ -89,7 +89,6 @@ const NAV_GROUPS: NavGroup[] = [
 
 const ui = useUiStore();
 const { can } = useCan();
-const { t, te } = useI18n();
 
 const visibleGroups = computed(() =>
   NAV_GROUPS.map((g) => ({

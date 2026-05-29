@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 
 const props = defineProps<{
   oldValues: unknown;
   newValues: unknown;
 }>();
-
-const { t } = useI18n();
 
 function pretty(v: unknown): string {
   if (v === null || v === undefined) return '—';

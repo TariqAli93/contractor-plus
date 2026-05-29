@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { templatesApi } from '@/services/api/templates.api';
 import { useConfirm } from '@/composables/useConfirm';
 import { useApiError } from '@/composables/useApiError';
@@ -21,7 +21,6 @@ const emit = defineEmits<{
   removed: [];
 }>();
 
-const { t } = useI18n();
 const { confirm } = useConfirm();
 const { fieldErrors, handle, clear } = useApiError();
 const toast = useToast();
@@ -41,7 +40,6 @@ watch(
 function blankForm(): CreateTemplateItemInput {
   return {
     materialId: '',
-    quantityFormula: '',
     estimatedQuantity: 0,
     estimatedPrice: 0,
     notes: null,
@@ -51,7 +49,6 @@ function blankForm(): CreateTemplateItemInput {
 function formFromItem(item: TemplateItem): CreateTemplateItemInput {
   return {
     materialId: item.materialId,
-    quantityFormula: item.quantityFormula,
     estimatedQuantity: Number(item.estimatedQuantity),
     estimatedPrice: Number(item.estimatedPrice),
     notes: item.notes,
@@ -117,7 +114,6 @@ async function remove() {
     <template v-if="!editing && item">
       <td>{{ item.material.name }}</td>
       <td>{{ item.material.unit }}</td>
-      <td>{{ item.quantityFormula }}</td>
       <td class="text-end">{{ Number(item.estimatedQuantity) }}</td>
       <td class="text-end"><MoneyDisplay :amount="item.estimatedPrice" /></td>
       <td>{{ item.notes ?? '—' }}</td>
@@ -148,23 +144,14 @@ async function remove() {
       </td>
       <td>
         <v-text-field
-          v-model="form.quantityFormula"
-          :placeholder="t('templates.items.fields.quantityFormula')"
-          :error-messages="fieldErrors.quantityFormula"
-          density="compact"
-          hide-details="auto"
-          variant="outlined"
-        />
-      </td>
-      <td>
-        <v-text-field
           v-model.number="form.estimatedQuantity"
           type="number"
           min="0"
           step="0.001"
           :error-messages="fieldErrors.estimatedQuantity"
+          :hint="t('templates.items.fields.quantityPer100m2Hint')"
+          persistent-hint
           density="compact"
-          hide-details="auto"
           variant="outlined"
           class="text-end"
         />

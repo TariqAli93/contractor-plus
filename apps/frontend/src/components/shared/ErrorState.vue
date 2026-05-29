@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { ApiError } from '@/types/api';
 
 const props = defineProps<{ error?: unknown }>();
 defineEmits<{ (e: 'retry'): void }>();
-
-const { t } = useI18n();
 
 function describe(err: unknown): { message: string; reqId?: string } {
   if (err instanceof ApiError) return { message: err.message, reqId: err.reqId };

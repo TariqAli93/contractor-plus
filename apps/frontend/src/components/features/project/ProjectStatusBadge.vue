@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { ProjectStatus } from '@/types/enums';
 
 const props = defineProps<{
   status: ProjectStatus;
   size?: 'x-small' | 'small' | 'default' | 'large';
 }>();
-
-const { t } = useI18n();
 
 const color = computed(() => {
   switch (props.status) {

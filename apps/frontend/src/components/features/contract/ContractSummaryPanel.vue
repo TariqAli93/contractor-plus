@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import type { ContractWithRelations } from '@/types/contract';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 
 const props = defineProps<{ contract: ContractWithRelations }>();
-const { t } = useI18n();
 
 const builtArea = computed(
   () => Number(props.contract.buildingArea) * props.contract.floors,

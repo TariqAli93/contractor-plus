@@ -44,6 +44,36 @@
   --cp-dur-slow: 260ms;
 }
 
+/* ---------- dark theme tokens ----------
+   Vuetify applies `.v-theme--contractorPlusDark` on the app root, so overriding
+   the --cp-* custom properties here re-themes all the non-Vuetify chrome
+   (panels, sidebar, topbar) to match the dark Vuetify surfaces. */
+.v-theme--contractorPlusDark {
+  --cp-bg: #0f172a;
+  --cp-bg-soft: #16223b;
+  --cp-surface: #1e293b;
+  --cp-surface-2: #243349;
+  --cp-border: #334155;
+  --cp-border-strong: #475569;
+  --cp-text: #e2e8f0;
+  --cp-text-muted: #94a3b8;
+  --cp-text-subtle: #64748b;
+  --cp-primary: #4f9bd0;
+  --cp-primary-soft: rgba(79, 155, 208, 0.16);
+  --cp-accent: #f59e0b;
+  --cp-success: #22c55e;
+  --cp-success-soft: rgba(34, 197, 94, 0.16);
+  --cp-warning: #fbbf24;
+  --cp-warning-soft: rgba(251, 191, 36, 0.16);
+  --cp-error: #f87171;
+  --cp-error-soft: rgba(248, 113, 113, 0.16);
+
+  --cp-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --cp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.5);
+  --cp-shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --cp-shadow-lg: 0 12px 24px -8px rgba(0, 0, 0, 0.6), 0 4px 8px -4px rgba(0, 0, 0, 0.5);
+}
+
 html,
 body,
 #app {
@@ -267,6 +297,9 @@ body {
   backdrop-filter: saturate(180%) blur(8px);
   -webkit-backdrop-filter: saturate(180%) blur(8px);
   border-bottom: 1px solid var(--cp-border) !important;
+}
+.v-theme--contractorPlusDark .cp-topbar {
+  background: rgba(30, 41, 59, 0.85) !important;
 }
 
 /* Skeleton shimmer — Vuetify's default sometimes shows a hard grey. */

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { costsApi } from '@/services/api/costs.api';
 import { useApiError } from '@/composables/useApiError';
 import { RoleName } from '@/types/enums';
@@ -15,7 +15,6 @@ import AddCostDialog from './AddCostDialog.vue';
 
 const props = defineProps<{ projectId: string }>();
 const emit = defineEmits<{ (e: 'changed'): void }>();
-const { t } = useI18n();
 const { handle } = useApiError();
 
 const ADD_ROLES: RoleName[] = [

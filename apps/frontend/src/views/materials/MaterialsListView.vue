@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { useMaterials } from '@/composables/useMaterials';
 import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
@@ -17,7 +17,6 @@ import DateDisplay from '@/components/shared/DateDisplay.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 
 const router = useRouter();
-const { t } = useI18n();
 const toast = useToast();
 const { confirm } = useConfirm();
 const { handle } = useApiError();
@@ -75,6 +74,10 @@ function onTableUpdate(opts: {
 
 function openEdit(material: Material) {
   void router.push(`/materials/${material.id}`);
+}
+
+function onRowClick(_e: unknown, row: { item: Material }) {
+  openEdit(row.item);
 }
 
 async function handleDelete(material: Material) {
@@ -139,7 +142,7 @@ async function handleDelete(material: Material) {
         item-value="id"
         hover
         @update:options="onTableUpdate"
-        @click:row="(_e: unknown, row: { item: Material }) => openEdit(row.item)"
+        @click:row="onRowClick"
       >
         <template #[`item.defaultPrice`]="{ item }">
           <MoneyDisplay :amount="item.defaultPrice" />

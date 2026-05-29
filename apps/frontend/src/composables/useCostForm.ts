@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { costsApi } from '@/services/api/costs.api';
 import { useApiError } from './useApiError';
 import { useToast } from './useToast';
@@ -28,7 +28,6 @@ function todayIso(): string {
 export function useCostForm(id?: string, initialProjectId?: string) {
   const router = useRouter();
   const toast = useToast();
-  const { t } = useI18n();
   const { fieldErrors, handle, clear } = useApiError();
 
   const isEdit = Boolean(id);
