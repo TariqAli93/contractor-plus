@@ -8,11 +8,11 @@ import {
 } from '@/services/api/document-templates.api';
 import { useApiError } from '@/composables/useApiError';
 import { useToast } from '@/composables/useToast';
-import { useCan } from '@/composables/useCan';
+import { useAccess } from '@/composables/useAccess';
 import { RoleName } from '@/types/enums';
 import type { DocumentTemplate, GeneratedDocument } from '@/types/document-template';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
-import RoleGate from '@/components/shared/RoleGate.vue';
+import AccessGate from '@/components/shared/AccessGate.vue';
 
 // Drop-in panel for the Contract details page. Owns:
 //   - listing active CONTRACT templates so the user can pick one
@@ -27,7 +27,7 @@ const props = defineProps<{ contractId: string }>();
 
 const { handle } = useApiError();
 const toast = useToast();
-const { can } = useCan();
+const { canAccess } = useAccess();
 
 const GENERATE_ROLES: RoleName[] = [
   RoleName.OWNER,
@@ -35,6 +35,8 @@ const GENERATE_ROLES: RoleName[] = [
   RoleName.ACCOUNTANT,
   RoleName.ENGINEER,
 ];
+const GENERATE_ACCESS = { permissions: ['contracts.generate_docx'], roles: GENERATE_ROLES };
+const canGenerateDocx = canAccess(GENERATE_ACCESS);
 
 const templates = ref<DocumentTemplate[]>([]);
 const templatesLoading = ref(false);
@@ -95,7 +97,7 @@ const noTemplates = computed(
 
 const canGenerate = computed(
   () =>
-    can(GENERATE_ROLES) &&
+    canGenerateDocx &&
     !generating.value &&
     selectedTemplateId.value !== undefined,
 );
@@ -137,7 +139,7 @@ function formatSize(bytes: number): string {
 </script>
 
 <template>
-  <RoleGate :roles="GENERATE_ROLES">
+  <AccessGate :permissions="['contracts.generate_docx']" :roles="GENERATE_ROLES">
     <v-card variant="outlined" class="mb-4">
       <v-card-title class="d-flex align-center text-subtitle-1">
         <v-icon icon="mdi-file-word-box-outline" class="me-2" />
@@ -223,5 +225,5 @@ function formatSize(bytes: number): string {
         </p>
       </v-card-text>
     </v-card>
-  </RoleGate>
+  </AccessGate>
 </template>

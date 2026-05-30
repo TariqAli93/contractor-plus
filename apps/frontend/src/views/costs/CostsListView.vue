@@ -51,6 +51,7 @@ const WRITE_ROLES: RoleName[] = [
   RoleName.ACCOUNTANT,
   RoleName.ENGINEER,
 ];
+const WRITE_PERMS = ['costs.create', 'costs.update', 'costs.delete'];
 
 const columns = computed(() => buildCostColumns(t));
 
@@ -151,7 +152,7 @@ async function handleDelete(cost: CostWithMaterial) {
   <div>
     <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
       <h1 class="text-h5">{{ t('nav.costs') }}</h1>
-      <RoleGate :roles="WRITE_ROLES">
+      <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" @click="newCost">
           {{ t('costs.new') }}
         </v-btn>
@@ -248,7 +249,7 @@ async function handleDelete(cost: CostWithMaterial) {
         </template>
         <template #[`item.actions`]="{ item }">
           <div class="flex justify-end gap-1" @click.stop>
-            <RoleGate :roles="WRITE_ROLES">
+            <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
               <v-btn
                 icon="mdi-pencil"
                 size="small"

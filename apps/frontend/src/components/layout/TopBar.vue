@@ -73,6 +73,11 @@ const userInitial = computed(() => (auth.user?.fullName ?? '?').charAt(0).toUppe
         </v-list-item>
         <v-divider class="my-1" />
         <v-list-item
+          prepend-icon="mdi-account-circle-outline"
+          :title="t('profile.title')"
+          to="/profile"
+        />
+        <v-list-item
           prepend-icon="mdi-logout"
           :title="t('common.logout')"
           @click="handleLogout"

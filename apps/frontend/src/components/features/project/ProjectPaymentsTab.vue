@@ -20,6 +20,7 @@ const { handle } = useApiError();
 // Payments are finance-only — engineers and viewers can read the panel but
 // not post a new receipt. Matches the backend's PaymentsRoutes WRITE_ROLES.
 const ADD_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ACCOUNTANT];
+const ADD_PERMS = ['payments.create'];
 
 const summary = ref<ProjectPaymentSummary | null>(null);
 const loading = ref(false);
@@ -67,7 +68,7 @@ async function onCreated() {
     <div class="flex items-center justify-between mb-3 gap-3 flex-wrap">
       <h2 class="text-h6">{{ t('projects.payments.title') }}</h2>
       <div class="flex items-center gap-2">
-        <RoleGate :roles="ADD_ROLES">
+        <RoleGate :permissions="ADD_PERMS" :roles="ADD_ROLES">
           <v-btn
             color="primary"
             prepend-icon="mdi-cash-plus"

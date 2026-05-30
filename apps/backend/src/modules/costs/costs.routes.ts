@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { RoleName } from '@prisma/client';
+import { RoleName } from '@contractor-plus/shared';
 import { CostsService } from './costs.service.js';
 import { CostsController } from './costs.controller.js';
 
@@ -31,14 +31,17 @@ function getController(prisma: import('@prisma/client').PrismaClient): CostsCont
 // Mounted at /api/v1/costs
 export const costsRoutes: FastifyPluginAsync = async (fastify) => {
   const controller = getController(fastify.prisma);
-  const read = { preHandler: [fastify.authenticate, fastify.authorize(READ_ROLES)] };
-  const write = { preHandler: [fastify.authenticate, fastify.authorize(WRITE_ROLES)] };
+  // Hybrid: permission-first with legacy role fallback.
+  const read = { preHandler: [fastify.authenticate, fastify.requireAccess({ permissions: ['costs.read'], roles: READ_ROLES })] };
+  const g = (permission: string) => ({
+    preHandler: [fastify.authenticate, fastify.requireAccess({ permissions: [permission], roles: WRITE_ROLES })],
+  });
 
   fastify.get('/', read, controller.list);
   fastify.get('/:id', read, controller.getById);
-  fastify.post('/', write, controller.create);
-  fastify.patch('/:id', write, controller.update);
-  fastify.delete('/:id', write, controller.remove);
+  fastify.post('/', g('costs.create'), controller.create);
+  fastify.patch('/:id', g('costs.update'), controller.update);
+  fastify.delete('/:id', g('costs.delete'), controller.remove);
 };
 
 // Mounted at /api/v1/projects — exposes project-scoped views:
@@ -46,7 +49,7 @@ export const costsRoutes: FastifyPluginAsync = async (fastify) => {
 //   GET /:id/cost-summary
 export const projectCostsRoutes: FastifyPluginAsync = async (fastify) => {
   const controller = getController(fastify.prisma);
-  const read = { preHandler: [fastify.authenticate, fastify.authorize(READ_ROLES)] };
+  const read = { preHandler: [fastify.authenticate, fastify.requireAccess({ permissions: ['costs.read'], roles: READ_ROLES })] };
 
   fastify.get('/:id/costs', read, controller.listForProject);
   fastify.get('/:id/cost-summary', read, controller.getProjectSummary);

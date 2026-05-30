@@ -14,6 +14,9 @@ import requestContextPlugin from './plugins/request-context.plugin.js';
 import tunnelPlugin from './plugins/tunnel.plugin.js';
 
 import authRoutes from './modules/auth/auth.routes.js';
+import usersRoutes from './modules/users/users.routes.js';
+import profileRoutes from './modules/profile/profile.routes.js';
+import rbacRoutes from './modules/rbac/rbac.routes.js';
 import customersRoutes from './modules/customers/customers.routes.js';
 import materialsRoutes from './modules/materials/materials.routes.js';
 import templatesRoutes from './modules/templates/templates.routes.js';
@@ -127,6 +130,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   await app.register(authRoutes, { prefix: '/api/v1/auth' });
+  await app.register(usersRoutes, { prefix: '/api/v1/users' });
+  await app.register(profileRoutes, { prefix: '/api/v1/profile' });
+  await app.register(rbacRoutes, { prefix: '/api/v1/rbac' });
   await app.register(customersRoutes, { prefix: '/api/v1/customers' });
   await app.register(materialsRoutes, { prefix: '/api/v1/materials' });
   await app.register(templatesRoutes, { prefix: '/api/v1/templates' });

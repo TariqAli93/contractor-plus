@@ -1,25 +1,19 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useCan } from '@/composables/useCan';
 import type { RoleName } from '@/types/enums';
+import AccessGate from './AccessGate.vue';
 
-const props = defineProps<{
+// Backward-compatible wrapper around AccessGate. Existing role-only call sites
+// keep working; an optional `permissions` prop makes a call site permission-
+// aware without changing the tag. New code should prefer <AccessGate>.
+defineProps<{
   roles: RoleName[];
+  permissions?: string[];
   mode?: 'hide' | 'disable';
 }>();
-
-const { can } = useCan();
-const allowed = computed(() => can(props.roles));
-const mode = computed(() => props.mode ?? 'hide');
 </script>
 
 <template>
-  <template v-if="allowed">
+  <AccessGate :roles="roles" :permissions="permissions" :mode="mode">
     <slot />
-  </template>
-  <template v-else-if="mode === 'disable'">
-    <div class="opacity-50 pointer-events-none">
-      <slot />
-    </div>
-  </template>
+  </AccessGate>
 </template>

@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { RoleName } from '@prisma/client';
+import { RoleName } from '@contractor-plus/shared';
 import { AuditService } from './audit.service.js';
 import { AuditController } from './audit.controller.js';
 
@@ -12,7 +12,8 @@ const auditRoutes: FastifyPluginAsync = async (fastify) => {
   const service = new AuditService(fastify.prisma);
   const controller = new AuditController(service);
 
-  const read = { preHandler: [fastify.authenticate, fastify.authorize(AUDIT_ROLES)] };
+  // Hybrid: audit.read permission OR legacy OWNER/ADMIN.
+  const read = { preHandler: [fastify.authenticate, fastify.requireAccess({ permissions: ['audit.read'], roles: AUDIT_ROLES })] };
 
   fastify.get('/logs', read, controller.listLogs);
   fastify.get('/logs/:id', read, controller.getLogById);

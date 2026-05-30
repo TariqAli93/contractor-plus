@@ -16,13 +16,9 @@ datasource db {
 // Enums
 // ============================================================
 
-enum RoleName {
-  OWNER
-  ADMIN
-  ACCOUNTANT
-  ENGINEER
-  VIEWER
-}
+// Role names are no longer a DB enum — roles may be system (OWNER, ADMIN, …)
+// or custom. The canonical system-role name constants live in
+// @contractor-plus/shared (RoleName). `Role.name` is a free String + unique.
 
 enum ContractStatus {
   DRAFT
@@ -93,22 +89,70 @@ enum DocumentCategory {
 // ============================================================
 
 model Role {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        RoleName @unique
+  id          String           @id @default(uuid()) @db.Uuid
+  // System role names match @contractor-plus/shared RoleName; custom roles use
+  // any other unique string.
+  name        String           @unique
+  displayName String?
   description String?
+  sortOrder   Int              @default(0)
+  isSystem    Boolean          @default(true)
+  // Protected roles cannot be deleted (all system roles are protected; OWNER
+  // additionally can never lose effective full access).
+  isProtected Boolean          @default(false)
+  isActive    Boolean          @default(true)
   users       User[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@map("roles")
+}
+
+// ============================================================
+// RBAC — dynamic permissions
+// ============================================================
+
+model Permission {
+  id          String           @id @default(uuid()) @db.Uuid
+  // Stable string identifier, e.g. "customers.create". Never generated.
+  key         String           @unique
+  module      String
+  action      String
+  displayName String
+  description String?
+  sortOrder   Int              @default(0)
+  isSystem    Boolean          @default(true)
+  isActive    Boolean          @default(true)
+  roles       RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([module])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String     @id @default(uuid()) @db.Uuid
+  roleId       String     @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String     @db.Uuid
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
 }
 
 model User {
   id            String         @id @default(uuid()) @db.Uuid
   // Login identifier. Stored lowercase-normalized; uniqueness enforced here.
   username      String         @unique
-  // Contact info — retained, no longer the login identifier.
-  email         String         @unique
+  // Contact info — optional, no longer the login identifier. Unique index
+  // treats NULLs as distinct, so multiple users may have no email.
+  email         String?        @unique
   passwordHash  String
   fullName      String
   phone         String?

@@ -40,6 +40,7 @@ const {
 } = useProjects();
 
 const WRITE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ENGINEER];
+const WRITE_PERMS = ['projects.create', 'projects.update', 'projects.delete'];
 
 const columns = computed(() => buildProjectColumns(t));
 
@@ -112,7 +113,7 @@ async function handleDelete(project: ProjectWithContract) {
   <div>
     <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
       <h1 class="text-h5">{{ t('nav.projects') }}</h1>
-      <RoleGate :roles="WRITE_ROLES">
+      <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" to="/projects/new">
           {{ t('projects.new') }}
         </v-btn>
@@ -196,7 +197,7 @@ async function handleDelete(project: ProjectWithContract) {
         </template>
         <template #[`item.actions`]="{ item }">
           <div class="flex justify-end gap-1" @click.stop>
-            <RoleGate :roles="WRITE_ROLES">
+            <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
               <v-btn
                 icon="mdi-delete-outline"
                 size="small"

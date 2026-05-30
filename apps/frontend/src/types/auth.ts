@@ -1,11 +1,14 @@
-import type { RoleName } from './enums';
-
 export interface UserProfile {
   id: string;
-  email: string;
+  username: string;
+  email: string | null;
   fullName: string;
   phone: string | null;
-  role: RoleName;
+  // Role name (system role from RoleName, or a custom role name).
+  role: string;
+  roleDisplayName: string | null;
+  // Effective permission keys for the user's role (OWNER = all).
+  permissions: string[];
   lastLoginAt: string | null;
 }
 

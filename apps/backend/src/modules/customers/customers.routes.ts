@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { RoleName } from '@prisma/client';
+import { RoleName } from '@contractor-plus/shared';
 import { CustomersService } from './customers.service.js';
 import { CustomersController } from './customers.controller.js';
 
@@ -21,14 +21,17 @@ const customersRoutes: FastifyPluginAsync = async (fastify) => {
   const service = new CustomersService(fastify.prisma);
   const controller = new CustomersController(service);
 
-  const read = { preHandler: [fastify.authenticate, fastify.authorize(READ_ROLES)] };
-  const write = { preHandler: [fastify.authenticate, fastify.authorize(WRITE_ROLES)] };
+  // Hybrid: permission-first with legacy role fallback.
+  const read = { preHandler: [fastify.authenticate, fastify.requireAccess({ permissions: ['customers.read'], roles: READ_ROLES })] };
+  const g = (permission: string) => ({
+    preHandler: [fastify.authenticate, fastify.requireAccess({ permissions: [permission], roles: WRITE_ROLES })],
+  });
 
   fastify.get('/', read, controller.list);
   fastify.get('/:id', read, controller.getById);
-  fastify.post('/', write, controller.create);
-  fastify.patch('/:id', write, controller.update);
-  fastify.delete('/:id', write, controller.remove);
+  fastify.post('/', g('customers.create'), controller.create);
+  fastify.patch('/:id', g('customers.update'), controller.update);
+  fastify.delete('/:id', g('customers.delete'), controller.remove);
 };
 
 export default customersRoutes;

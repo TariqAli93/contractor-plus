@@ -4,7 +4,7 @@ import { t } from '@/i18n';
 import { projectsApi } from '@/services/api/projects.api';
 import { useApiError } from '@/composables/useApiError';
 import { useToast } from '@/composables/useToast';
-import { useCan } from '@/composables/useCan';
+import { useAccess } from '@/composables/useAccess';
 import { ProjectStatus, RoleName } from '@/types/enums';
 import type { ProjectWithContract } from '@/types/project';
 import ProjectProgressBar from './ProjectProgressBar.vue';
@@ -15,10 +15,11 @@ const emit = defineEmits<{ refetch: [] }>();
 
 const { handle } = useApiError();
 const toast = useToast();
-const { can } = useCan();
+const { canAccess } = useAccess();
 
 const WRITE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ENGINEER];
-const canWrite = computed(() => can(WRITE_ROLES));
+const WRITE_PERMS = ['projects.update'];
+const canWrite = computed(() => canAccess({ permissions: WRITE_PERMS, roles: WRITE_ROLES }));
 
 const isTerminal = computed(
   () =>
@@ -111,7 +112,7 @@ function reset() {
         />
       </v-card-text>
 
-      <RoleGate :roles="WRITE_ROLES">
+      <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-divider v-if="!isTerminal" />
         <v-card-actions v-if="!isTerminal" class="px-4 pb-4">
           <v-btn variant="text" :disabled="!dirty || submitting" @click="reset">

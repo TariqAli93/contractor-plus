@@ -38,6 +38,7 @@ const {
 } = useContracts();
 
 const WRITE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ACCOUNTANT];
+const WRITE_PERMS = ['contracts.create', 'contracts.update', 'contracts.delete'];
 
 const columns = computed(() => buildContractColumns(t));
 
@@ -104,7 +105,7 @@ async function handleDelete(contract: Contract) {
   <div>
     <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
       <h1 class="text-h5">{{ t('nav.contracts') }}</h1>
-      <RoleGate :roles="WRITE_ROLES">
+      <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" to="/contracts/new">
           {{ t('contracts.new') }}
         </v-btn>
@@ -167,7 +168,7 @@ async function handleDelete(contract: Contract) {
         </template>
         <template #[`item.actions`]="{ item }">
           <div class="flex justify-end gap-1" @click.stop>
-            <RoleGate :roles="WRITE_ROLES">
+            <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
               <v-btn
                 icon="mdi-delete-outline"
                 size="small"

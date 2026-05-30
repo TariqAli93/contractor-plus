@@ -34,6 +34,7 @@ const {
 } = useCustomers();
 
 const WRITE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ACCOUNTANT];
+const WRITE_PERMS = ['customers.create', 'customers.update', 'customers.delete'];
 
 const columns = computed(() => buildCustomerColumns(t));
 
@@ -87,7 +88,7 @@ async function handleDelete(customer: Customer) {
   <div>
     <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
       <h1 class="text-h5">{{ t('nav.customers') }}</h1>
-      <RoleGate :roles="WRITE_ROLES">
+      <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" to="/customers/new">
           {{ t('customers.new') }}
         </v-btn>
@@ -128,7 +129,7 @@ async function handleDelete(customer: Customer) {
         </template>
         <template #[`item.actions`]="{ item }">
           <div class="flex justify-end gap-1" @click.stop>
-            <RoleGate :roles="WRITE_ROLES">
+            <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
               <v-btn
                 icon="mdi-pencil"
                 size="small"

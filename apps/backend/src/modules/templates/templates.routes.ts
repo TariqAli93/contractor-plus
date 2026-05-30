@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { RoleName } from '@prisma/client';
+import { RoleName } from '@contractor-plus/shared';
 import { TemplatesService } from './templates.service.js';
 import { TemplatesController } from './templates.controller.js';
 
@@ -21,25 +21,28 @@ const templatesRoutes: FastifyPluginAsync = async (fastify) => {
   const service = new TemplatesService(fastify.prisma);
   const controller = new TemplatesController(service);
 
-  const read = { preHandler: [fastify.authenticate, fastify.authorize(READ_ROLES)] };
-  const write = { preHandler: [fastify.authenticate, fastify.authorize(WRITE_ROLES)] };
+  // Hybrid: permission-first with legacy role fallback.
+  const read = { preHandler: [fastify.authenticate, fastify.requireAccess({ permissions: ['templates.read'], roles: READ_ROLES })] };
+  const g = (permission: string) => ({
+    preHandler: [fastify.authenticate, fastify.requireAccess({ permissions: [permission], roles: WRITE_ROLES })],
+  });
 
   // Templates
   fastify.get('/', read, controller.list);
   fastify.get('/:id', read, controller.getById);
-  fastify.post('/', write, controller.create);
-  fastify.patch('/:id', write, controller.update);
-  fastify.delete('/:id', write, controller.remove);
+  fastify.post('/', g('templates.create'), controller.create);
+  fastify.patch('/:id', g('templates.update'), controller.update);
+  fastify.delete('/:id', g('templates.delete'), controller.remove);
 
-  // Items
-  fastify.post('/:id/items', write, controller.addItem);
-  fastify.patch('/:id/items/:itemId', write, controller.updateItem);
-  fastify.delete('/:id/items/:itemId', write, controller.removeItem);
+  // Items (template composition is an update of the template)
+  fastify.post('/:id/items', g('templates.update'), controller.addItem);
+  fastify.patch('/:id/items/:itemId', g('templates.update'), controller.updateItem);
+  fastify.delete('/:id/items/:itemId', g('templates.update'), controller.removeItem);
 
   // Steps
-  fastify.post('/:id/steps', write, controller.addStep);
-  fastify.patch('/:id/steps/:stepId', write, controller.updateStep);
-  fastify.delete('/:id/steps/:stepId', write, controller.removeStep);
+  fastify.post('/:id/steps', g('templates.update'), controller.addStep);
+  fastify.patch('/:id/steps/:stepId', g('templates.update'), controller.updateStep);
+  fastify.delete('/:id/steps/:stepId', g('templates.update'), controller.removeStep);
 
   // Estimate
   fastify.get('/:id/estimate', read, controller.getEstimate);

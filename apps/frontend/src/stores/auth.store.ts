@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import type { UserProfile } from '@/types/auth';
-import type { RoleName } from '@/types/enums';
+import { RoleName } from '@/types/enums';
 import { tokenStorage } from '@/lib/token-storage';
 import { authApi } from '@/services/api/auth.api';
 
@@ -11,7 +11,9 @@ export const useAuthStore = defineStore('auth', () => {
   const initialized = ref(false);
 
   const isAuthenticated = computed(() => accessToken.value !== null && user.value !== null);
-  const role = computed<RoleName | null>(() => user.value?.role ?? null);
+  const role = computed<string | null>(() => user.value?.role ?? null);
+  const isOwner = computed(() => role.value === RoleName.OWNER);
+  const permissions = computed<string[]>(() => user.value?.permissions ?? []);
 
   function setSession(payload: {
     accessToken: string;
@@ -82,6 +84,8 @@ export const useAuthStore = defineStore('auth', () => {
     initialized,
     isAuthenticated,
     role,
+    isOwner,
+    permissions,
     setSession,
     setTokensOnly,
     clear,

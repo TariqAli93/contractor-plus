@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { RoleName } from '@prisma/client';
+import { RoleName } from '@contractor-plus/shared';
 
 // Login identifier: trimmed + lowercased, 3–50 chars, letters/numbers/._-.
 export const usernameSchema = z
@@ -31,10 +31,14 @@ export const tokenPairSchema = z.object({
 
 export const userProfileSchema = z.object({
   id: z.string().uuid(),
-  email: z.string().email(),
+  username: z.string(),
+  email: z.string().email().nullable(),
   fullName: z.string(),
   phone: z.string().nullable(),
-  role: z.nativeEnum(RoleName),
+  // Role name (system or custom) + its display label + effective permissions.
+  role: z.string(),
+  roleDisplayName: z.string().nullable(),
+  permissions: z.array(z.string()),
   lastLoginAt: z.date().nullable(),
 });
 

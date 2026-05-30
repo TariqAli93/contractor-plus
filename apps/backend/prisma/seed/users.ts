@@ -1,4 +1,5 @@
-import { type PrismaClient, RoleName } from '@prisma/client';
+import { RoleName } from '@contractor-plus/shared';
+import { type PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 // Shared password for demo. Print it after seeding so the operator can log in.

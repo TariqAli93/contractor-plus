@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { RoleName } from '@prisma/client';
+import { RoleName } from '@contractor-plus/shared';
 import { ContractsService } from './contracts.service.js';
 import { ContractsController } from './contracts.controller.js';
 
@@ -21,19 +21,22 @@ const contractsRoutes: FastifyPluginAsync = async (fastify) => {
   const service = new ContractsService(fastify.prisma);
   const controller = new ContractsController(service);
 
-  const read = { preHandler: [fastify.authenticate, fastify.authorize(READ_ROLES)] };
-  const write = { preHandler: [fastify.authenticate, fastify.authorize(WRITE_ROLES)] };
+  // Hybrid: permission-first with legacy role fallback.
+  const read = { preHandler: [fastify.authenticate, fastify.requireAccess({ permissions: ['contracts.read'], roles: READ_ROLES })] };
+  const g = (permission: string) => ({
+    preHandler: [fastify.authenticate, fastify.requireAccess({ permissions: [permission], roles: WRITE_ROLES })],
+  });
 
   fastify.get('/', read, controller.list);
   fastify.get('/:id', read, controller.getById);
-  fastify.post('/', write, controller.create);
-  fastify.patch('/:id', write, controller.update);
-  fastify.delete('/:id', write, controller.remove);
+  fastify.post('/', g('contracts.create'), controller.create);
+  fastify.patch('/:id', g('contracts.update'), controller.update);
+  fastify.delete('/:id', g('contracts.delete'), controller.remove);
 
-  fastify.post('/:id/generate-estimate', write, controller.generateEstimate);
-  fastify.post('/:id/approve', write, controller.approve);
-  fastify.post('/:id/cancel', write, controller.cancel);
-  fastify.post('/:id/create-project', write, controller.createProject);
+  fastify.post('/:id/generate-estimate', g('contracts.update'), controller.generateEstimate);
+  fastify.post('/:id/approve', g('contracts.approve'), controller.approve);
+  fastify.post('/:id/cancel', g('contracts.cancel'), controller.cancel);
+  fastify.post('/:id/create-project', g('projects.create'), controller.createProject);
 };
 
 export default contractsRoutes;

@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { RoleName } from '@prisma/client';
+import { RoleName } from '@contractor-plus/shared';
 import { DocumentTemplatesService } from './document-templates.service.js';
 import { DocumentTemplatesController } from './document-templates.controller.js';
 
@@ -25,18 +25,24 @@ function getController(prisma: import('@prisma/client').PrismaClient): DocumentT
   return cachedController;
 }
 
+// Hybrid access: contract-template management uses the
+// settings.contract_templates.manage permission; generation/preview uses
+// contracts.generate_docx. Both fall back to the legacy role sets.
+const MANAGE = { permissions: ['settings.contract_templates.manage'] as const, roles: MANAGE_ROLES };
+const GENERATE = { permissions: ['contracts.generate_docx'] as const, roles: GENERATE_ROLES };
+
 // Mounted at /api/v1/templates
 export const documentTemplatesRoutes: FastifyPluginAsync = async (fastify) => {
   const controller = getController(fastify.prisma);
-  const manage = { preHandler: [fastify.authenticate, fastify.authorize(MANAGE_ROLES)] };
-  const generate = { preHandler: [fastify.authenticate, fastify.authorize(GENERATE_ROLES)] };
+  const manage = { preHandler: [fastify.authenticate, fastify.requireAccess(MANAGE)] };
+  const generate = { preHandler: [fastify.authenticate, fastify.requireAccess(GENERATE)] };
 
   fastify.get('/', manage, controller.list);
   fastify.post('/', manage, controller.create);
   fastify.patch('/:id', manage, controller.update);
   fastify.delete('/:id', manage, controller.remove);
   fastify.post('/:id/set-default', manage, controller.setDefault);
-  // Downloads gated to the wider GENERATE_ROLES so an engineer can preview
+  // Downloads gated to the wider GENERATE set so an engineer can preview
   // the template they're about to render against.
   fastify.get('/:id/download', generate, controller.downloadTemplate);
 };
@@ -45,7 +51,7 @@ export const documentTemplatesRoutes: FastifyPluginAsync = async (fastify) => {
 // next to the existing contract routes for a cleaner URL hierarchy.
 export const contractDocxRoutes: FastifyPluginAsync = async (fastify) => {
   const controller = getController(fastify.prisma);
-  const generate = { preHandler: [fastify.authenticate, fastify.authorize(GENERATE_ROLES)] };
+  const generate = { preHandler: [fastify.authenticate, fastify.requireAccess(GENERATE)] };
 
   fastify.post('/:id/generate-docx', generate, controller.generateContractDocx);
   fastify.get('/:id/generated-documents', generate, controller.listGeneratedForContract);
@@ -54,6 +60,6 @@ export const contractDocxRoutes: FastifyPluginAsync = async (fastify) => {
 // Mounted at /api/v1/generated-documents
 export const generatedDocumentsRoutes: FastifyPluginAsync = async (fastify) => {
   const controller = getController(fastify.prisma);
-  const generate = { preHandler: [fastify.authenticate, fastify.authorize(GENERATE_ROLES)] };
+  const generate = { preHandler: [fastify.authenticate, fastify.requireAccess(GENERATE)] };
   fastify.get('/:id/download', generate, controller.downloadGenerated);
 };

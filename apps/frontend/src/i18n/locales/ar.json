@@ -13,6 +13,144 @@
       "system": "حسب النظام"
     }
   },
+  "roles": {
+    "OWNER": "المالك",
+    "ADMIN": "مدير",
+    "ACCOUNTANT": "محاسب",
+    "ENGINEER": "مهندس",
+    "VIEWER": "مشاهد"
+  },
+  "users": {
+    "new": "مستخدم جديد",
+    "edit": "تعديل المستخدم",
+    "searchPlaceholder": "ابحث بالاسم أو اسم المستخدم أو البريد أو الهاتف",
+    "usernameLocked": "لا يمكن تغيير اسم المستخدم بعد الإنشاء.",
+    "selfRoleLocked": "لا يمكنك تغيير دورك بنفسك.",
+    "selfDeactivateLocked": "لا يمكنك إيقاف حسابك بنفسك.",
+    "deleteConfirmTitle": "حذف هذا المستخدم؟",
+    "deleteConfirmMessage": "سيتم إخفاء المستخدم \"{name}\". يمكن استعادته لاحقاً.",
+    "activateConfirmTitle": "تفعيل المستخدم؟",
+    "activateConfirmMessage": "سيتمكن \"{name}\" من تسجيل الدخول مجدداً.",
+    "deactivateConfirmTitle": "إيقاف المستخدم؟",
+    "deactivateConfirmMessage": "لن يتمكن \"{name}\" من تسجيل الدخول حتى إعادة التفعيل.",
+    "fields": {
+      "username": "اسم المستخدم",
+      "password": "كلمة المرور",
+      "fullName": "الاسم الكامل",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "role": "الدور",
+      "status": "الحالة",
+      "active": "مفعّل",
+      "lastLoginAt": "آخر دخول"
+    },
+    "status": {
+      "active": "مفعّل",
+      "inactive": "موقوف"
+    },
+    "filter": {
+      "allRoles": "كل الأدوار",
+      "allStatuses": "كل الحالات"
+    },
+    "actions": {
+      "activate": "تفعيل",
+      "deactivate": "إيقاف",
+      "resetPassword": "إعادة تعيين كلمة المرور"
+    },
+    "resetPassword": {
+      "title": "إعادة تعيين كلمة المرور",
+      "hint": "أدخل كلمة مرور مؤقتة. سيُطلب من المستخدم استخدامها لتسجيل الدخول.",
+      "newPassword": "كلمة المرور الجديدة",
+      "submit": "إعادة التعيين"
+    },
+    "toast": {
+      "passwordReset": "تم إعادة تعيين كلمة المرور."
+    },
+    "errors": {
+      "usernameMin": "اسم المستخدم 3 أحرف على الأقل",
+      "passwordMin": "كلمة المرور 8 أحرف على الأقل",
+      "email": "صيغة البريد الإلكتروني غير صحيحة"
+    }
+  },
+  "profile": {
+    "title": "الملف الشخصي",
+    "accountTitle": "معلومات الحساب",
+    "editTitle": "تعديل بيانات التواصل",
+    "toast": {
+      "saved": "تم حفظ الملف الشخصي."
+    },
+    "password": {
+      "title": "تغيير كلمة المرور",
+      "current": "كلمة المرور الحالية",
+      "new": "كلمة المرور الجديدة",
+      "confirm": "تأكيد كلمة المرور",
+      "submit": "تغيير",
+      "changed": "تم تغيير كلمة المرور.",
+      "wrongCurrent": "كلمة المرور الحالية غير صحيحة",
+      "mismatch": "كلمتا المرور غير متطابقتين"
+    }
+  },
+  "rbac": {
+    "intro": "هذه الصلاحيات ديناميكية ويمكن تعديلها للأدوار المخصصة. الأدوار النظامية محمية لضمان استقرار النظام. يمكنك إنشاء دور مخصص ومنحه الصلاحيات المناسبة.",
+    "rolesTab": "الأدوار",
+    "matrixTab": "مصفوفة الصلاحيات",
+    "systemNote": "الأدوار النظامية محمية ولا يمكن حذفها. يمكنك إنشاء أدوار مخصصة ومنحها الصلاحيات المناسبة.",
+    "matrixNote": "تعرض هذه المصفوفة صلاحيات كل دور. المالك يملك جميع الصلاحيات دائماً.",
+    "systemRole": "دور نظامي",
+    "protected": "محمي",
+    "permission": "الصلاحية",
+    "userCount": "{n} مستخدم",
+    "permissionCount": "{n} صلاحية",
+    "createRole": "دور مخصص جديد",
+    "editRole": "تعديل الدور",
+    "editMetadata": "تعديل البيانات",
+    "editPermissions": "تعديل الصلاحيات",
+    "permissions": "الصلاحيات",
+    "permissionsSaved": "تم حفظ الصلاحيات.",
+    "selectedCount": "{n} صلاحية مختارة",
+    "selectAll": "تحديد الكل",
+    "clearAll": "إلغاء الكل",
+    "ownerLocked": "دور المالك يملك جميع الصلاحيات ولا يمكن تعديله.",
+    "systemRoleWarning": "تعديل صلاحيات دور نظامي قد يؤثر على عمل المستخدمين الحاليين. تابع بحذر.",
+    "deleteConfirmTitle": "حذف هذا الدور؟",
+    "deleteConfirmMessage": "سيتم حذف الدور المخصص \"{name}\" نهائياً.",
+    "fields": {
+      "name": "المعرّف",
+      "nameHint": "أحرف إنجليزية صغيرة وأرقام وشرطة فقط (مثل: auditor).",
+      "displayName": "الاسم الظاهر",
+      "description": "الوصف",
+      "sortOrder": "الترتيب"
+    },
+    "errors": {
+      "nameFormat": "المعرّف يجب أن يبدأ بحرف ويحتوي أحرفاً صغيرة وأرقاماً وشرطة فقط"
+    }
+  },
+  "permissionGroups": {
+    "dashboard": "لوحة التحكم",
+    "customers": "العملاء",
+    "materials": "المواد",
+    "templates": "القوالب",
+    "contracts": "العقود",
+    "projects": "المشاريع",
+    "costs": "المصاريف",
+    "payments": "الدفعات",
+    "reports": "التقارير",
+    "audit": "سجل التدقيق",
+    "tunnel": "النفق",
+    "settings": "الإعدادات",
+    "users": "المستخدمون",
+    "rbac": "الأدوار والصلاحيات",
+    "profile": "الملف الشخصي"
+  },
+  "permissionActions": {
+    "read": "اطلاع",
+    "create": "إنشاء",
+    "update": "تعديل",
+    "delete": "حذف",
+    "approve": "اعتماد",
+    "cancel": "إلغاء",
+    "manage": "إدارة"
+  },
   "common": {
     "loading": "جاري التحميل...",
     "save": "حفظ",
@@ -58,6 +196,8 @@
     "audit": "سجل التدقيق",
     "tunnel": "النفق",
     "settings": "الإعدادات",
+    "users": "المستخدمون",
+    "rbac": "الأدوار والصلاحيات",
     "groups": {
       "operations": "العمليات",
       "directory": "الدليل",

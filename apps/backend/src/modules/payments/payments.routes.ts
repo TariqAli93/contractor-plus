@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { RoleName } from '@prisma/client';
+import { RoleName } from '@contractor-plus/shared';
 import { PaymentsService } from './payments.service.js';
 import { PaymentsController } from './payments.controller.js';
 
@@ -30,17 +30,20 @@ function getController(prisma: import('@prisma/client').PrismaClient): PaymentsC
 // Mounted at /api/v1/payments
 export const paymentsRoutes: FastifyPluginAsync = async (fastify) => {
   const controller = getController(fastify.prisma);
-  const read = { preHandler: [fastify.authenticate, fastify.authorize(READ_ROLES)] };
-  const write = { preHandler: [fastify.authenticate, fastify.authorize(WRITE_ROLES)] };
+  // Hybrid: permission-first with legacy role fallback.
+  const read = { preHandler: [fastify.authenticate, fastify.requireAccess({ permissions: ['payments.read'], roles: READ_ROLES })] };
+  const g = (permission: string) => ({
+    preHandler: [fastify.authenticate, fastify.requireAccess({ permissions: [permission], roles: WRITE_ROLES })],
+  });
 
   fastify.get('/', read, controller.list);
   fastify.get('/:id', read, controller.getById);
-  fastify.post('/', write, controller.create);
-  fastify.patch('/:id', write, controller.update);
-  fastify.delete('/:id', write, controller.remove);
+  fastify.post('/', g('payments.create'), controller.create);
+  fastify.patch('/:id', g('payments.update'), controller.update);
+  fastify.delete('/:id', g('payments.delete'), controller.remove);
 
-  fastify.post('/:id/mark-paid', write, controller.markPaid);
-  fastify.post('/:id/cancel', write, controller.cancel);
+  fastify.post('/:id/mark-paid', g('payments.mark_paid'), controller.markPaid);
+  fastify.post('/:id/cancel', g('payments.cancel'), controller.cancel);
 };
 
 // Mounted at /api/v1/projects — exposes project-scoped views:
@@ -48,7 +51,7 @@ export const paymentsRoutes: FastifyPluginAsync = async (fastify) => {
 //   GET /:id/payment-summary
 export const projectPaymentsRoutes: FastifyPluginAsync = async (fastify) => {
   const controller = getController(fastify.prisma);
-  const read = { preHandler: [fastify.authenticate, fastify.authorize(READ_ROLES)] };
+  const read = { preHandler: [fastify.authenticate, fastify.requireAccess({ permissions: ['payments.read'], roles: READ_ROLES })] };
 
   fastify.get('/:id/payments', read, controller.listForProject);
   fastify.get('/:id/payment-summary', read, controller.getProjectSummary);

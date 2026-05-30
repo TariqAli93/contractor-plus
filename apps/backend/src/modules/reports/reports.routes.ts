@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { RoleName } from '@prisma/client';
+import { RoleName } from '@contractor-plus/shared';
 import { ReportsService } from './reports.service.js';
 import { ReportsController } from './reports.controller.js';
 
@@ -16,7 +16,8 @@ const reportsRoutes: FastifyPluginAsync = async (fastify) => {
   const service = new ReportsService(fastify.prisma);
   const controller = new ReportsController(service);
 
-  const read = { preHandler: [fastify.authenticate, fastify.authorize(REPORT_ROLES)] };
+  // Hybrid: reports.read permission OR legacy roles.
+  const read = { preHandler: [fastify.authenticate, fastify.requireAccess({ permissions: ['reports.read'], roles: REPORT_ROLES })] };
 
   fastify.get('/dashboard', read, controller.dashboard);
   fastify.get('/project-profitability', read, controller.listProjectProfitability);

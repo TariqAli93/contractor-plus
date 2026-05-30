@@ -5,7 +5,7 @@ import { projectsApi } from '@/services/api/projects.api';
 import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import { useApiError } from '@/composables/useApiError';
-import { useCan } from '@/composables/useCan';
+import { useAccess } from '@/composables/useAccess';
 import { ProjectStatus, RoleName } from '@/types/enums';
 import type { ProjectWithContract } from '@/types/project';
 import ProjectStatusBadge from './ProjectStatusBadge.vue';
@@ -16,10 +16,20 @@ const emit = defineEmits<{ refetch: [] }>();
 const { confirm } = useConfirm();
 const toast = useToast();
 const { handle } = useApiError();
-const { can } = useCan();
+const { canAccess } = useAccess();
 
+// Lifecycle actions are permission-first (any projects lifecycle permission)
+// with the legacy operations roles as fallback.
 const WRITE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ENGINEER];
-const canWrite = computed(() => can(WRITE_ROLES));
+const LIFECYCLE_PERMS = [
+  'projects.update',
+  'projects.start',
+  'projects.pause',
+  'projects.resume',
+  'projects.complete',
+  'projects.cancel',
+];
+const canWrite = computed(() => canAccess({ permissions: LIFECYCLE_PERMS, roles: WRITE_ROLES }));
 
 const isPlanned = computed(() => props.project.status === ProjectStatus.PLANNED);
 const isInProgress = computed(() => props.project.status === ProjectStatus.IN_PROGRESS);

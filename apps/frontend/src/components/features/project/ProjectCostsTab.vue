@@ -23,6 +23,7 @@ const ADD_ROLES: RoleName[] = [
   RoleName.ACCOUNTANT,
   RoleName.ENGINEER,
 ];
+const ADD_PERMS = ['costs.create'];
 
 const summary = ref<ProjectCostSummary | null>(null);
 const loading = ref(false);
@@ -61,7 +62,7 @@ async function onCreated() {
     <div class="flex items-center justify-between mb-3 gap-3 flex-wrap">
       <h2 class="text-h6">{{ t('projects.costs.title') }}</h2>
       <div class="flex items-center gap-2">
-        <RoleGate :roles="ADD_ROLES">
+        <RoleGate :permissions="ADD_PERMS" :roles="ADD_ROLES">
           <v-btn
             color="primary"
             prepend-icon="mdi-cash-minus"

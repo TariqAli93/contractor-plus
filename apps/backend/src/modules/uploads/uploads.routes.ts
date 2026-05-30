@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { RoleName } from '@prisma/client';
+import { RoleName } from '@contractor-plus/shared';
 import { UploadsService } from './uploads.service.js';
 import { UploadsController } from './uploads.controller.js';
 
@@ -12,8 +12,12 @@ const uploadsRoutes: FastifyPluginAsync = async (fastify) => {
   const service = new UploadsService(fastify.prisma);
   const controller = new UploadsController(service);
 
+  // Hybrid: company-asset management permission OR legacy OWNER/ADMIN.
   const guarded = {
-    preHandler: [fastify.authenticate, fastify.authorize(UPLOAD_ROLES)],
+    preHandler: [
+      fastify.authenticate,
+      fastify.requireAccess({ permissions: ['settings.company.manage'], roles: UPLOAD_ROLES }),
+    ],
   };
 
   // Read both assets in one go — used by the Company Profile tab on load.

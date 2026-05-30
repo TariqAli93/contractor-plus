@@ -3,15 +3,16 @@ import { computed, onMounted } from 'vue';
 import { t } from '@/i18n';
 import { useTunnel } from '@/composables/useTunnel';
 import { useTunnelStore } from '@/stores/tunnel.store';
-import { useCan } from '@/composables/useCan';
+import { useAccess } from '@/composables/useAccess';
 import { RoleName } from '@/types/enums';
 import DashboardSection from './DashboardSection.vue';
 
 const { refresh, toneLabel, copyPublicUrl } = useTunnel();
 const store = useTunnelStore();
-const { can } = useCan();
+const { canAccess } = useAccess();
 
 const ADMIN_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN];
+const canManageTunnel = computed(() => canAccess({ permissions: ['tunnel.manage'], roles: ADMIN_ROLES }));
 
 onMounted(() => {
   if (!store.initialized) void refresh({ silent: true });
@@ -35,7 +36,7 @@ const orbClass = computed(() => {
   <DashboardSection :title="t('tunnel.page.title')" icon="mdi-tunnel">
     <template #action>
       <v-btn
-        v-if="can(ADMIN_ROLES)"
+        v-if="canManageTunnel"
         variant="text"
         size="small"
         append-icon="mdi-arrow-left"

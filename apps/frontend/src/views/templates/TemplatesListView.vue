@@ -36,6 +36,7 @@ const {
 } = useTemplates();
 
 const WRITE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ACCOUNTANT];
+const WRITE_PERMS = ['templates.create', 'templates.update', 'templates.delete'];
 
 const columns = computed(() => buildTemplateColumns(t));
 
@@ -100,7 +101,7 @@ async function handleDelete(template: BuildingTemplate) {
   <div>
     <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
       <h1 class="text-h5">{{ t('nav.templates') }}</h1>
-      <RoleGate :roles="WRITE_ROLES">
+      <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" to="/templates/new">
           {{ t('templates.new') }}
         </v-btn>
@@ -163,7 +164,7 @@ async function handleDelete(template: BuildingTemplate) {
         </template>
         <template #[`item.actions`]="{ item }">
           <div class="flex justify-end gap-1" @click.stop>
-            <RoleGate :roles="WRITE_ROLES">
+            <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
               <v-btn
                 icon="mdi-pencil"
                 size="small"

@@ -1,10 +1,12 @@
-import { PrismaClient, RoleName } from '@prisma/client';
+import { RoleName } from '@contractor-plus/shared';
+import { PrismaClient } from '@prisma/client';
 import { seedUsers, DEMO_PASSWORD } from './seed/users.js';
 import { seedCustomers } from './seed/customers.js';
 import { seedMaterials } from './seed/materials.js';
 import { seedTemplates } from './seed/templates.js';
 import { seedScenarios } from './seed/scenarios.js';
 import { seedSettings } from './seed/settings.js';
+import { seedRbac } from './seed/rbac.js';
 
 const prisma = new PrismaClient();
 
@@ -17,6 +19,9 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('▶ Roles');
   await seedRoles();
+
+  console.log('▶ RBAC (permissions + role permissions)');
+  await seedRbac(prisma);
 
   console.log('▶ Settings (currencies + company profile)');
   await seedSettings(prisma);
@@ -48,12 +53,23 @@ async function main() {
   console.log('    viewer      — read-only');
 }
 
+// Arabic display metadata for the seeded system roles. Editable later via the
+// RBAC management UI; the permission set itself is code-defined.
+const ROLE_META: Record<RoleName, { displayName: string; description: string; sortOrder: number }> = {
+  [RoleName.OWNER]: { displayName: 'المالك', description: 'صلاحيات كاملة على النظام', sortOrder: 1 },
+  [RoleName.ADMIN]: { displayName: 'مدير', description: 'إدارة العمليات والمستخدمين', sortOrder: 2 },
+  [RoleName.ACCOUNTANT]: { displayName: 'محاسب', description: 'العقود والمصاريف والدفعات', sortOrder: 3 },
+  [RoleName.ENGINEER]: { displayName: 'مهندس', description: 'المشاريع والمصاريف', sortOrder: 4 },
+  [RoleName.VIEWER]: { displayName: 'مشاهد', description: 'اطلاع فقط', sortOrder: 5 },
+};
+
 async function seedRoles() {
   for (const name of Object.values(RoleName)) {
+    const meta = ROLE_META[name];
     await prisma.role.upsert({
       where: { name },
-      update: {},
-      create: { name },
+      update: { displayName: meta.displayName, description: meta.description, sortOrder: meta.sortOrder, isSystem: true },
+      create: { name, displayName: meta.displayName, description: meta.description, sortOrder: meta.sortOrder, isSystem: true },
     });
   }
   console.log(`  ${Object.values(RoleName).length} roles upserted`);

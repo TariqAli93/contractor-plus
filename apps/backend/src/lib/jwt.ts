@@ -1,13 +1,13 @@
 import jwt, { type SignOptions } from 'jsonwebtoken';
-import type { RoleName } from '@prisma/client';
 import { env } from '../config/env.js';
 
 const ISSUER = 'contractor-plus';
 
 export interface AccessTokenPayload {
   sub: string;
-  email: string;
-  role: RoleName;
+  email: string | null;
+  // Role name (system or custom). Kept small — permissions are loaded from DB.
+  role: string;
 }
 
 export function signAccessToken(payload: AccessTokenPayload): string {

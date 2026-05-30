@@ -2,7 +2,7 @@
 import { computed, onMounted } from 'vue';
 import { t } from '@/i18n';
 import { useProjectForm } from '@/composables/useProjectForm';
-import { useCan } from '@/composables/useCan';
+import { useAccess } from '@/composables/useAccess';
 import { ProjectStatus, RoleName } from '@/types/enums';
 import RoleGate from '@/components/shared/RoleGate.vue';
 
@@ -13,14 +13,15 @@ const props = defineProps<{
 
 const emit = defineEmits<{ saved: [] }>();
 
-const { can } = useCan();
+const { canAccess } = useAccess();
 const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } =
   useProjectForm(props.id);
 
 onMounted(load);
 
 const WRITE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ENGINEER];
-const canWrite = computed(() => can(WRITE_ROLES));
+const WRITE_PERMS = ['projects.update'];
+const canWrite = computed(() => canAccess({ permissions: WRITE_PERMS, roles: WRITE_ROLES }));
 
 const isTerminal = computed(
   () =>
@@ -94,7 +95,7 @@ async function handleSubmit() {
         />
       </div>
 
-      <RoleGate :roles="WRITE_ROLES">
+      <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <div v-if="!isTerminal" class="flex items-center pt-4">
           <v-btn variant="text" :disabled="submitting" @click="cancel">
             {{ t('common.cancel') }}

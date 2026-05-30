@@ -4,6 +4,7 @@ import { verifyPassword } from '../../lib/password.js';
 import { signAccessToken, accessTokenTtlSeconds } from '../../lib/jwt.js';
 import { generateOpaqueToken, sha256 } from '../../lib/crypto.js';
 import { UnauthorizedError } from '../../shared/errors/unauthorized.error.js';
+import { AccessService } from '../rbac/access.service.js';
 import { env } from '../../config/env.js';
 import type { LoginResponse, TokenPair, UserProfile } from './auth.schemas.js';
 import type { RequestContext } from './auth.types.js';
@@ -12,9 +13,11 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export class AuthService {
   private readonly repo: AuthRepository;
+  private readonly access: AccessService;
 
   constructor(prisma: PrismaClient) {
     this.repo = new AuthRepository(prisma);
+    this.access = new AccessService(prisma);
   }
 
   async login(username: string, password: string, ctx: RequestContext): Promise<LoginResponse> {
@@ -36,7 +39,7 @@ export class AuthService {
     await this.repo.updateLastLogin(user.id);
 
     return {
-      user: this.toProfile({ ...user, lastLoginAt: new Date() }),
+      user: await this.buildProfile({ ...user, lastLoginAt: new Date() }),
       tokens,
     };
   }
@@ -77,7 +80,7 @@ export class AuthService {
     if (!user || !user.isActive) {
       throw new UnauthorizedError('Account is not active', 'ACCOUNT_INACTIVE');
     }
-    return this.toProfile(user);
+    return this.buildProfile(user);
   }
 
   private async issueTokens(user: UserWithRole, ctx: RequestContext): Promise<TokenPair> {
@@ -106,13 +109,17 @@ export class AuthService {
     };
   }
 
-  private toProfile(user: UserWithRole): UserProfile {
+  private async buildProfile(user: UserWithRole): Promise<UserProfile> {
+    const permissions = await this.access.permissionsForRole(user.role.name);
     return {
       id: user.id,
+      username: user.username,
       email: user.email,
       fullName: user.fullName,
       phone: user.phone,
       role: user.role.name,
+      roleDisplayName: user.role.displayName,
+      permissions,
       lastLoginAt: user.lastLoginAt,
     };
   }
