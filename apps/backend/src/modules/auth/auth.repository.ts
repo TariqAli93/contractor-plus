@@ -5,9 +5,9 @@ export type UserWithRole = User & { role: Role };
 export class AuthRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  findUserByEmail(email: string): Promise<UserWithRole | null> {
+  findUserByUsername(username: string): Promise<UserWithRole | null> {
     return this.prisma.user.findFirst({
-      where: { email, deletedAt: null },
+      where: { username, deletedAt: null },
       include: { role: true },
     });
   }

@@ -40,12 +40,12 @@ async function main() {
   await seedScenarios(prisma, customers, materials, templates);
 
   console.log('\n✓ Seed complete.');
-  console.log(`\n  Demo accounts (password: ${DEMO_PASSWORD}):`);
-  console.log('    owner@contractor.demo       — full access');
-  console.log('    admin@contractor.demo       — full access');
-  console.log('    accountant@contractor.demo  — finance reads + writes');
-  console.log('    engineer@contractor.demo    — projects + costs');
-  console.log('    viewer@contractor.demo      — read-only');
+  console.log(`\n  Demo accounts (login by username, password: ${DEMO_PASSWORD}):`);
+  console.log('    owner       — full access');
+  console.log('    admin       — full access');
+  console.log('    accountant  — finance reads + writes');
+  console.log('    engineer    — projects + costs');
+  console.log('    viewer      — read-only');
 }
 
 async function seedRoles() {

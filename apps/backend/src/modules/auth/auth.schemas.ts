@@ -1,8 +1,17 @@
 import { z } from 'zod';
 import { RoleName } from '@prisma/client';
 
+// Login identifier: trimmed + lowercased, 3–50 chars, letters/numbers/._-.
+export const usernameSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(3, 'Username must be at least 3 characters')
+  .max(50, 'Username must be at most 50 characters')
+  .regex(/^[a-z0-9._-]+$/, 'Username may contain only letters, numbers, dot, underscore, and dash');
+
 export const loginSchema = z.object({
-  email: z.string().trim().toLowerCase().email(),
+  username: usernameSchema,
   password: z.string().min(1, 'Password is required'),
 });
 

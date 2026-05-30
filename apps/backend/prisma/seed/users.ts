@@ -4,40 +4,45 @@ import bcrypt from 'bcrypt';
 // Shared password for demo. Print it after seeding so the operator can log in.
 export const DEMO_PASSWORD = 'demo1234';
 
-// Iraqi staff. Phone format: +964 mobile (770/780 prefixes). The login
-// structure (emails + roles) is unchanged so existing demo accounts keep
-// working.
+// Iraqi staff. Login is by `username`; email is kept as contact info.
+// Phone format: +964 mobile (770/780 prefixes).
 const DEMO_USERS: Array<{
+  username: string;
   email: string;
   fullName: string;
   phone: string;
   role: RoleName;
 }> = [
   {
+    username: 'owner',
     email: 'owner@contractor.demo',
     fullName: 'طارق علي',
     phone: '+9647701000001',
     role: RoleName.OWNER,
   },
   {
+    username: 'admin',
     email: 'admin@contractor.demo',
     fullName: 'علي جاسم',
     phone: '+9647801000002',
     role: RoleName.ADMIN,
   },
   {
+    username: 'accountant',
     email: 'accountant@contractor.demo',
     fullName: 'محمد كريم',
     phone: '+9647701000003',
     role: RoleName.ACCOUNTANT,
   },
   {
+    username: 'engineer',
     email: 'engineer@contractor.demo',
     fullName: 'حسين كاظم',
     phone: '+9647801000004',
     role: RoleName.ENGINEER,
   },
   {
+    username: 'viewer',
     email: 'viewer@contractor.demo',
     fullName: 'سجاد مهدي',
     phone: '+9647701000005',
@@ -57,6 +62,7 @@ export async function seedUsers(prisma: PrismaClient) {
     if (!roleId) throw new Error(`Role ${u.role} not seeded — run role seeding first`);
     const user = await prisma.user.create({
       data: {
+        username: u.username,
         email: u.email,
         passwordHash,
         fullName: u.fullName,

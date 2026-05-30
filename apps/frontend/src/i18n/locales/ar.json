@@ -37,6 +37,8 @@
   },
   "auth": {
     "login": "تسجيل الدخول",
+    "username": "اسم المستخدم",
+    "usernamePlaceholder": "أدخل اسم المستخدم",
     "email": "البريد الإلكتروني",
     "password": "كلمة المرور",
     "submit": "دخول",

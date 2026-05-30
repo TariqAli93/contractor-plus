@@ -13,7 +13,7 @@ export class AuthController {
 
   login = async (request: FastifyRequest, reply: FastifyReply) => {
     const body = loginSchema.parse(request.body);
-    const result = await this.service.login(body.email, body.password, this.ctx(request));
+    const result = await this.service.login(body.username, body.password, this.ctx(request));
     return reply.code(200).send(result);
   };
 

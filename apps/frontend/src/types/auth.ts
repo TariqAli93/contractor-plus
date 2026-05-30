@@ -21,6 +21,6 @@ export interface LoginResponse {
 }
 
 export interface LoginInput {
-  email: string;
+  username: string;
   password: string;
 }

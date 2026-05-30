@@ -17,10 +17,13 @@ export class AuthService {
     this.repo = new AuthRepository(prisma);
   }
 
-  async login(email: string, password: string, ctx: RequestContext): Promise<LoginResponse> {
-    const user = await this.repo.findUserByEmail(email);
+  async login(username: string, password: string, ctx: RequestContext): Promise<LoginResponse> {
+    // Normalize defensively even though the schema already trims/lowercases.
+    const normalized = username.trim().toLowerCase();
+    const user = await this.repo.findUserByUsername(normalized);
 
-    // Constant-time-ish: only one generic error for all auth failures.
+    // Constant-time-ish: only one generic error for all auth failures (never
+    // reveal whether the username exists).
     if (!user || !user.isActive) {
       throw new UnauthorizedError('Invalid credentials', 'INVALID_CREDENTIALS');
     }

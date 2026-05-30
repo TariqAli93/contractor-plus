@@ -105,6 +105,9 @@ model Role {
 
 model User {
   id            String         @id @default(uuid()) @db.Uuid
+  // Login identifier. Stored lowercase-normalized; uniqueness enforced here.
+  username      String         @unique
+  // Contact info — retained, no longer the login identifier.
   email         String         @unique
   passwordHash  String
   fullName      String

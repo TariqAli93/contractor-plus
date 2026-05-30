@@ -34,8 +34,8 @@ export const useAuthStore = defineStore('auth', () => {
     tokenStorage.clearRefreshToken();
   }
 
-  async function login(email: string, password: string): Promise<void> {
-    const res = await authApi.login({ email, password });
+  async function login(username: string, password: string): Promise<void> {
+    const res = await authApi.login({ username, password });
     setSession({
       accessToken: res.tokens.accessToken,
       refreshToken: res.tokens.refreshToken,

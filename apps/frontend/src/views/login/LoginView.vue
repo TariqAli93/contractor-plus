@@ -13,18 +13,18 @@ const route = useRoute();
 const router = useRouter();
 const { fieldErrors, handle, clear } = useApiError();
 
-const email = ref('');
+const username = ref('');
 const password = ref('');
 const submitting = ref(false);
 
 const requiredRule = (v: string) => !!v || ' ';
-const emailRule = (v: string) => /.+@.+\..+/.test(v) || ' ';
+const minLenRule = (v: string) => (v?.trim().length ?? 0) >= 3 || ' ';
 
 async function submit() {
   clear();
   submitting.value = true;
   try {
-    await auth.login(email.value, password.value);
+    await auth.login(username.value, password.value);
     // After a successful login we have credentials — pull the logo + the
     // default currency so the destination page renders branded on the
     // first paint.
@@ -65,12 +65,13 @@ onMounted(() => {
       <v-form @submit.prevent="submit">
         <v-card-text class="flex flex-col gap-3">
           <v-text-field
-            v-model="email"
-            :label="t('auth.email')"
-            type="email"
-            autocomplete="email"
-            :rules="[requiredRule, emailRule]"
-            :error-messages="fieldErrors.email"
+            v-model="username"
+            :label="t('auth.username')"
+            :placeholder="t('auth.usernamePlaceholder')"
+            type="text"
+            autocomplete="username"
+            :rules="[requiredRule, minLenRule]"
+            :error-messages="fieldErrors.username"
           />
           <v-text-field
             v-model="password"
