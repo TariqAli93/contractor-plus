@@ -1,0 +1,57 @@
+appId: com.contractorplus.app
+productName: ContractorPlus
+copyright: © Contractor Plus
+
+# Pinned explicitly: under pnpm's hoisted layout `electron` lives in the repo-root
+# node_modules, not frontend/node_modules, so electron-builder cannot infer the
+# version from the app dir. Keep in sync with frontend devDependency "electron".
+electronVersion: 31.7.7
+
+# Electron app code (main/preload/scripts) is shipped raw in the asar; the Vue
+# SPA is NOT in the asar — it ships as extraResources and is served by the
+# backend service (single origin) and via the app:// protocol during setup.
+asar: true
+
+directories:
+  buildResources: build
+  output: ../release
+
+files:
+  - electron/**/*
+  - package.json
+  - '!**/*.map'
+  - '!**/.env*'
+
+extraResources:
+  - from: dist
+    to: frontend
+    filter:
+      - '**/*'
+
+# Copies + verifies dist-backend → resources/backend (TS/Prisma bundle + WinSW
+# host + service scripts). Runs before NSIS.
+afterPack: ../scripts/afterPack.cjs
+
+win:
+  target:
+    - nsis
+  artifactName: ContractorPlus-Setup-${version}.exe
+
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: إدارة المقاولات
+  uninstallDisplayName: إدارة المقاولات ${version}
+  unicode: true
+  # customInstall/customUnInstall: register + start + repair the WinSW service,
+  # and PRESERVE the service across updates.
+  include: ../scripts/installer-include.nsh
+
+publish:
+  - provider: github
+    owner: TariqAli93
+    repo: contractor-plus
+    releaseType: release

@@ -1,0 +1,36 @@
+<service>
+  <id>ContractorPlusBackend</id>
+  <name>Contractor Plus Backend</name>
+  <description>خدمة الخادم المحلي لتطبيق إدارة المقاولات — HTTP على 127.0.0.1:31734. الإصدار ${BACKEND_VERSION}.</description>
+
+  <!-- Bundled standalone Node.js runtime (NOT Electron's binary) so the service
+       is fully independent of the desktop client. %BASE% = the directory that
+       contains this descriptor and the WinSW wrapper (resources\backend). -->
+  <executable>%BASE%\bin\node.exe</executable>
+  <arguments>dist\server.js</arguments>
+  <workingdirectory>%BASE%</workingdirectory>
+
+  <!-- The ONLY runtime input handed to the backend. DB connection + secrets live
+       in %ProgramData%\ContractorPlus\config\service.json (written + ACL-locked at
+       first-run setup) — never in this descriptor or the installer. -->
+  <env name="NODE_ENV" value="production" />
+  <env name="CONTRACTOR_PLUS_HOME" value="%ProgramData%\ContractorPlus" />
+
+  <!-- Restart policy: two quick retries, then back off; reset the counter hourly. -->
+  <onfailure action="restart" delay="5 sec" />
+  <onfailure action="restart" delay="10 sec" />
+  <onfailure action="none" />
+  <resetfailure>1 hour</resetfailure>
+  <stoptimeout>15 sec</stoptimeout>
+
+  <!-- Delayed automatic start so the service does not block system boot. -->
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+
+  <!-- Roll stdout/stderr by size; keep a small window of history. -->
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>5</keepFiles>
+  </log>
+  <logpath>%ProgramData%\ContractorPlus\logs</logpath>
+</service>

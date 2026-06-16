@@ -14,7 +14,15 @@ export default [
       '**/build/**',
       '**/coverage/**',
       '**/*.tsbuildinfo',
-      'apps/backend/prisma/migrations/**',
+      'backend/prisma/migrations/**',
+      // Node build/runtime scripts (CommonJS / plain Node) — not app source.
+      'frontend/electron/**',
+      'scripts/**',
+      'build-backend.js',
+      'pumb-version.js',
+      'dist-backend/**',
+      'release/**',
+      'release-client/**',
     ],
   },
   js.configs.recommended,
@@ -32,7 +40,7 @@ export default [
     },
   },
   {
-    files: ['apps/frontend/**/*.vue'],
+    files: ['frontend/**/*.vue'],
     languageOptions: {
       parser: vueParser,
       parserOptions: {
@@ -42,9 +50,22 @@ export default [
         extraFileExtensions: ['.vue'],
       },
     },
-    plugins: { vue: vuePlugin },
+    plugins: { vue: vuePlugin, '@typescript-eslint': tseslint },
     rules: {
       ...vuePlugin.configs['vue3-recommended'].rules,
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    },
+  },
+  {
+    // TypeScript (and Vue <script lang="ts">) makes these core ESLint rules
+    // redundant or wrong: the compiler already flags undefined identifiers, and
+    // the `export const X` + `export type X` merge pattern trips no-redeclare.
+    // Unused vars are handled by the type-aware @typescript-eslint rule above.
+    files: ['**/*.{ts,tsx,vue}'],
+    rules: {
+      'no-undef': 'off',
+      'no-redeclare': 'off',
+      'no-unused-vars': 'off',
     },
   },
   prettier,

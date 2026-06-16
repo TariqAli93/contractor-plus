@@ -1,0 +1,51 @@
+### Contractor Plus — CLIENT build (structural parity with nuqta-plus).
+#
+# A thin client: it ships the Vue SPA but NOT the backend bundle, and installs
+# NO Windows Service (empty installer macros). There is deliberately no afterPack
+# hook here, so resources/backend is never produced.
+#
+# NOTE: for this build to be functional at runtime the frontend needs a
+# server-URL setting (to point at a remote Contractor Plus server). That is a UI
+# change and is out of scope for the production-packaging work — this config
+# exists so the client packaging path matches nuqta-plus structurally.
+
+appId: com.contractorplus.client
+productName: ContractorPlus Client
+copyright: © Contractor Plus
+
+# See electron-builder.yml — pnpm hoisted layout requires an explicit version.
+electronVersion: 31.7.7
+
+asar: true
+
+directories:
+  buildResources: build
+  output: ../release-client
+
+files:
+  - electron/**/*
+  - package.json
+  - '!**/*.map'
+  - '!**/.env*'
+
+extraResources:
+  - from: dist
+    to: frontend
+    filter:
+      - '**/*'
+
+win:
+  target:
+    - nsis
+  artifactName: ContractorPlus-Client-Setup-${version}.exe
+
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: إدارة المقاولات (عميل)
+  uninstallDisplayName: إدارة المقاولات - عميل ${version}
+  unicode: true
+  include: ../scripts/installer-include-client.nsh

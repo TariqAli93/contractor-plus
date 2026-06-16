@@ -1,0 +1,619 @@
+D:\dev_projects\contractor-plus
+├── backend/
+|  ├── company/
+|  |  ├── logos/
+|  |  └── stamps/
+|  ├── docker-compose.yml
+|  ├── package.json
+|  ├── prisma/
+|  |  ├── migrations/
+|  |  |  ├── 20260527024005_simplify_tunnel_state/
+|  |  |  |  └── migration.sql
+|  |  |  ├── 20260527173802_add_system_settings/
+|  |  |  |  └── migration.sql
+|  |  |  ├── 20260527173900_currencies_default_partial_unique/
+|  |  |  |  └── migration.sql
+|  |  |  ├── 20260528184102_company_profile_assets/
+|  |  |  |  └── migration.sql
+|  |  |  ├── 20260528192514_document_templates/
+|  |  |  |  └── migration.sql
+|  |  |  ├── 20260528220000_assets_public_prefix/
+|  |  |  |  └── migration.sql
+|  |  |  ├── 20260530000000_add_user_username/
+|  |  |  |  └── migration.sql
+|  |  |  ├── 20260530010000_add_role_metadata/
+|  |  |  |  └── migration.sql
+|  |  |  ├── 20260530020000_user_email_optional/
+|  |  |  |  └── migration.sql
+|  |  |  ├── 20260530030000_hybrid_rbac/
+|  |  |  |  └── migration.sql
+|  |  |  └── migration_lock.toml
+|  |  ├── schema.prisma
+|  |  ├── seed/
+|  |  |  ├── bootstrap-settings.sql
+|  |  |  ├── customers.ts
+|  |  |  ├── helpers.ts
+|  |  |  ├── materials.ts
+|  |  |  ├── rbac.ts
+|  |  |  ├── scenarios.ts
+|  |  |  ├── settings.ts
+|  |  |  ├── templates.ts
+|  |  |  └── users.ts
+|  |  └── seed.ts
+|  ├── private/
+|  |  ├── contracts/
+|  |  ├── temp/
+|  |  └── templates/
+|  ├── public/
+|  |  └── company/
+|  |     ├── logos/
+|  |     └── stamps/
+|  ├── service/
+|  |  ├── ContractorPlusBackend.xml.tmpl
+|  |  ├── free-port.ps1
+|  |  ├── install-service.cmd
+|  |  ├── provision-elevated.ps1
+|  |  ├── repair-service.ps1
+|  |  ├── restart-service.cmd
+|  |  ├── start-service.cmd
+|  |  ├── status-service.cmd
+|  |  ├── stop-service.cmd
+|  |  ├── stop-wait.ps1
+|  |  ├── uninstall-service.cmd
+|  |  └── verify-version.ps1
+|  ├── src/
+|  |  ├── app.ts
+|  |  ├── config/
+|  |  |  ├── env.ts
+|  |  |  └── service-config.ts
+|  |  ├── lib/
+|  |  |  ├── cloudflared-path.ts
+|  |  |  ├── crypto.ts
+|  |  |  ├── docx/
+|  |  |  |  ├── format-date.ts
+|  |  |  |  ├── format-money.ts
+|  |  |  |  ├── placeholder-map.ts
+|  |  |  |  └── renderer.ts
+|  |  |  ├── dpapi.ts
+|  |  |  ├── jwt.ts
+|  |  |  ├── logger.ts
+|  |  |  ├── machine-id.ts
+|  |  |  ├── password.ts
+|  |  |  ├── prisma.ts
+|  |  |  ├── storage/
+|  |  |  |  ├── local-storage.service.ts
+|  |  |  |  ├── storage.service.ts
+|  |  |  |  ├── storage.types.ts
+|  |  |  |  └── url-builder.ts
+|  |  |  └── user-data-dir.ts
+|  |  ├── modules/
+|  |  |  ├── audit/
+|  |  |  |  ├── audit.controller.ts
+|  |  |  |  ├── audit.repository.ts
+|  |  |  |  ├── audit.routes.ts
+|  |  |  |  ├── audit.schemas.ts
+|  |  |  |  ├── audit.service.ts
+|  |  |  |  └── audit.types.ts
+|  |  |  ├── auth/
+|  |  |  |  ├── auth.controller.ts
+|  |  |  |  ├── auth.repository.ts
+|  |  |  |  ├── auth.routes.ts
+|  |  |  |  ├── auth.schemas.ts
+|  |  |  |  ├── auth.service.ts
+|  |  |  |  └── auth.types.ts
+|  |  |  ├── contracts/
+|  |  |  |  ├── contracts.controller.ts
+|  |  |  |  ├── contracts.repository.ts
+|  |  |  |  ├── contracts.routes.ts
+|  |  |  |  ├── contracts.schemas.ts
+|  |  |  |  ├── contracts.service.ts
+|  |  |  |  └── contracts.types.ts
+|  |  |  ├── costs/
+|  |  |  |  ├── costs.controller.ts
+|  |  |  |  ├── costs.repository.ts
+|  |  |  |  ├── costs.routes.ts
+|  |  |  |  ├── costs.schemas.ts
+|  |  |  |  ├── costs.service.ts
+|  |  |  |  └── costs.types.ts
+|  |  |  ├── customers/
+|  |  |  |  ├── customers.controller.ts
+|  |  |  |  ├── customers.repository.ts
+|  |  |  |  ├── customers.routes.ts
+|  |  |  |  ├── customers.schemas.ts
+|  |  |  |  ├── customers.service.ts
+|  |  |  |  └── customers.types.ts
+|  |  |  ├── document-templates/
+|  |  |  |  ├── document-templates.controller.ts
+|  |  |  |  ├── document-templates.repository.ts
+|  |  |  |  ├── document-templates.routes.ts
+|  |  |  |  ├── document-templates.schemas.ts
+|  |  |  |  ├── document-templates.service.ts
+|  |  |  |  └── document-templates.types.ts
+|  |  |  ├── materials/
+|  |  |  |  ├── materials.controller.ts
+|  |  |  |  ├── materials.repository.ts
+|  |  |  |  ├── materials.routes.ts
+|  |  |  |  ├── materials.schemas.ts
+|  |  |  |  ├── materials.service.ts
+|  |  |  |  └── materials.types.ts
+|  |  |  ├── payments/
+|  |  |  |  ├── payments.controller.ts
+|  |  |  |  ├── payments.repository.ts
+|  |  |  |  ├── payments.routes.ts
+|  |  |  |  ├── payments.schemas.ts
+|  |  |  |  ├── payments.service.ts
+|  |  |  |  └── payments.types.ts
+|  |  |  ├── profile/
+|  |  |  |  ├── profile.controller.ts
+|  |  |  |  ├── profile.routes.ts
+|  |  |  |  ├── profile.schemas.ts
+|  |  |  |  └── profile.service.ts
+|  |  |  ├── projects/
+|  |  |  |  ├── projects.controller.ts
+|  |  |  |  ├── projects.repository.ts
+|  |  |  |  ├── projects.routes.ts
+|  |  |  |  ├── projects.schemas.ts
+|  |  |  |  ├── projects.service.ts
+|  |  |  |  └── projects.types.ts
+|  |  |  ├── rbac/
+|  |  |  |  ├── access.service.ts
+|  |  |  |  ├── rbac.catalog.ts
+|  |  |  |  ├── rbac.controller.ts
+|  |  |  |  ├── rbac.repository.ts
+|  |  |  |  ├── rbac.routes.ts
+|  |  |  |  ├── rbac.schemas.ts
+|  |  |  |  ├── rbac.service.ts
+|  |  |  |  └── rbac.types.ts
+|  |  |  ├── reports/
+|  |  |  |  ├── reports.controller.ts
+|  |  |  |  ├── reports.repository.ts
+|  |  |  |  ├── reports.routes.ts
+|  |  |  |  ├── reports.schemas.ts
+|  |  |  |  ├── reports.service.ts
+|  |  |  |  └── reports.types.ts
+|  |  |  ├── settings/
+|  |  |  |  ├── settings.controller.ts
+|  |  |  |  ├── settings.repository.ts
+|  |  |  |  ├── settings.routes.ts
+|  |  |  |  ├── settings.schemas.ts
+|  |  |  |  ├── settings.service.ts
+|  |  |  |  └── settings.types.ts
+|  |  |  ├── templates/
+|  |  |  |  ├── templates.controller.ts
+|  |  |  |  ├── templates.repository.ts
+|  |  |  |  ├── templates.routes.ts
+|  |  |  |  ├── templates.schemas.ts
+|  |  |  |  ├── templates.service.ts
+|  |  |  |  └── templates.types.ts
+|  |  |  ├── tunnel/
+|  |  |  |  ├── tunnel.client.ts
+|  |  |  |  ├── tunnel.controller.ts
+|  |  |  |  ├── tunnel.fs.ts
+|  |  |  |  ├── tunnel.repository.ts
+|  |  |  |  ├── tunnel.routes.ts
+|  |  |  |  ├── tunnel.runner.ts
+|  |  |  |  ├── tunnel.schemas.ts
+|  |  |  |  ├── tunnel.service.ts
+|  |  |  |  └── tunnel.types.ts
+|  |  |  ├── uploads/
+|  |  |  |  ├── uploads.controller.ts
+|  |  |  |  ├── uploads.routes.ts
+|  |  |  |  ├── uploads.schemas.ts
+|  |  |  |  ├── uploads.service.ts
+|  |  |  |  └── uploads.types.ts
+|  |  |  └── users/
+|  |  |     ├── users.controller.ts
+|  |  |     ├── users.repository.ts
+|  |  |     ├── users.routes.ts
+|  |  |     ├── users.schemas.ts
+|  |  |     ├── users.service.ts
+|  |  |     └── users.types.ts
+|  |  ├── plugins/
+|  |  |  ├── auth.plugin.ts
+|  |  |  ├── error-handler.plugin.ts
+|  |  |  ├── prisma.plugin.ts
+|  |  |  ├── rbac.plugin.ts
+|  |  |  ├── request-context.plugin.ts
+|  |  |  └── tunnel.plugin.ts
+|  |  ├── server.ts
+|  |  ├── setup/
+|  |  |  ├── bootstrap.ts
+|  |  |  └── migrate-on-boot.ts
+|  |  └── shared/
+|  |     ├── constants/
+|  |     |  └── roles.ts
+|  |     ├── errors/
+|  |     |  ├── app-error.ts
+|  |     |  ├── conflict.error.ts
+|  |     |  ├── forbidden.error.ts
+|  |     |  ├── not-found.error.ts
+|  |     |  ├── unauthorized.error.ts
+|  |     |  └── validation.error.ts
+|  |     ├── types/
+|  |     |  ├── api-response.ts
+|  |     |  ├── fastify.d.ts
+|  |     |  ├── pagination.ts
+|  |     |  └── prisma-enum-guard.ts
+|  |     ├── utils/
+|  |     |  ├── json.ts
+|  |     |  └── pagination.ts
+|  |     └── validation/
+|  |        └── common.schemas.ts
+|  ├── temp/
+|  ├── templates/
+|  └── tsconfig.json
+├── build-backend.js
+├── eslint.config.js
+├── frontend/
+|  ├── build/
+|  |  └── README.md
+|  ├── electron/
+|  |  ├── main/
+|  |  |  └── main.cjs
+|  |  ├── preload/
+|  |  |  └── preload.cjs
+|  |  └── scripts/
+|  |     ├── autoUpdater.cjs
+|  |     ├── backendChecker.cjs
+|  |     ├── backendManager.cjs
+|  |     ├── credentials.cjs
+|  |     ├── db-ops.cjs
+|  |     ├── logger.cjs
+|  |     ├── provision.cjs
+|  |     ├── runtime.cjs
+|  |     ├── serviceController.cjs
+|  |     ├── setup.cjs
+|  |     └── versionManager.cjs
+|  ├── electron-builder-client.yml
+|  ├── electron-builder.yml
+|  ├── index.html
+|  ├── package.json
+|  ├── postcss.config.js
+|  ├── public/
+|  |  └── favicon.svg
+|  ├── scripts/
+|  ├── src/
+|  |  ├── App.vue
+|  |  ├── assets/
+|  |  |  └── styles/
+|  |  |     └── main.css
+|  |  ├── components/
+|  |  |  ├── features/
+|  |  |  |  ├── audit/
+|  |  |  |  |  ├── AuditActionBadge.vue
+|  |  |  |  |  └── AuditDiffPanel.vue
+|  |  |  |  ├── contract/
+|  |  |  |  |  ├── ContractActionToolbar.vue
+|  |  |  |  |  ├── contractColumns.ts
+|  |  |  |  |  ├── ContractEstimateTab.vue
+|  |  |  |  |  ├── ContractGeneralTab.vue
+|  |  |  |  |  ├── ContractGenerateDocxPanel.vue
+|  |  |  |  |  ├── ContractHeaderCard.vue
+|  |  |  |  |  ├── ContractItemRow.vue
+|  |  |  |  |  ├── ContractItemsTab.vue
+|  |  |  |  |  ├── ContractProjectTab.vue
+|  |  |  |  |  ├── ContractStatusBadge.vue
+|  |  |  |  |  └── ContractSummaryPanel.vue
+|  |  |  |  ├── cost/
+|  |  |  |  |  ├── CostCategoryBadge.vue
+|  |  |  |  |  ├── costColumns.ts
+|  |  |  |  |  └── CostForm.vue
+|  |  |  |  ├── customer/
+|  |  |  |  |  ├── customerColumns.ts
+|  |  |  |  |  └── CustomerForm.vue
+|  |  |  |  ├── dashboard/
+|  |  |  |  |  ├── DashboardSection.vue
+|  |  |  |  |  ├── DelayedProjectRow.vue
+|  |  |  |  |  ├── DelayedProjectsWidget.vue
+|  |  |  |  |  ├── MonthlyFinancialSummary.vue
+|  |  |  |  |  ├── OverduePaymentRow.vue
+|  |  |  |  |  ├── OverduePaymentsWidget.vue
+|  |  |  |  |  ├── QuickActionButton.vue
+|  |  |  |  |  ├── QuickActionsPanel.vue
+|  |  |  |  |  ├── RecentPaymentRow.vue
+|  |  |  |  |  ├── RecentPaymentsWidget.vue
+|  |  |  |  |  ├── RecentProjectCard.vue
+|  |  |  |  |  ├── RecentProjectsWidget.vue
+|  |  |  |  |  ├── SummaryMetricCard.vue
+|  |  |  |  |  ├── TopSummaryCards.vue
+|  |  |  |  |  └── TunnelStatusWidget.vue
+|  |  |  |  ├── material/
+|  |  |  |  |  ├── materialColumns.ts
+|  |  |  |  |  └── MaterialForm.vue
+|  |  |  |  ├── payment/
+|  |  |  |  |  ├── MarkPaidDialog.vue
+|  |  |  |  |  ├── paymentColumns.ts
+|  |  |  |  |  ├── PaymentForm.vue
+|  |  |  |  |  └── PaymentStatusBadge.vue
+|  |  |  |  ├── profile/
+|  |  |  |  |  ├── ChangePasswordDialog.vue
+|  |  |  |  |  └── ProfileForm.vue
+|  |  |  |  ├── project/
+|  |  |  |  |  ├── AddCostDialog.vue
+|  |  |  |  |  ├── AddPaymentDialog.vue
+|  |  |  |  |  ├── ProjectActionToolbar.vue
+|  |  |  |  |  ├── projectColumns.ts
+|  |  |  |  |  ├── ProjectCostsTab.vue
+|  |  |  |  |  ├── ProjectGeneralTab.vue
+|  |  |  |  |  ├── ProjectHeaderCard.vue
+|  |  |  |  |  ├── ProjectPaymentsTab.vue
+|  |  |  |  |  ├── ProjectProgressBar.vue
+|  |  |  |  |  ├── ProjectProgressCard.vue
+|  |  |  |  |  ├── ProjectProgressTab.vue
+|  |  |  |  |  ├── ProjectStatusBadge.vue
+|  |  |  |  |  └── ProjectSummaryPanel.vue
+|  |  |  |  ├── rbac/
+|  |  |  |  |  ├── PermissionBadge.vue
+|  |  |  |  |  ├── PermissionGroupCard.vue
+|  |  |  |  |  ├── PermissionToggle.vue
+|  |  |  |  |  ├── RoleBadge.vue
+|  |  |  |  |  ├── RoleEditDialog.vue
+|  |  |  |  |  └── RolePermissionsDialog.vue
+|  |  |  |  ├── settings/
+|  |  |  |  |  ├── AppearanceSettingsTab.vue
+|  |  |  |  |  ├── CompanyAssetUploader.vue
+|  |  |  |  |  ├── CompanyProfileTab.vue
+|  |  |  |  |  ├── ContractTemplatesTab.vue
+|  |  |  |  |  ├── CurrencyDialog.vue
+|  |  |  |  |  ├── CurrencyTab.vue
+|  |  |  |  |  ├── GeneralSettingsTab.vue
+|  |  |  |  |  ├── PlaceholderReferenceCard.vue
+|  |  |  |  |  └── SettingsCard.vue
+|  |  |  |  ├── setup/
+|  |  |  |  |  ├── StepDatabase.vue
+|  |  |  |  |  ├── StepInitialize.vue
+|  |  |  |  |  ├── StepSuccess.vue
+|  |  |  |  |  ├── StepUser.vue
+|  |  |  |  |  └── StepWelcome.vue
+|  |  |  |  ├── template/
+|  |  |  |  |  ├── templateColumns.ts
+|  |  |  |  |  ├── TemplateEstimateTab.vue
+|  |  |  |  |  ├── TemplateGeneralTab.vue
+|  |  |  |  |  ├── TemplateMaterialRow.vue
+|  |  |  |  |  ├── TemplateMaterialsTab.vue
+|  |  |  |  |  ├── TemplateStepRow.vue
+|  |  |  |  |  └── TemplateStepsTab.vue
+|  |  |  |  ├── tunnel/
+|  |  |  |  |  ├── TunnelActionPanel.vue
+|  |  |  |  |  ├── TunnelDiagnostics.vue
+|  |  |  |  |  ├── TunnelErrorGuidance.vue
+|  |  |  |  |  └── TunnelStatusHero.vue
+|  |  |  |  └── user/
+|  |  |  |     ├── ResetPasswordDialog.vue
+|  |  |  |     ├── userColumns.ts
+|  |  |  |     ├── UserForm.vue
+|  |  |  |     ├── UserRoleBadge.vue
+|  |  |  |     └── UserStatusBadge.vue
+|  |  |  ├── layout/
+|  |  |  |  ├── AppLayout.vue
+|  |  |  |  ├── LoginLayout.vue
+|  |  |  |  ├── SetupLayout.vue
+|  |  |  |  ├── SideNav.vue
+|  |  |  |  ├── TopBar.vue
+|  |  |  |  └── TunnelStatusChip.vue
+|  |  |  └── shared/
+|  |  |     ├── AccessGate.vue
+|  |  |     ├── CompanyLogo.vue
+|  |  |     ├── ConfirmDialog.vue
+|  |  |     ├── DataTable.vue
+|  |  |     ├── DateDisplay.vue
+|  |  |     ├── EmptyState.vue
+|  |  |     ├── ErrorState.vue
+|  |  |     ├── FilterBar.vue
+|  |  |     ├── LoadingOverlay.vue
+|  |  |     ├── MoneyDisplay.vue
+|  |  |     ├── Pagination.vue
+|  |  |     ├── RoleGate.vue
+|  |  |     ├── SearchBar.vue
+|  |  |     ├── StatusBadge.vue
+|  |  |     └── SummaryCard.vue
+|  |  ├── composables/
+|  |  |  ├── useAccess.ts
+|  |  |  ├── useApiError.ts
+|  |  |  ├── useAuditLogs.ts
+|  |  |  ├── useCan.ts
+|  |  |  ├── useConfirm.ts
+|  |  |  ├── useContractEstimate.ts
+|  |  |  ├── useContractForm.ts
+|  |  |  ├── useContracts.ts
+|  |  |  ├── useCostForm.ts
+|  |  |  ├── useCosts.ts
+|  |  |  ├── useCurrencyFormat.ts
+|  |  |  ├── useCustomerForm.ts
+|  |  |  ├── useCustomers.ts
+|  |  |  ├── useDashboard.ts
+|  |  |  ├── useFileUpload.ts
+|  |  |  ├── useMaterialForm.ts
+|  |  |  ├── useMaterials.ts
+|  |  |  ├── usePaymentForm.ts
+|  |  |  ├── usePayments.ts
+|  |  |  ├── useProjectForm.ts
+|  |  |  ├── useProjects.ts
+|  |  |  ├── useTemplateEstimate.ts
+|  |  |  ├── useTemplateForm.ts
+|  |  |  ├── useTemplates.ts
+|  |  |  ├── useToast.ts
+|  |  |  ├── useTunnel.ts
+|  |  |  ├── useUserForm.ts
+|  |  |  └── useUsers.ts
+|  |  ├── env.d.ts
+|  |  ├── i18n/
+|  |  |  ├── index.ts
+|  |  |  └── locales/
+|  |  |     └── ar.json
+|  |  ├── lib/
+|  |  |  ├── asset-url.ts
+|  |  |  ├── currency-format.ts
+|  |  |  ├── date.ts
+|  |  |  └── token-storage.ts
+|  |  ├── main.ts
+|  |  ├── plugins/
+|  |  |  └── vuetify.ts
+|  |  ├── router/
+|  |  |  ├── guards.ts
+|  |  |  ├── index.ts
+|  |  |  └── routes.ts
+|  |  ├── services/
+|  |  |  └── api/
+|  |  |     ├── audit.api.ts
+|  |  |     ├── auth.api.ts
+|  |  |     ├── client.ts
+|  |  |     ├── contracts.api.ts
+|  |  |     ├── costs.api.ts
+|  |  |     ├── customers.api.ts
+|  |  |     ├── dashboard.api.ts
+|  |  |     ├── document-templates.api.ts
+|  |  |     ├── materials.api.ts
+|  |  |     ├── payments.api.ts
+|  |  |     ├── profile.api.ts
+|  |  |     ├── projects.api.ts
+|  |  |     ├── rbac.api.ts
+|  |  |     ├── reports.api.ts
+|  |  |     ├── settings.api.ts
+|  |  |     ├── templates.api.ts
+|  |  |     ├── tunnel.api.ts
+|  |  |     ├── uploads.api.ts
+|  |  |     └── users.api.ts
+|  |  ├── stores/
+|  |  |  ├── auth.store.ts
+|  |  |  ├── settings.store.ts
+|  |  |  ├── setup.store.ts
+|  |  |  ├── theme.store.ts
+|  |  |  ├── tunnel.store.ts
+|  |  |  └── ui.store.ts
+|  |  ├── types/
+|  |  |  ├── api.ts
+|  |  |  ├── audit.ts
+|  |  |  ├── auth.ts
+|  |  |  ├── contract.ts
+|  |  |  ├── cost.ts
+|  |  |  ├── customer.ts
+|  |  |  ├── dashboard.ts
+|  |  |  ├── desktop.d.ts
+|  |  |  ├── document-template.ts
+|  |  |  ├── enums.ts
+|  |  |  ├── material.ts
+|  |  |  ├── pagination.ts
+|  |  |  ├── payment.ts
+|  |  |  ├── profile.ts
+|  |  |  ├── project.ts
+|  |  |  ├── rbac.ts
+|  |  |  ├── report.ts
+|  |  |  ├── settings.ts
+|  |  |  ├── template.ts
+|  |  |  └── user.ts
+|  |  └── views/
+|  |     ├── audit/
+|  |     |  ├── AuditEntityHistoryView.vue
+|  |     |  ├── AuditLogsView.vue
+|  |     |  └── AuditUserHistoryView.vue
+|  |     ├── contracts/
+|  |     |  ├── ContractEditView.vue
+|  |     |  └── ContractsListView.vue
+|  |     ├── costs/
+|  |     |  ├── CostEditView.vue
+|  |     |  └── CostsListView.vue
+|  |     ├── customers/
+|  |     |  ├── CustomerEditView.vue
+|  |     |  └── CustomersListView.vue
+|  |     ├── dashboard/
+|  |     |  └── DashboardView.vue
+|  |     ├── login/
+|  |     |  └── LoginView.vue
+|  |     ├── materials/
+|  |     |  ├── MaterialEditView.vue
+|  |     |  └── MaterialsListView.vue
+|  |     ├── NotFoundView.vue
+|  |     ├── payments/
+|  |     |  ├── PaymentEditView.vue
+|  |     |  └── PaymentsListView.vue
+|  |     ├── profile/
+|  |     |  └── ProfileView.vue
+|  |     ├── projects/
+|  |     |  ├── ProjectEditView.vue
+|  |     |  └── ProjectsListView.vue
+|  |     ├── rbac/
+|  |     |  ├── PermissionMatrix.vue
+|  |     |  ├── RbacView.vue
+|  |     |  └── RolesList.vue
+|  |     ├── reports/
+|  |     |  ├── CashFlowReportView.vue
+|  |     |  ├── DelayedProjectsReportView.vue
+|  |     |  ├── OverduePaymentsReportView.vue
+|  |     |  ├── ProjectProfitabilityReportView.vue
+|  |     |  └── ReportsDashboardView.vue
+|  |     ├── settings/
+|  |     |  └── SettingsView.vue
+|  |     ├── setup/
+|  |     |  └── SetupWizardView.vue
+|  |     ├── templates/
+|  |     |  ├── TemplateEditView.vue
+|  |     |  └── TemplatesListView.vue
+|  |     ├── tunnel/
+|  |     |  └── TunnelView.vue
+|  |     └── users/
+|  |        ├── UserEditView.vue
+|  |        └── UsersListView.vue
+|  ├── tailwind.config.js
+|  ├── tsconfig.json
+|  ├── tsconfig.node.json
+|  ├── tsconfig.node.tsbuildinfo
+|  ├── tsconfig.tsbuildinfo
+|  └── vite.config.ts
+├── package.json
+├── packages/
+|  ├── shared/
+|  |  ├── package.json
+|  |  ├── README.md
+|  |  ├── src/
+|  |  |  ├── api/
+|  |  |  |  ├── api-error.ts
+|  |  |  |  ├── index.ts
+|  |  |  |  └── pagination.ts
+|  |  |  ├── auth/
+|  |  |  |  ├── index.ts
+|  |  |  |  └── roles.ts
+|  |  |  ├── enums/
+|  |  |  |  ├── audit-action.ts
+|  |  |  |  ├── construction-step-status.ts
+|  |  |  |  ├── contract-status.ts
+|  |  |  |  ├── cost-category.ts
+|  |  |  |  ├── index.ts
+|  |  |  |  ├── payment.ts
+|  |  |  |  └── project-status.ts
+|  |  |  ├── index.ts
+|  |  |  └── service/
+|  |  |     ├── index.ts
+|  |  |     └── protocol.ts
+|  |  ├── tsconfig.build.json
+|  |  └── tsconfig.json
+|  └── tsconfig/
+|     ├── base.json
+|     ├── node.json
+|     ├── package.json
+|     └── vue.json
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+├── pumb-version.js
+├── scripts/
+|  ├── afterPack.cjs
+|  ├── clean.js
+|  ├── fetch-node.js
+|  ├── fetch-winsw.js
+|  ├── generate-backend-manifest.js
+|  ├── installer-include-client.nsh
+|  ├── installer-include.nsh
+|  ├── mark-bad-release.js
+|  ├── verify-packaged-backend.js
+|  └── verify-versions.js
+└── tools/
+   ├── cloudflared/
+   |  └── cloudflared.exe
+   ├── node/
+   |  └── node.exe
+   └── winsw/
+      └── WinSW-x64.exe
+
+directory: 4600 file: 39590 symboliclink: 5
+
+ignored: directory (566)

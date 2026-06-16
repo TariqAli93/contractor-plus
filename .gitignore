@@ -8,6 +8,24 @@ build
 dist-ssr
 *.tsbuildinfo
 
+# Electron packaging (generated installers + flattened backend bundle)
+/dist-backend/
+/dist-backend-manifest/
+/release/
+/release-client/
+
+# Build resources under frontend/build are SOURCE (icons, NSIS assets) and must
+# be tracked despite the global `build` ignore above.
+!/frontend/build/
+!/frontend/build/**
+
+# Fetched, content-verified build binaries (downloaded by fetch:node / fetch:winsw)
+/tools/node/node.exe
+/tools/winsw/WinSW-x64.exe
+
+# Vite config timestamp artifacts
+**/vite.config.ts.timestamp-*
+
 # Env files (per-app .env files stay local)
 .env
 .env.local

@@ -2,27 +2,65 @@
   "name": "contractor-plus",
   "version": "0.1.0",
   "private": true,
-  "description": "Contractor Plus monorepo — Vue/Vite frontend + Fastify/Prisma backend.",
+  "type": "module",
+  "description": "Contractor Plus monorepo — Vue/Vite frontend + Fastify/Prisma backend, packaged as a Windows desktop app with an independent backend Windows Service.",
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
   },
   "packageManager": "pnpm@9.12.3",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild",
+      "prisma",
+      "@prisma/client",
+      "@prisma/engines"
+    ]
+  },
   "scripts": {
-    "dev": "pnpm build:shared && pnpm -r --parallel --stream dev",
-    "dev:frontend": "pnpm build:shared && pnpm --filter frontend dev",
-    "dev:backend": "pnpm build:shared && pnpm --filter backend dev",
-    "build": "pnpm -r build",
-    "build:shared": "pnpm --filter @contractor-plus/shared build",
-    "build:frontend": "pnpm build:shared && pnpm --filter frontend build",
-    "build:backend": "pnpm build:shared && pnpm --filter backend build",
+    "//dev": "----- Development (web) -----",
+    "dev": "pnpm build:shared && concurrently -k -n backend,frontend -c yellow,blue \"pnpm dev:backend\" \"pnpm dev:frontend\"",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter backend dev",
     "start": "pnpm --filter backend start",
+
+    "//desktop": "----- Desktop (Electron) dev -----",
+    "electron:dev": "pnpm build:shared && pnpm build:backend && concurrently -k -n vite,electron -c blue,green \"pnpm dev:frontend\" \"wait-on http://127.0.0.1:5173 && pnpm --filter frontend run electron:dev\"",
+    "desktop:reset": "node -e \"const p=require('path').join(process.env.APPDATA||'','ContractorPlus','setup-complete.flag'); try{require('fs').rmSync(p,{force:true});console.log('reset',p)}catch(e){console.log(e.message)}\"",
+
+    "//build": "----- Build (per package) -----",
+    "build": "pnpm build:shared && pnpm build:frontend && pnpm build:backend",
+    "build:shared": "pnpm --filter @contractor-plus/shared build",
+    "build:frontend": "pnpm --filter frontend build",
+    "build:backend": "pnpm --filter backend prisma:generate && pnpm --filter backend build",
+    "build:backend-bundle": "node build-backend.js",
+
+    "//tools": "----- Build tools (download + verify) -----",
+    "fetch:winsw": "node scripts/fetch-winsw.js",
+    "fetch:node": "node scripts/fetch-node.js",
+
+    "//verify": "----- Verification -----",
+    "verify:versions": "node scripts/verify-versions.js",
+    "verify:packaged": "node scripts/verify-packaged-backend.js",
+    "bump-version": "node pumb-version.js",
+    "manifest": "node scripts/generate-backend-manifest.js",
+
+    "//package": "----- Package (Windows installer) -----",
+    "clean": "node scripts/clean.js",
+    "package": "pnpm clean && pnpm verify:versions && pnpm fetch:winsw && pnpm fetch:node && pnpm build:shared && pnpm build:frontend && pnpm build:backend && pnpm build:backend-bundle && pnpm --filter frontend exec electron-builder --config electron-builder.yml && pnpm verify:packaged",
+    "dist": "pnpm package",
+    "package:client": "pnpm clean && pnpm verify:versions && pnpm build:shared && pnpm build:frontend && pnpm --filter frontend exec electron-builder --config electron-builder-client.yml",
+    "publish:app": "pnpm clean && pnpm verify:versions && pnpm fetch:winsw && pnpm fetch:node && pnpm build:shared && pnpm build:frontend && pnpm build:backend && pnpm build:backend-bundle && pnpm --filter frontend exec electron-builder --config electron-builder.yml --publish always && pnpm verify:packaged",
+
+    "//quality": "----- Quality -----",
     "typecheck": "pnpm build:shared && pnpm -r typecheck",
-    "lint": "eslint \"apps/**/*.{ts,tsx,vue}\" \"packages/**/*.ts\" --max-warnings=0",
-    "lint:fix": "eslint \"apps/**/*.{ts,tsx,vue}\" \"packages/**/*.ts\" --fix",
+    "lint": "eslint \"backend/src/**/*.ts\" \"frontend/src/**/*.{ts,vue}\" \"packages/**/src/**/*.ts\" --max-warnings=0",
+    "lint:fix": "eslint \"backend/src/**/*.ts\" \"frontend/src/**/*.{ts,vue}\" \"packages/**/src/**/*.ts\" --fix",
     "format": "prettier --write \"**/*.{ts,tsx,vue,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,vue,json,md,yml,yaml}\"",
-    "clean": "pnpm -r exec -- node -e \"require('fs').rmSync('dist',{recursive:true,force:true}); require('fs').rmSync('.tsbuildinfo',{recursive:true,force:true})\"",
+
+    "//prisma": "----- Prisma -----",
     "prisma:generate": "pnpm --filter backend prisma:generate",
     "prisma:migrate": "pnpm --filter backend prisma:migrate",
     "prisma:seed": "pnpm --filter backend prisma:seed",
@@ -31,11 +69,13 @@
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.15.0",
     "@typescript-eslint/parser": "^8.15.0",
+    "concurrently": "^9.1.0",
     "eslint": "^9.15.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-vue": "^9.31.0",
     "prettier": "^3.3.3",
     "typescript": "^5.6.3",
-    "vue-eslint-parser": "^9.4.3"
+    "vue-eslint-parser": "^9.4.3",
+    "wait-on": "^8.0.1"
   }
 }
