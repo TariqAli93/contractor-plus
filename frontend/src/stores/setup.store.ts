@@ -114,10 +114,12 @@ export const useSetupStore = defineStore('setup', () => {
     });
 
     try {
+      console.info('[setup/ui] initialize → sending');
       const res = await desktop.setup.initialize({
         db: { ...db },
         owner: { username: normalizedUsername(), pin: owner.pin },
       });
+      console.info('[setup/ui] initialize ← ok=%s error=%s', res?.ok, res?.error ?? '-');
       if (res.ok) {
         initDone.value = true;
         credentials.value = {
@@ -139,7 +141,9 @@ export const useSetupStore = defineStore('setup', () => {
 
   async function completeAndLaunch(): Promise<{ ok: boolean; error?: string }> {
     if (!desktop) return { ok: false, error: 'غير متاح.' };
+    console.info('[setup/ui] complete → sending');
     const res = await desktop.setup.complete();
+    console.info('[setup/ui] complete ← ok=%s error=%s', res?.ok, res?.error ?? '-');
     if (res.ok) setupComplete.value = true;
     return { ok: res.ok, error: res.error };
   }

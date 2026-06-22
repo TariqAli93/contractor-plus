@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Contractor Plus desktop client (Electron shell over the Vue SPA).",
   "author": "Contractor Plus",
-  "main": "electron/main/main.cjs",
+  "main": "electron/main/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",

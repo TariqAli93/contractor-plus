@@ -201,7 +201,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   // through to the not-found handler below, which returns the SPA shell so that
   // vue-router's history-mode deep links (e.g. /customers) resolve. API,
   // uploads, and health paths still return JSON 404s.
-  const frontendDist = process.env.FRONTEND_DIST?.trim();
+  const frontendDist = env.FRONTEND_DIST;
   if (frontendDist && existsSync(frontendDist)) {
     await app.register(fastifyStatic, {
       root: frontendDist,

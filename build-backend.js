@@ -190,11 +190,15 @@ function generatePrismaClient() {
   const prismaCli = path.join(DIST_DIR, 'node_modules', 'prisma', 'build', 'index.js');
   if (!fs.existsSync(prismaCli)) fail(`prisma CLI not found at ${path.relative(ROOT, prismaCli)}`);
 
-  execFileSync(process.execPath, [prismaCli, 'generate', '--schema', path.join('prisma', 'schema.prisma')], {
-    cwd: DIST_DIR,
-    stdio: 'inherit',
-    env: { ...process.env },
-  });
+  execFileSync(
+    process.execPath,
+    [prismaCli, 'generate', '--schema', path.join('prisma', 'schema.prisma')],
+    {
+      cwd: DIST_DIR,
+      stdio: 'inherit',
+      env: { ...process.env },
+    },
+  );
 
   const generated = path.join(DIST_DIR, 'node_modules', '.prisma', 'client');
   if (!fs.existsSync(generated)) {
@@ -220,8 +224,7 @@ function writeEnvProductionExample() {
 # NODE_ENV=production
 # PORT=31734
 
-# Full PostgreSQL connection string (takes precedence over everything):
-# DATABASE_URL=postgresql://postgres:CHANGE_ME@127.0.0.1:5432/contractor_plus?schema=public
+
 
 # JWT signing secret (>= 32 chars). REQUIRED — generate a strong random value:
 #   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
@@ -254,7 +257,9 @@ function bundleCloudflared() {
   // resolves it at <bundle>/cloudflared.exe (cwd fallback in cloudflared-path.ts).
   // Ship it when present; the backend degrades gracefully (tunnel disabled) if not.
   if (!fs.existsSync(CLOUDFLARED_SOURCE)) {
-    warn('cloudflared.exe not found under tools/cloudflared — remote-access tunnel will be unavailable.');
+    warn(
+      'cloudflared.exe not found under tools/cloudflared — remote-access tunnel will be unavailable.',
+    );
     return;
   }
   fs.copyFileSync(CLOUDFLARED_SOURCE, path.join(DIST_DIR, 'cloudflared.exe'));

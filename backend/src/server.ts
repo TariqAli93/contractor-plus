@@ -1,5 +1,7 @@
-import { buildApp } from './app.js';
+// Load + validate configuration FIRST. In service mode this reads + validates
+// service.json and exit(1)s on any problem BEFORE app.js pulls in Prisma/Fastify.
 import { env } from './config/env.js';
+import { buildApp } from './app.js';
 import { runMigrationsIfService } from './setup/migrate-on-boot.js';
 
 async function start() {

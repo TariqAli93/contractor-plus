@@ -27,7 +27,7 @@
 
     "//desktop": "----- Desktop (Electron) dev -----",
     "electron:dev": "pnpm build:shared && pnpm build:backend && concurrently -k -n vite,electron -c blue,green \"pnpm dev:frontend\" \"wait-on http://127.0.0.1:5173 && pnpm --filter frontend run electron:dev\"",
-    "desktop:reset": "node -e \"const p=require('path').join(process.env.APPDATA||'','ContractorPlus','setup-complete.flag'); try{require('fs').rmSync(p,{force:true});console.log('reset',p)}catch(e){console.log(e.message)}\"",
+    "desktop:reset": "node -e \"const p=require('path').join(process.env.ProgramData||'C:\\\\ProgramData','ContractorPlus','config','service.json'); try{require('fs').rmSync(p,{force:true});console.log('reset',p)}catch(e){console.log(e.message)}\"",
 
     "//build": "----- Build (per package) -----",
     "build": "pnpm build:shared && pnpm build:frontend && pnpm build:backend",

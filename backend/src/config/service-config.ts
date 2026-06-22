@@ -1,64 +1,67 @@
 /**
- * Windows-Service configuration loader.
+ * Service-mode application config builder.
  *
- * When the backend is launched by the WinSW service `ContractorPlusBackend`, the
- * only environment it is handed is `CONTRACTOR_PLUS_HOME` (= `%ProgramData%\
- * ContractorPlus`). The full runtime configuration — including the DB password
- * and JWT secret — lives in a single plaintext file written (and ACL-locked to
- * SYSTEM + Administrators + the service account) by the desktop's elevated
- * provisioning step during first-run setup:
+ * In production / Windows-Service mode the ENTIRE runtime configuration comes
+ * from the wizard-provisioned, ACL-locked `service.json`, loaded + validated by
+ * the shared loader (`@contractor-plus/shared/service-config`). This module maps
+ * the resolved service config onto the backend {@link AppConfig}.
  *
- *   <HOME>\config\service.json   { db:{host,port,database,user,password}, jwtSecret, port, frontendDist?, corsOrigin? }
- *   <HOME>\data                  CONTRACTOR_PLUS_DATA_DIR (uploads/public/private)
- *   <HOME>\logs                  central logs (rolled by WinSW)
+ * Values that are NOT part of per-deployment `service.json` — token TTLs, the
+ * bcrypt cost, the management API endpoint, the upload size limit — are supplied
+ * here as fixed APPLICATION CONSTANTS. They do not vary per install and are not
+ * secrets, so they are not "hidden defaults that mask invalid config": every
+ * connection-critical value (DB, JWT secret, port, CORS origin, SPA path) comes
+ * from service.json and fails loudly when missing or invalid.
  *
- * The secret material is NEVER baked into the installer or the service
- * descriptor (the "no secrets in install files" rule) — it is entered by the
- * operator during setup and persisted under %ProgramData% on the target machine
- * only. This module reconstructs DATABASE_URL/JWT/PORT/etc. from disk and injects
- * them into `process.env` BEFORE the zod env schema in `env.ts` runs.
- *
- * Dev and the Electron child-process path never set `CONTRACTOR_PLUS_HOME`, so
- * this is a no-op there and the existing env-var contract is unchanged.
+ * Explicitly absent here (the legacy patterns removed in Phase 1):
+ *   - NO `import 'dotenv/config'` / no .env is ever read.
+ *   - NO process.env routing or `setIfUnset` — service.json always wins.
+ *   - NO early return when process.env.DATABASE_URL exists.
+ *   - NO ProgramData fallback — a missing CONTRACTOR_PLUS_HOME fails loudly.
  */
-import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { loadServiceConfig } from '@contractor-plus/shared/service-config';
+import type { AppConfig } from './app-config.js';
 
-interface ServiceConfigFile {
-  version: number;
-  db: { host: string; port: number; database: string; user: string; password: string };
-  jwtSecret: string;
-  port: number;
-  /** Absolute path to the built SPA the service should serve (single origin). */
-  frontendDist?: string;
-  corsOrigin?: string;
-}
+/**
+ * Application constants that are intentionally not part of `service.json`.
+ * (Identical to the previous zod defaults, so production behavior is unchanged.)
+ */
+const APP_CONSTANTS = {
+  JWT_ACCESS_TTL: '15m',
+  REFRESH_TOKEN_TTL_DAYS: 30,
+  BCRYPT_ROUNDS: 12,
+  MANAGEMENT_API_URL: 'https://manage.codelapps.com',
+  MANAGEMENT_API_TIMEOUT_MS: 15_000,
+  MAX_UPLOAD_SIZE_MB: 5,
+} as const;
 
-function setIfUnset(key: string, value: string): void {
-  if (process.env[key] === undefined || process.env[key] === '') {
-    process.env[key] = value;
-  }
-}
+/**
+ * Build the backend {@link AppConfig} from `service.json`. Throws `ConfigError`
+ * (SERVICE_HOME_NOT_SET / SERVICE_CONFIG_NOT_FOUND / _INVALID_JSON /
+ * _INVALID_SCHEMA) when the configuration is missing or invalid — surfaced by
+ * env.ts as a clean exit(1) BEFORE Prisma or Fastify initialize.
+ */
+export function buildServiceModeConfig(): AppConfig {
+  const cfg = loadServiceConfig();
 
-export function loadServiceConfigIntoEnv(): void {
-  const home = process.env.CONTRACTOR_PLUS_HOME?.trim();
-  if (!home) return; // not service mode — env already provided (dev / Electron child)
-
-  const cfg = JSON.parse(
-    readFileSync(path.join(home, 'config', 'service.json'), 'utf8'),
-  ) as ServiceConfigFile;
-
-  const user = encodeURIComponent(cfg.db.user);
-  const pass = encodeURIComponent(cfg.db.password);
-  const { host, port: dbPort, database } = cfg.db;
-  const databaseUrl = `postgresql://${user}:${pass}@${host}:${dbPort}/${database}?schema=public`;
-
-  setIfUnset('NODE_ENV', 'production');
-  setIfUnset('DATABASE_URL', databaseUrl);
-  setIfUnset('JWT_ACCESS_SECRET', cfg.jwtSecret);
-  setIfUnset('PORT', String(cfg.port));
-  setIfUnset('CONTRACTOR_PLUS_DATA_DIR', path.join(home, 'data'));
-  setIfUnset('CORS_ORIGIN', cfg.corsOrigin ?? `http://127.0.0.1:${cfg.port}`);
-  setIfUnset('LOCAL_SERVICE_URL', `http://127.0.0.1:${cfg.port}`);
-  if (cfg.frontendDist) setIfUnset('FRONTEND_DIST', cfg.frontendDist);
+  return {
+    NODE_ENV: 'production',
+    PORT: cfg.port,
+    DATABASE_URL: cfg.databaseUrl,
+    JWT_ACCESS_SECRET: cfg.jwtSecret,
+    JWT_ACCESS_TTL: APP_CONSTANTS.JWT_ACCESS_TTL,
+    REFRESH_TOKEN_TTL_DAYS: APP_CONSTANTS.REFRESH_TOKEN_TTL_DAYS,
+    BCRYPT_ROUNDS: APP_CONSTANTS.BCRYPT_ROUNDS,
+    CORS_ORIGIN: cfg.corsOrigin,
+    MANAGEMENT_API_URL: APP_CONSTANTS.MANAGEMENT_API_URL,
+    LOCAL_SERVICE_URL: `http://127.0.0.1:${cfg.port}`,
+    MANAGEMENT_API_TIMEOUT_MS: APP_CONSTANTS.MANAGEMENT_API_TIMEOUT_MS,
+    // Derived from the validated home; keeps uploads at <home>/data/uploads
+    // without routing through process.env (matches prior production location).
+    UPLOAD_ROOT: path.join(cfg.dataDir, 'uploads'),
+    MAX_UPLOAD_SIZE_MB: APP_CONSTANTS.MAX_UPLOAD_SIZE_MB,
+    FRONTEND_DIST: cfg.frontendDist,
+    CONTRACTOR_PLUS_EXPECTED_DB: cfg.expectedDbName,
+  };
 }

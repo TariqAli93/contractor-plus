@@ -12,7 +12,17 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./service-config": {
+      "types": "./dist/service/config.d.ts",
+      "import": "./dist/service/config.js",
+      "default": "./dist/service/config.js"
+    },
     "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "service-config": ["./dist/service/config.d.ts"]
+    }
   },
   "files": [
     "dist",

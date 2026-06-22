@@ -249,21 +249,21 @@ D:\dev_projects\contractor-plus
 |  |  └── README.md
 |  ├── electron/
 |  |  ├── main/
-|  |  |  └── main.cjs
+|  |  |  └── main.js
 |  |  ├── preload/
-|  |  |  └── preload.cjs
+|  |  |  └── preload.mjs
 |  |  └── scripts/
-|  |     ├── autoUpdater.cjs
-|  |     ├── backendChecker.cjs
-|  |     ├── backendManager.cjs
-|  |     ├── credentials.cjs
-|  |     ├── db-ops.cjs
-|  |     ├── logger.cjs
-|  |     ├── provision.cjs
-|  |     ├── runtime.cjs
-|  |     ├── serviceController.cjs
-|  |     ├── setup.cjs
-|  |     └── versionManager.cjs
+|  |     ├── autoUpdater.js
+|  |     ├── backendChecker.js
+|  |     ├── backendManager.js
+|  |     ├── credentials.js
+|  |     ├── db-ops.js
+|  |     ├── logger.js
+|  |     ├── provision.js
+|  |     ├── runtime.js
+|  |     ├── serviceController.js
+|  |     ├── setup.js
+|  |     └── versionManager.js
 |  ├── electron-builder-client.yml
 |  ├── electron-builder.yml
 |  ├── index.html

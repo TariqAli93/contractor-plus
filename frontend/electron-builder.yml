@@ -36,6 +36,7 @@ win:
   target:
     - nsis
   artifactName: ContractorPlus-Setup-${version}.exe
+  icon: build/icon.ico
 
 nsis:
   oneClick: false
@@ -48,6 +49,9 @@ nsis:
   unicode: true
   # customInstall/customUnInstall: register + start + repair the WinSW service,
   # and PRESERVE the service across updates.
+  installerHeader: build/installer-header.bmp
+  installerSidebar: build/installer-sidebar.bmp
+  uninstallerIcon: build/icon.ico
   include: ../scripts/installer-include.nsh
 
 publish:
