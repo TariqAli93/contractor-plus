@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, defineAsyncComponent, onMounted } from 'vue';
 import { t } from '@/i18n';
 import { useDashboard } from '@/composables/useDashboard';
 import { useAuthStore } from '@/stores/auth.store';
@@ -16,6 +16,12 @@ import DateDisplay from '@/components/shared/DateDisplay.vue';
 
 const auth = useAuthStore();
 const { summary, delayed, overdue, loading, error, fetch } = useDashboard();
+
+// Lazy-load the chart so ApexCharts (heavy) is split into its own async chunk,
+// fetched only when the dashboard actually renders — keeping the route chunk lean.
+const FinancialOverviewChart = defineAsyncComponent(
+  () => import('@/components/features/dashboard/FinancialOverviewChart.vue'),
+);
 
 onMounted(fetch);
 
@@ -58,6 +64,8 @@ const greetingName = computed(() => auth.user?.fullName?.split(' ')[0] ?? '');
             </h2>
             <MonthlyFinancialSummary :summary="summary" :loading="loading" />
           </section>
+
+          <FinancialOverviewChart :summary="summary" :loading="loading" />
 
           <DelayedProjectsWidget :projects="delayed" :loading="loading" />
           <OverduePaymentsWidget :groups="overdue" :loading="loading" />

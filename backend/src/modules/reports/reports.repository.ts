@@ -6,6 +6,7 @@ import {
   type Prisma,
   type PrismaClient,
 } from '@prisma/client';
+import { money, type Money } from '../../lib/money.js';
 import type { RecentProject } from './reports.types.js';
 
 const TERMINAL_PROJECT_STATUSES: ProjectStatus[] = [
@@ -81,9 +82,9 @@ export class ReportsRepository {
     });
   }
 
-  // ---------- Money aggregations ----------
+  // ---------- Money aggregations (Decimal end-to-end) ----------
 
-  sumPaidPaymentsInRange(from?: Date, to?: Date): Promise<number> {
+  sumPaidPaymentsInRange(from?: Date, to?: Date): Promise<Money> {
     return this.prisma.payment
       .aggregate({
         where: {
@@ -95,10 +96,10 @@ export class ReportsRepository {
         },
         _sum: { amount: true },
       })
-      .then((r) => Number(r._sum.amount ?? 0));
+      .then((r) => money(r._sum.amount ?? 0));
   }
 
-  sumCostsInRange(from?: Date, to?: Date): Promise<number> {
+  sumCostsInRange(from?: Date, to?: Date): Promise<Money> {
     return this.prisma.projectCost
       .aggregate({
         where: {
@@ -107,10 +108,10 @@ export class ReportsRepository {
         },
         _sum: { totalAmount: true },
       })
-      .then((r) => Number(r._sum.totalAmount ?? 0));
+      .then((r) => money(r._sum.totalAmount ?? 0));
   }
 
-  sumApprovedContractValueInRange(from?: Date, to?: Date): Promise<number> {
+  sumApprovedContractValueInRange(from?: Date, to?: Date): Promise<Money> {
     return this.prisma.contract
       .aggregate({
         where: {
@@ -123,14 +124,14 @@ export class ReportsRepository {
         },
         _sum: { totalPrice: true },
       })
-      .then((r) => Number(r._sum.totalPrice ?? 0));
+      .then((r) => money(r._sum.totalPrice ?? 0));
   }
 
-  sumPaidPaymentsTotal(): Promise<number> {
+  sumPaidPaymentsTotal(): Promise<Money> {
     return this.sumPaidPaymentsInRange();
   }
 
-  sumOutstandingPaymentsTotal(): Promise<number> {
+  sumOutstandingPaymentsTotal(): Promise<Money> {
     return this.prisma.payment
       .aggregate({
         where: {
@@ -139,7 +140,7 @@ export class ReportsRepository {
         },
         _sum: { amount: true },
       })
-      .then((r) => Number(r._sum.amount ?? 0));
+      .then((r) => money(r._sum.amount ?? 0));
   }
 
   // ---------- Recent lists ----------
@@ -219,7 +220,7 @@ export class ReportsRepository {
     });
   }
 
-  sumCostsByProject(projectIds: string[]): Promise<Map<string, number>> {
+  sumCostsByProject(projectIds: string[]): Promise<Map<string, Money>> {
     if (projectIds.length === 0) return Promise.resolve(new Map());
     return this.prisma.projectCost
       .groupBy({
@@ -227,10 +228,10 @@ export class ReportsRepository {
         where: { projectId: { in: projectIds }, deletedAt: null },
         _sum: { totalAmount: true },
       })
-      .then((rows) => new Map(rows.map((r) => [r.projectId, Number(r._sum.totalAmount ?? 0)])));
+      .then((rows) => new Map(rows.map((r) => [r.projectId, money(r._sum.totalAmount ?? 0)])));
   }
 
-  sumPaidByProject(projectIds: string[]): Promise<Map<string, number>> {
+  sumPaidByProject(projectIds: string[]): Promise<Map<string, Money>> {
     if (projectIds.length === 0) return Promise.resolve(new Map());
     return this.prisma.payment
       .groupBy({
@@ -242,7 +243,7 @@ export class ReportsRepository {
         },
         _sum: { amount: true },
       })
-      .then((rows) => new Map(rows.map((r) => [r.projectId, Number(r._sum.amount ?? 0)])));
+      .then((rows) => new Map(rows.map((r) => [r.projectId, money(r._sum.amount ?? 0)])));
   }
 
   // ---------- Overdue payments ----------

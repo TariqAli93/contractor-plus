@@ -11,8 +11,9 @@ const props = defineProps<{
 }>();
 
 const profitTone = computed<'positive' | 'urgent' | 'neutral'>(() => {
-  const v = props.summary?.monthlyProfit;
-  if (v === undefined || v === null) return 'neutral';
+  const raw = props.summary?.monthlyProfit;
+  if (raw === undefined || raw === null) return 'neutral';
+  const v = Number(raw);
   if (v < 0) return 'urgent';
   if (v > 0) return 'positive';
   return 'neutral';

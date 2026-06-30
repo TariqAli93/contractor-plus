@@ -37,12 +37,13 @@ export interface ContractEstimate {
   buildingArea: number;
   floors: number;
   scaleFactor: number;
-  estimatedMaterialCost: number;
+  // Money values are serialized as fixed-precision strings (no float drift).
+  estimatedMaterialCost: string;
   expectedProfitMargin: number | null;
-  estimatedProfitAmount: number | null;
-  suggestedSellingPrice: number | null;
-  suggestedMeterPrice: number | null;
-  currentTotalPrice: number;
-  currentMeterPrice: number;
+  estimatedProfitAmount: string | null;
+  suggestedSellingPrice: string | null;
+  suggestedMeterPrice: string | null;
+  currentTotalPrice: string;
+  currentMeterPrice: string;
   itemsReplaced: number;
 }

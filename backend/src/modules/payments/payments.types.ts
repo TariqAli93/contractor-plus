@@ -26,9 +26,11 @@ export interface ProjectPaymentSummary {
   projectId: string;
   contractId: string | null;
   contractNumber: string | null;
-  contractTotal: number | null;
-  totalPaid: number;
-  remainingBalance: number | null;
+  // Money values are serialized as fixed-precision strings; the collection
+  // percentage stays a number (it is a ratio, not a currency amount).
+  contractTotal: string | null;
+  totalPaid: string;
+  remainingBalance: string | null;
   collectionPercentage: number | null;
   pendingPayments: number;
   latePayments: number;

@@ -135,7 +135,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/projects',
     name: 'projects',
-    component: () => import('@/views/projects/ProjectsListView.vue'),
+    component: () => import('@/views/projects/ProjectsWorkspaceView.vue'),
     meta: { layout: 'app', access: { permissions: ['projects.read'], roles: ALL_ROLES } },
   },
   {

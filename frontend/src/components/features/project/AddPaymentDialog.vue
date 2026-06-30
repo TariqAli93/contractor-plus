@@ -4,12 +4,14 @@ import { t } from '@/i18n';
 import { paymentsApi } from '@/services/api/payments.api';
 import { useApiError } from '@/composables/useApiError';
 import { useToast } from '@/composables/useToast';
+import { useSaveShortcut } from '@/composables/useSaveShortcut';
 import { PaymentMethod } from '@/types/enums';
-import type { CreatePaymentInput } from '@/types/payment';
+import type { CreatePaymentInput, MarkPaidBody } from '@/types/payment';
 
 // Inline create dialog hosted by ProjectPaymentsTab. Project is fixed by the
-// parent — no project selector, no paymentDate. The status starts as PENDING
-// on the backend; marking the payment paid is a separate action elsewhere.
+// parent. The "already paid today" toggle collapses the old two-step flow
+// (create PENDING → later mark paid) into one: on submit we create the payment
+// and, when toggled, immediately record it as paid in a single interaction.
 
 const props = defineProps<{
   modelValue: boolean;
@@ -30,6 +32,8 @@ interface FormState {
   method: PaymentMethod | null;
   reference: string | null;
   notes: string | null;
+  alreadyPaid: boolean;
+  paymentDate: string;
 }
 
 function todayIso(): string {
@@ -43,6 +47,8 @@ function emptyForm(): FormState {
     method: null,
     reference: null,
     notes: null,
+    alreadyPaid: false,
+    paymentDate: todayIso(),
   };
 }
 
@@ -88,8 +94,19 @@ async function submit() {
       reference: form.value.reference,
       notes: form.value.notes,
     };
-    await paymentsApi.create(payload);
-    toast.success(t('projects.payments.paymentCreated'));
+    const created = await paymentsApi.create(payload);
+
+    if (form.value.alreadyPaid) {
+      // Record the receipt now — same data the standalone mark-paid step needs.
+      const body: MarkPaidBody = { paymentDate: form.value.paymentDate };
+      if (form.value.method) body.method = form.value.method;
+      if (form.value.reference) body.reference = form.value.reference;
+      await paymentsApi.markPaid(created.id, body);
+      toast.success(t('projects.payments.paymentRecorded'));
+    } else {
+      toast.success(t('projects.payments.paymentCreated'));
+    }
+
     emit('created');
     emit('update:modelValue', false);
   } catch (e) {
@@ -98,6 +115,9 @@ async function submit() {
     submitting.value = false;
   }
 }
+
+// Ctrl+S saves while the dialog is open and not mid-submit.
+useSaveShortcut(submit, { enabled: () => props.modelValue && !submitting.value });
 </script>
 
 <template>
@@ -149,6 +169,23 @@ async function submit() {
             auto-grow
             class="md:col-span-2"
           />
+
+          <!-- Collapses create + mark-paid into one step. -->
+          <v-switch
+            v-model="form.alreadyPaid"
+            :label="t('projects.payments.alreadyPaidToday')"
+            color="success"
+            density="compact"
+            hide-details
+            class="md:col-span-2"
+          />
+          <v-text-field
+            v-if="form.alreadyPaid"
+            v-model="form.paymentDate"
+            :label="t('payments.fields.paymentDate')"
+            type="date"
+            class="md:col-span-2"
+          />
         </v-card-text>
 
         <v-divider />
@@ -159,7 +196,7 @@ async function submit() {
           </v-btn>
           <v-spacer />
           <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
-            {{ t('common.create') }}
+            {{ form.alreadyPaid ? t('projects.payments.recordPaid') : t('common.create') }}
           </v-btn>
         </v-card-actions>
       </v-form>

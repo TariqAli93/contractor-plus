@@ -18,5 +18,25 @@ export const useUiStore = defineStore('ui', () => {
     sidebarCollapsed.value = !sidebarCollapsed.value;
   }
 
-  return { sidebarCollapsed, toggleSidebar };
+  // Global command palette (Ctrl/⌘+K). Open state lives here so any component
+  // — the topbar button, a keyboard hook, a quick-action — can drive it.
+  const paletteOpen = ref(false);
+  function openPalette() {
+    paletteOpen.value = true;
+  }
+  function closePalette() {
+    paletteOpen.value = false;
+  }
+  function togglePalette() {
+    paletteOpen.value = !paletteOpen.value;
+  }
+
+  return {
+    sidebarCollapsed,
+    toggleSidebar,
+    paletteOpen,
+    openPalette,
+    closePalette,
+    togglePalette,
+  };
 });

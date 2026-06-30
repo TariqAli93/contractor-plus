@@ -21,6 +21,7 @@ import type {
   ListContractsQuery,
   UpdateContractInput,
 } from './contracts.schemas.js';
+import { money, round, sumMoney, toMoneyString, toMoneyStringOrNull } from '../../lib/money.js';
 import type { ContractEstimate } from './contracts.types.js';
 
 const CONTRACT = 'Contract';
@@ -91,7 +92,7 @@ export class ContractsService {
         );
       }
 
-      const totalPrice = round2(data.buildingArea * data.floors * data.meterPrice);
+      const totalPrice = round(money(data.buildingArea).times(data.floors).times(data.meterPrice));
 
       const created = await this.repo.create(
         {
@@ -146,12 +147,10 @@ export class ContractsService {
       if (data.customerId) await this.assertCustomerExists(tx, data.customerId);
       if (data.templateId) await this.assertTemplateExists(tx, data.templateId);
 
-      const merged = {
-        buildingArea: data.buildingArea ?? Number(existing.buildingArea),
-        floors: data.floors ?? existing.floors,
-        meterPrice: data.meterPrice ?? Number(existing.meterPrice),
-      };
-      const totalPrice = round2(merged.buildingArea * merged.floors * merged.meterPrice);
+      const buildingArea = money(data.buildingArea ?? existing.buildingArea);
+      const floors = data.floors ?? existing.floors;
+      const meterPrice = money(data.meterPrice ?? existing.meterPrice);
+      const totalPrice = round(buildingArea.times(floors).times(meterPrice));
 
       const updated = await this.repo.update(
         id,
@@ -231,33 +230,31 @@ export class ContractsService {
       });
       if (!template) throw new NotFoundError('Template', 'TEMPLATE_NOT_FOUND');
 
-      const buildingArea = Number(contract.buildingArea);
+      const buildingArea = money(contract.buildingArea);
       const floors = contract.floors;
-      const scaleFactor = (buildingArea * floors) / TEMPLATE_BASELINE_AREA;
+      const scaleFactor = buildingArea.times(floors).div(TEMPLATE_BASELINE_AREA);
 
       const newItems = template.items.map((item) => ({
         contractId: contract.id,
         materialId: item.materialId,
-        quantity: round3(Number(item.estimatedQuantity) * scaleFactor),
+        quantity: round(money(item.estimatedQuantity).times(scaleFactor), 3),
         unit: item.material.unit,
-        estimatedPrice: round2(Number(item.estimatedPrice) * scaleFactor),
+        estimatedPrice: round(money(item.estimatedPrice).times(scaleFactor)),
         notes: item.notes,
       }));
 
       await this.repo.replaceItems(contract.id, newItems, tx);
 
-      const estimatedMaterialCost = round2(
-        newItems.reduce((sum, i) => sum + i.estimatedPrice, 0),
-      );
+      const estimatedMaterialCost = round(sumMoney(newItems.map((i) => i.estimatedPrice)));
 
-      const margin =
+      // Margin (a percentage): the contract's own, else the template's suggestion.
+      const marginSource =
         contract.expectedProfitMargin !== null
-          ? Number(contract.expectedProfitMargin)
-          : template.suggestedProfitMargin !== null
-            ? Number(template.suggestedProfitMargin)
-            : null;
+          ? contract.expectedProfitMargin
+          : template.suggestedProfitMargin;
+      const margin = marginSource !== null ? money(marginSource) : null;
 
-      // Adopt template's suggested margin if contract has none yet.
+      // Adopt the template's suggested margin if the contract has none yet.
       let marginPersisted = contract.expectedProfitMargin;
       if (contract.expectedProfitMargin === null && template.suggestedProfitMargin !== null) {
         const updated = await this.repo.update(
@@ -269,14 +266,15 @@ export class ContractsService {
       }
 
       const estimatedProfitAmount =
-        margin !== null ? round2(estimatedMaterialCost * (margin / 100)) : null;
+        margin !== null ? round(estimatedMaterialCost.times(margin.div(100))) : null;
       const suggestedSellingPrice =
         estimatedProfitAmount !== null
-          ? round2(estimatedMaterialCost + estimatedProfitAmount)
+          ? round(estimatedMaterialCost.plus(estimatedProfitAmount))
           : null;
+      const areaTimesFloors = buildingArea.times(floors);
       const suggestedMeterPrice =
-        suggestedSellingPrice !== null && buildingArea > 0 && floors > 0
-          ? round2(suggestedSellingPrice / (buildingArea * floors))
+        suggestedSellingPrice !== null && areaTimesFloors.gt(0)
+          ? round(suggestedSellingPrice.div(areaTimesFloors))
           : null;
 
       await this.audit.log(
@@ -288,9 +286,9 @@ export class ContractsService {
           newValues: toJsonValue({
             event: 'estimate_generated',
             itemsReplaced: newItems.length,
-            scaleFactor,
-            estimatedMaterialCost,
-            marginUsed: margin,
+            scaleFactor: round(scaleFactor, 3).toString(),
+            estimatedMaterialCost: toMoneyString(estimatedMaterialCost),
+            marginUsed: margin !== null ? margin.toString() : null,
           }),
         },
         tx,
@@ -301,16 +299,16 @@ export class ContractsService {
         contractNumber: contract.contractNumber,
         templateId: template.id,
         templateName: template.name,
-        buildingArea,
+        buildingArea: buildingArea.toNumber(),
         floors,
-        scaleFactor: round3(scaleFactor),
-        estimatedMaterialCost,
-        expectedProfitMargin: marginPersisted !== null ? Number(marginPersisted) : margin,
-        estimatedProfitAmount,
-        suggestedSellingPrice,
-        suggestedMeterPrice,
-        currentTotalPrice: Number(contract.totalPrice),
-        currentMeterPrice: Number(contract.meterPrice),
+        scaleFactor: round(scaleFactor, 3).toNumber(),
+        estimatedMaterialCost: toMoneyString(estimatedMaterialCost),
+        expectedProfitMargin: marginPersisted !== null ? Number(marginPersisted) : null,
+        estimatedProfitAmount: toMoneyStringOrNull(estimatedProfitAmount),
+        suggestedSellingPrice: toMoneyStringOrNull(suggestedSellingPrice),
+        suggestedMeterPrice: toMoneyStringOrNull(suggestedMeterPrice),
+        currentTotalPrice: toMoneyString(contract.totalPrice),
+        currentMeterPrice: toMoneyString(contract.meterPrice),
         itemsReplaced: newItems.length,
       };
     });
@@ -511,14 +509,6 @@ export class ContractsService {
     );
   }
 
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
-}
-
-function round3(n: number): number {
-  return Math.round(n * 1000) / 1000;
 }
 
 function addDays(date: Date, days: number): Date {

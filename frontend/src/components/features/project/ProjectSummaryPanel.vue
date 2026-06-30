@@ -12,23 +12,21 @@ const props = defineProps<{
   paymentSummary: ProjectPaymentSummary | null;
 }>();
 
-const contractValue = computed(() =>
-  props.paymentSummary?.contractTotal !== undefined &&
-  props.paymentSummary?.contractTotal !== null
-    ? props.paymentSummary.contractTotal
-    : null,
+const contractValue = computed<string | null>(
+  () => props.paymentSummary?.contractTotal ?? null,
 );
 
-const totalCosts = computed(() => props.costSummary?.totalCosts ?? 0);
-const totalPaid = computed(() => props.paymentSummary?.totalPaid ?? 0);
+// Coerced to number for the local derived estimates below. The authoritative,
+// Decimal-precise profit/cash figures come from the profitability report; these
+// panel values are display-only conveniences, so a Number() coercion is fine.
+const totalCosts = computed(() => Number(props.costSummary?.totalCosts ?? 0));
+const totalPaid = computed(() => Number(props.paymentSummary?.totalPaid ?? 0));
 
 const profitEstimate = computed(() =>
-  contractValue.value !== null ? contractValue.value - totalCosts.value : null,
+  contractValue.value !== null ? Number(contractValue.value) - totalCosts.value : null,
 );
 const cashPosition = computed(() => totalPaid.value - totalCosts.value);
-const remainingBalance = computed(() =>
-  props.paymentSummary?.remainingBalance ?? null,
-);
+const remainingBalance = computed(() => props.paymentSummary?.remainingBalance ?? null);
 </script>
 
 <template>

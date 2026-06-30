@@ -18,6 +18,7 @@ import type {
   MarkPaidBody,
   UpdatePaymentInput,
 } from './payments.schemas.js';
+import { money, round, toMoneyString, toMoneyStringOrNull } from '../../lib/money.js';
 import type { ProjectPaymentSummary } from './payments.types.js';
 
 const PAYMENT = 'Payment';
@@ -271,21 +272,20 @@ export class PaymentsService {
         this.repo.latestForProject(projectId, LATEST_PAYMENTS_LIMIT),
       ]);
 
-    const contractTotal = project.contract ? Number(project.contract.totalPrice) : null;
-    const remainingBalance =
-      contractTotal !== null ? round2(contractTotal - totalPaid) : null;
+    const contractTotal = project.contract ? money(project.contract.totalPrice) : null;
+    const remainingBalance = contractTotal !== null ? contractTotal.minus(totalPaid) : null;
     const collectionPercentage =
-      contractTotal !== null && contractTotal > 0
-        ? round2((totalPaid / contractTotal) * 100)
+      contractTotal !== null && contractTotal.gt(0)
+        ? round(totalPaid.div(contractTotal).times(100)).toNumber()
         : null;
 
     return {
       projectId,
       contractId: project.contract?.id ?? null,
       contractNumber: project.contract?.contractNumber ?? null,
-      contractTotal,
-      totalPaid: round2(totalPaid),
-      remainingBalance,
+      contractTotal: toMoneyStringOrNull(contractTotal),
+      totalPaid: toMoneyString(totalPaid),
+      remainingBalance: toMoneyStringOrNull(remainingBalance),
       collectionPercentage,
       pendingPayments: pendingCount,
       latePayments: lateCount,
@@ -328,8 +328,4 @@ export class PaymentsService {
       );
     }
   }
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
 }

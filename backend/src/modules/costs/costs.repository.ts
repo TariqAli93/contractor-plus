@@ -4,6 +4,7 @@ import type {
   PrismaClient,
   ProjectCost,
 } from '@prisma/client';
+import { money, type Money } from '../../lib/money.js';
 import type { CostFilter, CostListArgs, CostWithMaterial } from './costs.types.js';
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
@@ -60,14 +61,14 @@ export class CostsRepository {
     });
   }
 
-  sumTotalForProject(projectId: string): Promise<number> {
+  sumTotalForProject(projectId: string): Promise<Money> {
     return this.prisma.projectCost
       .aggregate({
         where: { projectId, deletedAt: null },
         _sum: { totalAmount: true },
         _count: { _all: true },
       })
-      .then((r) => Number(r._sum.totalAmount ?? 0));
+      .then((r) => money(r._sum.totalAmount ?? 0));
   }
 
   countForProject(projectId: string): Promise<number> {
@@ -76,7 +77,7 @@ export class CostsRepository {
 
   sumByCategoryForProject(
     projectId: string,
-  ): Promise<Array<{ category: CostCategory; total: number }>> {
+  ): Promise<Array<{ category: CostCategory; total: Money }>> {
     return this.prisma.projectCost
       .groupBy({
         by: ['category'],
@@ -84,7 +85,7 @@ export class CostsRepository {
         _sum: { totalAmount: true },
       })
       .then((rows) =>
-        rows.map((r) => ({ category: r.category, total: Number(r._sum.totalAmount ?? 0) })),
+        rows.map((r) => ({ category: r.category, total: money(r._sum.totalAmount ?? 0) })),
       );
   }
 

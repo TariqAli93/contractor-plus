@@ -16,6 +16,7 @@ import type {
   ListCostsQuery,
   UpdateCostInput,
 } from './costs.schemas.js';
+import { money, round, toMoneyString, type Money, type MoneyInput } from '../../lib/money.js';
 import type { CostWithMaterial, ProjectCostSummary } from './costs.types.js';
 
 const COST = 'ProjectCost';
@@ -119,12 +120,8 @@ export class CostsService {
       const merged = {
         category: data.category ?? existing.category,
         materialId: 'materialId' in data ? data.materialId : existing.materialId,
-        quantity: 'quantity' in data ? data.quantity : existing.quantity !== null
-          ? Number(existing.quantity)
-          : null,
-        unitPrice: 'unitPrice' in data ? data.unitPrice : existing.unitPrice !== null
-          ? Number(existing.unitPrice)
-          : null,
+        quantity: 'quantity' in data ? data.quantity : existing.quantity,
+        unitPrice: 'unitPrice' in data ? data.unitPrice : existing.unitPrice,
       };
 
       this.assertCategoryMaterialCoherence(merged.category, merged.materialId ?? null);
@@ -135,7 +132,7 @@ export class CostsService {
       const totalAmount = this.resolveTotalAmount(
         merged.quantity,
         merged.unitPrice,
-        data.totalAmount ?? Number(existing.totalAmount),
+        data.totalAmount ?? existing.totalAmount,
       );
 
       const updated = await this.repo.update(
@@ -203,20 +200,20 @@ export class CostsService {
       this.repo.latestForProject(projectId, LATEST_COSTS_LIMIT),
     ]);
 
-    const totalByCategory: Record<CostCategory, number> = {
-      [CostCategory.MATERIAL]: 0,
-      [CostCategory.LABOR]: 0,
-      [CostCategory.MACHINERY]: 0,
-      [CostCategory.TRANSPORT]: 0,
-      [CostCategory.MISC]: 0,
+    const totalByCategory: Record<CostCategory, string> = {
+      [CostCategory.MATERIAL]: '0.00',
+      [CostCategory.LABOR]: '0.00',
+      [CostCategory.MACHINERY]: '0.00',
+      [CostCategory.TRANSPORT]: '0.00',
+      [CostCategory.MISC]: '0.00',
     };
     for (const row of byCategory) {
-      totalByCategory[row.category] = round2(row.total);
+      totalByCategory[row.category] = toMoneyString(row.total);
     }
 
     return {
       projectId,
-      totalCosts: round2(totalCosts),
+      totalCosts: toMoneyString(totalCosts),
       costCount,
       materialCosts: totalByCategory[CostCategory.MATERIAL],
       laborCosts: totalByCategory[CostCategory.LABOR],
@@ -242,12 +239,12 @@ export class CostsService {
   }
 
   private resolveTotalAmount(
-    quantity: number | null | undefined,
-    unitPrice: number | null | undefined,
-    fallback: number | undefined,
-  ): number {
+    quantity: MoneyInput | null | undefined,
+    unitPrice: MoneyInput | null | undefined,
+    fallback: MoneyInput | null | undefined,
+  ): Money {
     if (quantity != null && unitPrice != null) {
-      return round2(quantity * unitPrice);
+      return round(money(quantity).times(money(unitPrice)));
     }
     if (fallback == null) {
       throw new ValidationError(
@@ -255,7 +252,7 @@ export class CostsService {
         { totalAmount: ['required'] },
       );
     }
-    return round2(fallback);
+    return round(money(fallback));
   }
 
   private async assertProjectExists(
@@ -279,8 +276,4 @@ export class CostsService {
     });
     if (!m) throw new NotFoundError('Material', 'MATERIAL_NOT_FOUND');
   }
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
 }

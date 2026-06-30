@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { ProfileService } from './profile.service.js';
 import { changePasswordSchema, updateProfileSchema } from './profile.schemas.js';
 import { UnauthorizedError } from '../../shared/errors/unauthorized.error.js';
+import { readRefreshCookie } from '../../lib/auth-cookies.js';
 import type { AuditActor } from '../audit/audit.service.js';
 
 export class ProfileController {
@@ -18,7 +19,14 @@ export class ProfileController {
 
   changePassword = async (request: FastifyRequest, reply: FastifyReply) => {
     const body = changePasswordSchema.parse(request.body);
-    await this.service.changePassword(this.userId(request), body, this.actor(request));
+    // The "keep my current session" token now rides in the HttpOnly refresh
+    // cookie (no longer the request body), so the controller reads it from there.
+    await this.service.changePassword(
+      this.userId(request),
+      body,
+      this.actor(request),
+      readRefreshCookie(request),
+    );
     return reply.code(200).send({ success: true });
   };
 

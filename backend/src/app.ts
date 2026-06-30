@@ -5,6 +5,9 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
+import rateLimit from '@fastify/rate-limit';
+import cookie from '@fastify/cookie';
+import csrfProtection from '@fastify/csrf-protection';
 import fastifyStatic from '@fastify/static';
 import { PROTOCOL_VERSION } from '@contractor-plus/shared';
 
@@ -75,6 +78,49 @@ export async function buildApp(): Promise<FastifyInstance> {
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   });
   await app.register(cors, { origin: env.CORS_ORIGIN, credentials: true });
+
+  // Rate limiting — a blanket per-IP ceiling on every route (a cheap DoS guard),
+  // with far tighter per-route buckets layered on the auth endpoints (see
+  // auth.routes.ts). `trustProxy` is enabled above, so behind the Cloudflare
+  // tunnel the limiter keys on the real client IP (X-Forwarded-For), not the
+  // loopback address the tunnel connects from. The 429 body is shaped like every
+  // other API error so the SPA's axios error normalizer handles it uniformly.
+  await app.register(rateLimit, {
+    global: true,
+    max: 1000,
+    timeWindow: '1 minute',
+    errorResponseBuilder: (request, context) => ({
+      statusCode: 429,
+      code: 'RATE_LIMITED',
+      message: `Too many requests — please retry after ${context.after}.`,
+      reqId: request.id,
+    }),
+  });
+
+  // Cookies — required for the HttpOnly refresh-token cookie and the CSRF
+  // double-submit secret. Registered before csrf-protection (its dependency).
+  await app.register(cookie);
+
+  // CSRF protection (double-submit). reply.generateCsrf() stores the validating
+  // secret in this HttpOnly `_csrf` cookie; the matching token is mirrored into a
+  // readable XSRF-TOKEN cookie the SPA echoes back in X-XSRF-TOKEN. Only the
+  // cookie-authenticated endpoints opt in (auth.routes.ts) — Bearer-authenticated
+  // routes carry the token in a header an attacker cannot forge, so they are not
+  // CSRF-exposed.
+  await app.register(csrfProtection, {
+    cookieKey: '_csrf',
+    cookieOpts: {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      path: '/',
+      maxAge: env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60,
+    },
+    getToken: (req) => {
+      const header = req.headers['x-xsrf-token'];
+      return Array.isArray(header) ? header[0] : header;
+    },
+  });
 
   // Multipart parser for file uploads. Limits enforced here apply to every
   // request that uses request.file()/request.files(); the upload service

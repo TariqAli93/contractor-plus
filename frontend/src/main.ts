@@ -7,6 +7,18 @@ import { useAuthStore } from "./stores/auth.store";
 import { useThemeStore } from "./stores/theme.store";
 import { registerAuthBindings } from "./services/api/client";
 
+// Self-hosted Arabic UI font (Arabic + Latin subsets only). @fontsource ships
+// the woff2 files + @font-face locally; the browser fetches only the glyph
+// ranges it needs via unicode-range.
+import "@fontsource/ibm-plex-sans-arabic/arabic-400.css";
+import "@fontsource/ibm-plex-sans-arabic/latin-400.css";
+import "@fontsource/ibm-plex-sans-arabic/arabic-500.css";
+import "@fontsource/ibm-plex-sans-arabic/latin-500.css";
+import "@fontsource/ibm-plex-sans-arabic/arabic-600.css";
+import "@fontsource/ibm-plex-sans-arabic/latin-600.css";
+import "@fontsource/ibm-plex-sans-arabic/arabic-700.css";
+import "@fontsource/ibm-plex-sans-arabic/latin-700.css";
+
 import "./assets/styles/main.css";
 
 async function bootstrap() {

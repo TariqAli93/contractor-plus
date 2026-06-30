@@ -173,6 +173,42 @@
     "logout": "تسجيل الخروج",
     "comingSoon": "قريباً"
   },
+  "datagrid": {
+    "selected": "محدّد",
+    "deleteSelected": "حذف المحدد",
+    "exportCsv": "تصدير CSV",
+    "importCsv": "استيراد CSV",
+    "filter": "تصفية…",
+    "hint": "تحرير مباشر داخل الخلية • Enter للحفظ • Tab للتنقل • انسخ/الصق من Excel • Ctrl+D للتعبئة للأسفل",
+    "pasteApplied": "تم تطبيق اللصق.",
+    "pasteSkipped": "تم تخطّي صفوف غير مكتملة.",
+    "truncated": "عرض {shown} من {total}. استخدم التصفية لتضييق النتائج."
+  },
+  "palette": {
+    "openLabel": "بحث سريع",
+    "placeholder": "ابحث أو نفّذ أمراً…",
+    "noResults": "لا نتائج",
+    "hintNavigate": "للتنقل",
+    "hintOpen": "للفتح",
+    "groups": {
+      "recent": "آخر ما فُتح",
+      "latestProjects": "أحدث المشاريع",
+      "actions": "أوامر",
+      "results": "نتائج"
+    },
+    "actions": {
+      "newProject": "مشروع جديد",
+      "newContract": "عقد جديد",
+      "newCustomer": "عميل جديد",
+      "newMaterial": "مادة جديدة",
+      "goDashboard": "الذهاب إلى لوحة التحكم",
+      "goProjects": "الذهاب إلى المشاريع",
+      "goContracts": "الذهاب إلى العقود",
+      "goMaterials": "الذهاب إلى المواد",
+      "goReports": "الذهاب إلى التقارير",
+      "goSettings": "الذهاب إلى الإعدادات"
+    }
+  },
   "auth": {
     "login": "تسجيل الدخول",
     "username": "اسم المستخدم",
@@ -229,6 +265,9 @@
     "searchPlaceholder": "ابحث بالاسم أو الوحدة",
     "deleteConfirmTitle": "حذف هذه المادة؟",
     "deleteConfirmMessage": "سيتم إخفاء المادة \"{name}\". يمكن استعادتها لاحقاً.",
+    "gridAddInvalid": "أدخل اسم المادة والوحدة على الأقل.",
+    "deleteManyTitle": "حذف المواد المحددة؟",
+    "deleteManyMessage": "سيتم حذف {n} مادة. يمكن استعادتها لاحقاً.",
     "fields": {
       "name": "الاسم",
       "unit": "الوحدة",
@@ -475,6 +514,10 @@
     "edit": "المشروع",
     "searchPlaceholder": "ابحث باسم المشروع أو رقم العقد",
     "saveFirstHint": "احفظ المشروع أولاً للوصول إلى تبويبات المصاريف والدفعات والتقدم.",
+    "openFull": "فتح كامل",
+    "workspace": {
+      "selectHint": "اختر مشروعاً من القائمة لعرض تفاصيله هنا."
+    },
     "deleteConfirmTitle": "حذف هذا المشروع؟",
     "deleteConfirmMessage": "سيتم إخفاء المشروع \"{name}\". الحذف مرفوض إذا كانت توجد مصاريف أو دفعات.",
     "delayedBy": "هذا المشروع متأخر {days} يوم.",
@@ -557,8 +600,13 @@
       "latest": "أحدث المصاريف",
       "empty": "لا توجد مصاريف بعد.",
       "addCost": "إضافة مصروف",
+      "addDetailed": "إضافة مفصّلة",
       "addCostTitle": "إضافة مصروف لهذا المشروع",
       "costCreated": "تمت إضافة المصروف.",
+      "quickAddHint": "اكتب القيم ثم اضغط Enter للحفظ وفتح صفّ جديد.",
+      "quickAddInvalid": "أدخل وصفاً، مع الإجمالي أو (الكمية وسعر الوحدة معاً).",
+      "deleteTitle": "حذف المصاريف المحددة؟",
+      "deleteManyMsg": "سيتم حذف {n} مصروف. لا يمكن التراجع بسهولة.",
       "summary": {
         "totalCosts": "إجمالي المصاريف",
         "materials": "مواد",
@@ -584,6 +632,12 @@
       "addPayment": "إضافة دفعة",
       "addPaymentTitle": "إضافة دفعة لهذا المشروع",
       "paymentCreated": "تمت إضافة الدفعة.",
+      "gridAddInvalid": "أدخل المبلغ وتاريخ الاستحقاق.",
+      "deleteTitle": "حذف الدفعات المحددة؟",
+      "deleteManyMsg": "سيتم حذف {n} دفعة (المعلّقة/المتأخرة فقط).",
+      "alreadyPaidToday": "تم الاستلام اليوم",
+      "recordPaid": "تسجيل كمدفوعة",
+      "paymentRecorded": "تم تسجيل الدفعة.",
       "summary": {
         "contractTotal": "إجمالي العقد",
         "totalPaid": "إجمالي المدفوع",
@@ -620,6 +674,10 @@
       "monthlyCosts": "مصاريف الشهر",
       "monthlyProfit": "ربح الشهر",
       "cashCollected": "إجمالي النقد المحصّل"
+    },
+    "financialChart": {
+      "title": "الأداء المالي للشهر",
+      "amount": "القيمة"
     },
     "delayed": {
       "title": "المشاريع المتأخرة",

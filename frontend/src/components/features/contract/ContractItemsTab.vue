@@ -1,17 +1,24 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { t } from '@/i18n';
+import { useCurrencyFormat } from '@/composables/useCurrencyFormat';
 import type { ContractWithRelations } from '@/types/contract';
 import { ContractStatus } from '@/types/enums';
+import type { GridColumn, GridRow } from '@/components/shared/datagrid/types';
+import DataGrid from '@/components/shared/datagrid/DataGrid.vue';
+import { buildContractItemColumns } from './contractItemColumns';
 import EmptyState from '@/components/shared/EmptyState.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
-import ContractItemRow from './ContractItemRow.vue';
 
 const props = defineProps<{ contract: ContractWithRelations }>();
+const { format: money } = useCurrencyFormat();
 
 const totalCost = computed(() =>
   props.contract.items.reduce((s, i) => s + Number(i.estimatedPrice), 0),
 );
+
+const columns = computed<GridColumn[]>(() => buildContractItemColumns({ t, money }));
+const gridRows = computed<GridRow[]>(() => props.contract.items as unknown as GridRow[]);
 
 const explanation = computed(() => {
   if (props.contract.status === ContractStatus.CANCELLED) return t('contracts.items.cancelledHint');
@@ -40,27 +47,20 @@ const explanation = computed(() => {
       {{ explanation }}
     </v-alert>
 
-    <v-table v-if="contract.items.length > 0" density="comfortable">
-      <thead>
-        <tr>
-          <th class="text-start">{{ t('contracts.items.fields.material') }}</th>
-          <th class="text-start" style="width: 90px">{{ t('contracts.items.fields.unit') }}</th>
-          <th class="text-end" style="width: 140px">{{ t('contracts.items.fields.quantity') }}</th>
-          <th class="text-end" style="width: 160px">{{ t('contracts.items.fields.estimatedPrice') }}</th>
-          <th class="text-start">{{ t('contracts.items.fields.notes') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <ContractItemRow v-for="item in contract.items" :key="item.id" :item="item" />
-      </tbody>
-      <tfoot>
-        <tr>
-          <td colspan="3" class="text-end font-medium">{{ t('contracts.items.totalEstimated') }}</td>
-          <td class="text-end font-medium"><MoneyDisplay :amount="totalCost" /></td>
-          <td></td>
-        </tr>
-      </tfoot>
-    </v-table>
+    <template v-if="contract.items.length > 0">
+      <DataGrid
+        :rows="gridRows"
+        :columns="columns"
+        :editable="false"
+        :enable-csv="true"
+        export-name="contract-items"
+        height="440px"
+      />
+      <div class="flex items-center justify-end gap-3 mt-3 pe-2">
+        <span class="font-medium">{{ t('contracts.items.totalEstimated') }}</span>
+        <span class="font-medium text-h6"><MoneyDisplay :amount="totalCost" /></span>
+      </div>
+    </template>
 
     <EmptyState
       v-else

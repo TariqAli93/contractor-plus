@@ -1,100 +1,158 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, onMounted, ref } from 'vue';
 import { t } from '@/i18n';
-import { useMaterials } from '@/composables/useMaterials';
-import { useConfirm } from '@/composables/useConfirm';
-import { useToast } from '@/composables/useToast';
-import { useApiError } from '@/composables/useApiError';
 import { materialsApi } from '@/services/api/materials.api';
-import { buildMaterialColumns } from '@/components/features/material/materialColumns';
+import { useApiError } from '@/composables/useApiError';
+import { useToast } from '@/composables/useToast';
+import { useAccess } from '@/composables/useAccess';
+import { useConfirm } from '@/composables/useConfirm';
+import { useCurrencyFormat } from '@/composables/useCurrencyFormat';
+import { numOrNull } from '@/lib/number';
 import { RoleName } from '@/types/enums';
-import type { Material } from '@/types/material';
-import SearchBar from '@/components/shared/SearchBar.vue';
+import type { CreateMaterialInput, Material, UpdateMaterialInput } from '@/types/material';
+import type {
+  GridCellCommit,
+  GridColumn,
+  GridPastePayload,
+  GridRow,
+} from '@/components/shared/datagrid/types';
+import DataGrid from '@/components/shared/datagrid/DataGrid.vue';
+import { buildMaterialColumns } from '@/components/features/material/materialGridColumns';
 import ErrorState from '@/components/shared/ErrorState.vue';
 import RoleGate from '@/components/shared/RoleGate.vue';
-import DateDisplay from '@/components/shared/DateDisplay.vue';
-import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 
-const router = useRouter();
-const toast = useToast();
-const { confirm } = useConfirm();
 const { handle } = useApiError();
-
-const {
-  items,
-  total,
-  loading,
-  error,
-  page,
-  pageSize,
-  searchInput,
-  isActive,
-  sortBy,
-  sortDir,
-  fetch,
-  setIsActiveFilter,
-} = useMaterials();
+const toast = useToast();
+const { canAccess } = useAccess();
+const { confirm } = useConfirm();
+const { format: money } = useCurrencyFormat();
 
 const WRITE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ACCOUNTANT];
-const WRITE_PERMS = ['materials.create', 'materials.update', 'materials.delete'];
+const canCreate = computed(() => canAccess({ permissions: ['materials.create'], roles: WRITE_ROLES }));
+const canEdit = computed(() => canAccess({ permissions: ['materials.update'], roles: WRITE_ROLES }));
+const canDelete = computed(() => canAccess({ permissions: ['materials.delete'], roles: WRITE_ROLES }));
 
-const columns = computed(() => buildMaterialColumns(t));
+const materials = ref<Material[]>([]);
+const total = ref(0);
+const loading = ref(false);
+const error = ref<unknown>(null);
 
-// Chip-group value: 'all' | 'active' | 'inactive'. Synced with isActive ref.
-const filterValue = computed<'all' | 'active' | 'inactive'>(() => {
-  if (isActive.value === true) return 'active';
-  if (isActive.value === false) return 'inactive';
-  return 'all';
-});
+// The grid is client-paged; pull every material (capped) so sort/filter/export
+// operate over the full catalogue. Virtualization for very large sets is a
+// later optimization.
+const CAP = 1000;
+async function refresh() {
+  loading.value = true;
+  error.value = null;
+  try {
+    const collected: Material[] = [];
+    let page = 1;
+    let totalCount = 0;
+    do {
+      const res = await materialsApi.list({ page, pageSize: 100, sortBy: 'name', sortDir: 'asc' });
+      collected.push(...res.items);
+      totalCount = res.total;
+      page++;
+    } while (collected.length < totalCount && collected.length < CAP);
+    materials.value = collected;
+    total.value = totalCount;
+  } catch (e) {
+    error.value = e;
+    handle(e);
+  } finally {
+    loading.value = false;
+  }
+}
+onMounted(refresh);
 
-function onFilterChange(v: 'all' | 'active' | 'inactive') {
-  if (v === 'active') setIsActiveFilter(true);
-  else if (v === 'inactive') setIsActiveFilter(false);
-  else setIsActiveFilter(undefined);
+const columns = computed<GridColumn[]>(() => buildMaterialColumns({ t, money }));
+const gridRows = computed<GridRow[]>(() => materials.value as unknown as GridRow[]);
+
+function newRowFactory(): Record<string, unknown> {
+  return { name: '', unit: '', defaultPrice: null, isActive: true, notes: '' };
 }
 
-onMounted(fetch);
+function materialPatch(values: Record<string, unknown>): UpdateMaterialInput {
+  const patch: UpdateMaterialInput = {};
+  if ('name' in values) patch.name = String(values.name ?? '').trim();
+  if ('unit' in values) patch.unit = String(values.unit ?? '').trim();
+  if ('notes' in values) patch.notes = values.notes == null || values.notes === '' ? null : String(values.notes);
+  if ('defaultPrice' in values) patch.defaultPrice = numOrNull(values.defaultPrice);
+  if ('isActive' in values) patch.isActive = values.isActive === true || values.isActive === 'true';
+  return patch;
+}
 
-function onTableUpdate(opts: {
-  page: number;
-  itemsPerPage: number;
-  sortBy: Array<{ key: string; order: 'asc' | 'desc' }>;
-}) {
-  page.value = opts.page;
-  pageSize.value = opts.itemsPerPage;
-  const first = opts.sortBy[0];
-  if (first && (first.key === 'name' || first.key === 'createdAt' || first.key === 'defaultPrice')) {
-    sortBy.value = first.key;
-    sortDir.value = first.order;
-  } else if (opts.sortBy.length === 0) {
-    sortBy.value = 'name';
-    sortDir.value = 'asc';
+function buildCreate(values: Record<string, unknown>): CreateMaterialInput | null {
+  const name = String(values.name ?? '').trim();
+  const unit = String(values.unit ?? '').trim();
+  if (!name || !unit) return null;
+  return {
+    name,
+    unit,
+    defaultPrice: numOrNull(values.defaultPrice),
+    notes: values.notes == null || values.notes === '' ? null : String(values.notes),
+    isActive: !(values.isActive === false || values.isActive === 'false'),
+  };
+}
+
+async function onCellCommit(p: GridCellCommit) {
+  try {
+    await materialsApi.update(p.id, materialPatch({ [p.field]: p.value }));
+    await refresh();
+  } catch (e) {
+    handle(e);
+    await refresh();
   }
 }
 
-function openEdit(material: Material) {
-  void router.push(`/materials/${material.id}`);
+async function onNewCommit(values: Record<string, unknown>) {
+  const payload = buildCreate(values);
+  if (!payload) {
+    toast.error(t('materials.gridAddInvalid'));
+    return;
+  }
+  try {
+    await materialsApi.create(payload);
+    toast.success(t('common.saved'));
+    await refresh();
+  } catch (e) {
+    handle(e);
+  }
 }
 
-function onRowClick(_e: unknown, row: { item: Material }) {
-  openEdit(row.item);
+async function onPaste(payload: GridPastePayload) {
+  try {
+    for (const u of payload.updates) await materialsApi.update(u.id, materialPatch(u.values));
+    let skipped = 0;
+    for (const row of payload.creates) {
+      const create = buildCreate(row);
+      if (create) await materialsApi.create(create);
+      else skipped++;
+    }
+    toast.success(t('datagrid.pasteApplied'));
+    if (skipped > 0) toast.error(t('datagrid.pasteSkipped'));
+    await refresh();
+  } catch (e) {
+    handle(e);
+    await refresh();
+  }
 }
 
-async function handleDelete(material: Material) {
+async function onDeleteRows(ids: string[]) {
   const ok = await confirm({
-    title: t('materials.deleteConfirmTitle'),
-    message: t('materials.deleteConfirmMessage', { name: material.name }),
+    title: t('materials.deleteManyTitle'),
+    message: t('materials.deleteManyMessage').replace('{n}', String(ids.length)),
     confirmText: t('common.delete'),
     destructive: true,
   });
   if (!ok) return;
   try {
-    await materialsApi.remove(material.id);
+    for (const id of ids) await materialsApi.remove(id);
     toast.success(t('common.deleted'));
-    await fetch();
+    await refresh();
   } catch (e) {
     handle(e);
+    await refresh();
   }
 }
 </script>
@@ -103,84 +161,37 @@ async function handleDelete(material: Material) {
   <div>
     <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
       <h1 class="text-h5">{{ t('nav.materials') }}</h1>
-      <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
+      <RoleGate :permissions="['materials.create']" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" to="/materials/new">
           {{ t('materials.new') }}
         </v-btn>
       </RoleGate>
     </div>
 
-    <v-card>
-      <v-card-text class="flex flex-wrap items-center gap-3">
-        <div class="flex-1 min-w-[240px]">
-          <SearchBar v-model="searchInput" :placeholder="t('materials.searchPlaceholder')" />
-        </div>
-        <v-chip-group
-          :model-value="filterValue"
-          mandatory
-          selected-class="bg-primary text-white"
-          @update:model-value="onFilterChange"
-        >
-          <v-chip value="all" size="small">{{ t('materials.filter.all') }}</v-chip>
-          <v-chip value="active" size="small">{{ t('materials.filter.active') }}</v-chip>
-          <v-chip value="inactive" size="small">{{ t('materials.filter.inactive') }}</v-chip>
-        </v-chip-group>
-      </v-card-text>
+    <p class="text-caption text-medium-emphasis mb-2">{{ t('datagrid.hint') }}</p>
 
-      <v-divider />
+    <ErrorState v-if="error" :error="error" class="my-4" @retry="refresh" />
 
-      <ErrorState v-if="error" :error="error" class="my-4" @retry="fetch" />
+    <DataGrid
+      v-else
+      :rows="gridRows"
+      :columns="columns"
+      :editable="canEdit"
+      :show-new-row="canCreate"
+      :new-row-factory="newRowFactory"
+      :selectable="canDelete"
+      :enable-csv="true"
+      export-name="materials"
+      :loading="loading"
+      height="600px"
+      @cell-commit="onCellCommit"
+      @new-commit="onNewCommit"
+      @paste="onPaste"
+      @delete-rows="onDeleteRows"
+    />
 
-      <v-data-table-server
-        v-else
-        :items="items"
-        :items-length="total"
-        :headers="columns"
-        :loading="loading"
-        :page="page"
-        :items-per-page="pageSize"
-        :items-per-page-options="[10, 20, 50, 100]"
-        item-value="id"
-        hover
-        @update:options="onTableUpdate"
-        @click:row="onRowClick"
-      >
-        <template #[`item.defaultPrice`]="{ item }">
-          <MoneyDisplay :amount="item.defaultPrice" />
-        </template>
-        <template #[`item.isActive`]="{ item }">
-          <v-chip
-            size="small"
-            variant="tonal"
-            :color="item.isActive ? 'success' : undefined"
-            :prepend-icon="item.isActive ? 'mdi-check-circle' : 'mdi-circle-off-outline'"
-          >
-            {{ item.isActive ? t('materials.status.active') : t('materials.status.inactive') }}
-          </v-chip>
-        </template>
-        <template #[`item.createdAt`]="{ item }">
-          <DateDisplay :value="item.createdAt" />
-        </template>
-        <template #[`item.actions`]="{ item }">
-          <div class="flex justify-end gap-1" @click.stop>
-            <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
-              <v-btn
-                icon="mdi-pencil"
-                size="small"
-                variant="text"
-                @click="openEdit(item)"
-              />
-              <v-btn
-                icon="mdi-delete-outline"
-                size="small"
-                variant="text"
-                color="error"
-                @click="handleDelete(item)"
-              />
-            </RoleGate>
-          </div>
-        </template>
-      </v-data-table-server>
-    </v-card>
+    <p v-if="total > materials.length" class="text-caption text-medium-emphasis mt-2">
+      {{ t('datagrid.truncated').replace('{shown}', String(materials.length)).replace('{total}', String(total)) }}
+    </p>
   </div>
 </template>

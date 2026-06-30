@@ -36,11 +36,11 @@ export interface DashboardSummary {
   activeProjects: number;
   delayedProjects: number;
   overduePayments: number;
-  monthlyRevenue: number;
-  monthlyCosts: number;
-  monthlyProfit: number;
-  totalCashCollected: number;
-  pendingCollections: number;
+  monthlyRevenue: string;
+  monthlyCosts: string;
+  monthlyProfit: string;
+  totalCashCollected: string;
+  pendingCollections: string;
   recentProjects: DashboardRecentProject[];
   recentPayments: DashboardRecentPayment[];
   asOf: string;
@@ -62,7 +62,7 @@ export interface DelayedProjectRow {
 
 export interface OverduePaymentLine {
   id: string;
-  amount: number;
+  amount: string;
   dueDate: string;
   daysOverdue: number;
   reference: string | null;
@@ -76,7 +76,7 @@ export interface OverduePaymentsGroup {
   contractNumber: string | null;
   customerId: string | null;
   customerName: string | null;
-  totalOverdueAmount: number;
+  totalOverdueAmount: string;
   overduePaymentsCount: number;
   oldestDueDate: string;
   payments: OverduePaymentLine[];

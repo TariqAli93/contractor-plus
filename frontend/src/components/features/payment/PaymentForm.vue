@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { t } from '@/i18n';
 import { usePaymentForm } from '@/composables/usePaymentForm';
+import { useSaveShortcut } from '@/composables/useSaveShortcut';
 import { projectsApi } from '@/services/api/projects.api';
 import { PaymentMethod } from '@/types/enums';
 import type { ProjectWithContract } from '@/types/project';
@@ -11,6 +12,8 @@ const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } =
   props.id,
   props.initialProjectId,
 );
+
+useSaveShortcut(submit, { enabled: () => !submitting.value });
 
 const projects = ref<ProjectWithContract[]>([]);
 const projectsLoading = ref(false);

@@ -12,6 +12,9 @@ export interface AccessTokenPayload {
 
 export function signAccessToken(payload: AccessTokenPayload): string {
   const options: SignOptions = {
+    // Pin the signing algorithm explicitly instead of relying on the library
+    // default, so the issued and accepted algorithms stay in lockstep.
+    algorithm: 'HS256',
     expiresIn: env.JWT_ACCESS_TTL as SignOptions['expiresIn'],
     issuer: ISSUER,
   };
@@ -19,7 +22,14 @@ export function signAccessToken(payload: AccessTokenPayload): string {
 }
 
 export function verifyAccessToken(token: string): AccessTokenPayload {
-  const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET, { issuer: ISSUER });
+  // Pin the accepted algorithm to HS256. Without an explicit allow-list,
+  // jsonwebtoken honours whatever `alg` the token header claims — opening the
+  // algorithm-confusion class of attacks (a forged `alg:"none"` token, or an
+  // `alg:"RS256"` token verified against our HMAC secret treated as a public key).
+  const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET, {
+    algorithms: ['HS256'],
+    issuer: ISSUER,
+  });
   if (typeof decoded === 'string') {
     throw new Error('Unexpected JWT payload');
   }

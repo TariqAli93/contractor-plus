@@ -1,6 +1,19 @@
 <script setup lang="ts">
+import { onKeyStroke } from '@vueuse/core';
 import TopBar from './TopBar.vue';
 import SideNav from './SideNav.vue';
+import CommandPalette from './CommandPalette.vue';
+import { useUiStore } from '@/stores/ui.store';
+
+const ui = useUiStore();
+
+// Global command palette shortcut: Ctrl+K (Windows/Linux) or ⌘+K (mac).
+onKeyStroke(['k', 'K'], (e) => {
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    ui.togglePalette();
+  }
+});
 </script>
 
 <template>
@@ -16,6 +29,7 @@ import SideNav from './SideNav.vue';
         </router-view>
       </div>
     </v-main>
+    <CommandPalette />
   </v-app>
 </template>
 

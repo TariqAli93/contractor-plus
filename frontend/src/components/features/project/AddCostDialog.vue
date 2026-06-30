@@ -5,6 +5,7 @@ import { costsApi } from '@/services/api/costs.api';
 import { materialsApi } from '@/services/api/materials.api';
 import { useApiError } from '@/composables/useApiError';
 import { useToast } from '@/composables/useToast';
+import { useSaveShortcut } from '@/composables/useSaveShortcut';
 import { CostCategory } from '@/types/enums';
 import type { CreateCostInput } from '@/types/cost';
 import type { Material } from '@/types/material';
@@ -200,6 +201,9 @@ async function submit() {
     submitting.value = false;
   }
 }
+
+// Ctrl+S saves while the dialog is open and not mid-submit.
+useSaveShortcut(submit, { enabled: () => props.modelValue && !submitting.value });
 </script>
 
 <template>

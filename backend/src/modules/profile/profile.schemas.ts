@@ -28,8 +28,6 @@ export const changePasswordSchema = z
     currentPassword: z.string().min(1, 'Current password is required'),
     newPassword: passwordSchema,
     confirmPassword: z.string().min(1),
-    // Optional: keep the caller's current session alive when rotating tokens.
-    currentRefreshToken: z.string().optional(),
   })
   .refine((d) => d.newPassword === d.confirmPassword, {
     message: 'Passwords do not match',

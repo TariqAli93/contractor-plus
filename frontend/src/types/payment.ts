@@ -19,9 +19,9 @@ export interface ProjectPaymentSummary {
   projectId: string;
   contractId: string | null;
   contractNumber: string | null;
-  contractTotal: number | null;
-  totalPaid: number;
-  remainingBalance: number | null;
+  contractTotal: string | null;
+  totalPaid: string;
+  remainingBalance: string | null;
   collectionPercentage: number | null;
   pendingPayments: number;
   latePayments: number;

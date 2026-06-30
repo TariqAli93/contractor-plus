@@ -119,10 +119,11 @@ function onRowClick(_e: unknown, row: { item: ProjectProfitability }) {
   openProject(row.item);
 }
 
-function profitClass(p: number | null) {
+function profitClass(p: string | null) {
   if (p === null) return '';
-  if (p > 0) return 'text-success';
-  if (p < 0) return 'text-error';
+  const n = Number(p);
+  if (n > 0) return 'text-success';
+  if (n < 0) return 'text-error';
   return '';
 }
 </script>

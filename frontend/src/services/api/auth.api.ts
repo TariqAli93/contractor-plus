@@ -4,11 +4,10 @@ import type { LoginInput, LoginResponse, TokenPair, UserProfile } from '@/types/
 export const authApi = {
   login: (input: LoginInput): Promise<LoginResponse> => apiPost('/auth/login', input),
 
-  refresh: (input: { refreshToken: string }): Promise<TokenPair> =>
-    apiPost('/auth/refresh', input),
+  // Refresh / logout are authenticated by the HttpOnly refresh cookie — no body.
+  refresh: (): Promise<TokenPair> => apiPost('/auth/refresh'),
 
-  logout: (input: { refreshToken: string }): Promise<void> =>
-    apiPost('/auth/logout', input),
+  logout: (): Promise<void> => apiPost('/auth/logout'),
 
   logoutAll: (): Promise<void> => apiPost('/auth/logout-all'),
 

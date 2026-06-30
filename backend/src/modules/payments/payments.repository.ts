@@ -4,6 +4,7 @@ import {
   type Prisma,
   type PrismaClient,
 } from '@prisma/client';
+import { money, type Money } from '../../lib/money.js';
 import type { PaymentFilter, PaymentListArgs } from './payments.types.js';
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
@@ -52,13 +53,13 @@ export class PaymentsRepository {
 
   // ----- Summary aggregations -----
 
-  sumPaidForProject(projectId: string): Promise<number> {
+  sumPaidForProject(projectId: string): Promise<Money> {
     return this.prisma.payment
       .aggregate({
         where: { projectId, status: PaymentStatus.PAID, deletedAt: null },
         _sum: { amount: true },
       })
-      .then((r) => Number(r._sum.amount ?? 0));
+      .then((r) => money(r._sum.amount ?? 0));
   }
 
   countPendingNotLateForProject(projectId: string, now: Date): Promise<number> {

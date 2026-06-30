@@ -28,6 +28,19 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
       });
     }
 
+    // Fastify framework / plugin errors (CSRF rejection, malformed JSON body,
+    // payload-too-large, …) carry a numeric statusCode + machine code. Surface
+    // genuine 4xx client errors with their real status instead of masking them
+    // as a 500; anything else falls through to the generic, detail-free 500.
+    if (typeof error.statusCode === 'number' && error.statusCode >= 400 && error.statusCode < 500) {
+      return reply.code(error.statusCode).send({
+        statusCode: error.statusCode,
+        code: error.code || 'BAD_REQUEST',
+        message: error.message,
+        reqId: request.id,
+      });
+    }
+
     request.log.error({ err: error, reqId: request.id });
     return reply.code(500).send({
       statusCode: 500,

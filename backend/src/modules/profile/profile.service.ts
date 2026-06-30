@@ -58,7 +58,12 @@ export class ProfileService {
     });
   }
 
-  async changePassword(userId: string, data: ChangePasswordInput, actor: AuditActor): Promise<void> {
+  async changePassword(
+    userId: string,
+    data: ChangePasswordInput,
+    actor: AuditActor,
+    currentRefreshToken?: string,
+  ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findFirst({ where: { id: userId, deletedAt: null } });
       if (!user) throw new NotFoundError(ENTITY, 'USER_NOT_FOUND');
@@ -70,8 +75,9 @@ export class ProfileService {
       const passwordHash = await hashPassword(data.newPassword);
       await tx.user.update({ where: { id: userId }, data: { passwordHash } });
 
-      // Revoke every other refresh token; keep the caller's current one if sent.
-      const keepHash = data.currentRefreshToken ? sha256(data.currentRefreshToken) : null;
+      // Revoke every other refresh token; keep the caller's current session
+      // (identified by the refresh token from its HttpOnly cookie) when present.
+      const keepHash = currentRefreshToken ? sha256(currentRefreshToken) : null;
       await tx.refreshToken.updateMany({
         where: { userId, revokedAt: null, ...(keepHash ? { tokenHash: { not: keepHash } } : {}) },
         data: { revokedAt: new Date() },

@@ -1,15 +1,28 @@
 import 'vuetify/styles';
-import '@mdi/font/css/materialdesignicons.css';
-import { createVuetify } from 'vuetify';
-import { aliases, mdi } from 'vuetify/iconsets/mdi';
+import { h } from 'vue';
+import { createVuetify, type IconProps, type IconSet } from 'vuetify';
+import { aliases, mdi as mdiSvg } from 'vuetify/iconsets/mdi-svg';
 import { ar } from 'vuetify/locale';
+import { mdiIconPaths } from './mdi-icons';
 
 // Theme names referenced by the theme store.
 export const LIGHT_THEME = 'contractorPlus';
 export const DARK_THEME = 'contractorPlusDark';
 
+// Icons render as @mdi/js SVG paths instead of shipping the heavy MDI webfont.
+// Call sites keep their kebab names (icon="mdi-cash-plus"); this set resolves
+// them to SVG paths via the generated map. Vuetify's own `$`-prefixed internal
+// aliases are already resolved to path strings, so they pass straight through to
+// the stock mdi-svg renderer.
+const SvgIcon = mdiSvg.component;
+const resolveIcon = (value: IconProps['icon']): IconProps['icon'] =>
+  typeof value === 'string' && value.startsWith('mdi-') ? (mdiIconPaths[value] ?? '') : value;
+const mdiNamedSvg: IconSet = {
+  component: (props: IconProps) => h(SvgIcon, { ...props, icon: resolveIcon(props.icon) }),
+};
+
 export const vuetify = createVuetify({
-  icons: { defaultSet: 'mdi', aliases, sets: { mdi } },
+  icons: { defaultSet: 'mdi', aliases, sets: { mdi: mdiNamedSvg } },
   defaults: {
     VBtn: { variant: 'flat' },
     VTextField: { variant: 'outlined', density: 'comfortable' },

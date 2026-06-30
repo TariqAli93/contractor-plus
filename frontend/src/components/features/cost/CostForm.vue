@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { t } from '@/i18n';
 import { useCostForm } from '@/composables/useCostForm';
+import { useSaveShortcut } from '@/composables/useSaveShortcut';
 import { projectsApi } from '@/services/api/projects.api';
 import { materialsApi } from '@/services/api/materials.api';
 import { CostCategory } from '@/types/enums';
@@ -13,6 +14,8 @@ const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } =
   props.id,
   props.initialProjectId,
 );
+
+useSaveShortcut(submit, { enabled: () => !submitting.value });
 
 // Lightweight pickers — both endpoints are cheap to call once and small
 // enough that we don't need autocomplete-with-fetch.

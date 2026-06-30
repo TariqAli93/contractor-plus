@@ -35,14 +35,14 @@ export type CostWithMaterial = ProjectCost & {
 
 export interface ProjectCostSummary {
   projectId: string;
-  totalCosts: number;
+  totalCosts: string;
   costCount: number;
-  materialCosts: number;
-  laborCosts: number;
-  machineryCosts: number;
-  transportCosts: number;
-  miscCosts: number;
-  totalByCategory: Record<CostCategory, number>;
+  materialCosts: string;
+  laborCosts: string;
+  machineryCosts: string;
+  transportCosts: string;
+  miscCosts: string;
+  totalByCategory: Record<CostCategory, string>;
   latestCosts: CostWithMaterial[];
 }
 

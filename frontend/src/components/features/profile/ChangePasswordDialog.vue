@@ -4,7 +4,6 @@ import { t } from '@/i18n';
 import { profileApi } from '@/services/api/profile.api';
 import { useToast } from '@/composables/useToast';
 import { ApiError } from '@/types/api';
-import { tokenStorage } from '@/lib/token-storage';
 
 const props = defineProps<{ modelValue: boolean }>();
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>();
@@ -52,8 +51,6 @@ async function submit() {
       currentPassword: currentPassword.value,
       newPassword: newPassword.value,
       confirmPassword: confirmPassword.value,
-      // Keep this session alive; revoke the others.
-      currentRefreshToken: tokenStorage.getRefreshToken() ?? undefined,
     });
     toast.success(t('profile.password.changed'));
     close();

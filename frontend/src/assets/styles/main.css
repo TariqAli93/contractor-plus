@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------- typography ----------
+   Apply the self-hosted Arabic UI font app-wide, overriding Vuetify's default
+   Roboto/system stack. `.v-overlay-container` covers teleported menus, dialogs,
+   and tooltips that render outside `.v-application`. */
+html,
+body,
+.v-application,
+.v-overlay-container {
+  font-family: 'IBM Plex Sans Arabic', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
 /* ---------- design tokens ---------- */
 :root {
   /* Surfaces — kept aligned with Vuetify theme (primary #1E5F8C) but pulled

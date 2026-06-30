@@ -35,7 +35,7 @@ watch([dateFrom, dateTo], () => void fetch());
 onMounted(fetch);
 
 const netClass = computed(() => {
-  const n = data.value?.netCashFlow ?? 0;
+  const n = Number(data.value?.netCashFlow ?? 0);
   if (n > 0) return 'text-success';
   if (n < 0) return 'text-error';
   return '';

@@ -2,6 +2,7 @@ import type { PrismaClient } from '@prisma/client';
 import { ProjectWithContractSummary, ReportsRepository } from './reports.repository.js';
 import { NotFoundError } from '../../shared/errors/not-found.error.js';
 import { buildPaginated, toSkipTake } from '../../shared/utils/pagination.js';
+import { money, toMoneyString, toMoneyStringOrNull, type Money } from '../../lib/money.js';
 import type { Paginated } from '../../shared/types/pagination.js';
 import type {
   CashFlowQuery,
@@ -22,8 +23,9 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 // Reports are pure aggregations. All queries inside each method run in parallel
 // via Promise.all. Per-project rollups use Prisma groupBy keyed on projectId so
-// the cost like "sum costs across these 20 projects" is exactly two SQL queries
-// regardless of N.
+// a cost like "sum costs across these 20 projects" is exactly two SQL queries
+// regardless of N. All money flows as Decimal (Money) end-to-end and is
+// serialized to a fixed-precision string at the DTO boundary — no float drift.
 
 export class ReportsService {
   private readonly repo: ReportsRepository;
@@ -64,11 +66,11 @@ export class ReportsService {
       activeProjects,
       delayedProjects,
       overduePayments,
-      monthlyRevenue: round2(monthlyRevenue),
-      monthlyCosts: round2(monthlyCosts),
-      monthlyProfit: round2(monthlyRevenue - monthlyCosts),
-      totalCashCollected: round2(totalCashCollected),
-      pendingCollections: round2(pendingCollections),
+      monthlyRevenue: toMoneyString(monthlyRevenue),
+      monthlyCosts: toMoneyString(monthlyCosts),
+      monthlyProfit: toMoneyString(monthlyRevenue.minus(monthlyCosts)),
+      totalCashCollected: toMoneyString(totalCashCollected),
+      pendingCollections: toMoneyString(pendingCollections),
       recentProjects,
       recentPayments,
       asOf: now.toISOString(),
@@ -105,7 +107,11 @@ export class ReportsService {
     ]);
 
     const items = projects.map((p: ProjectWithContractSummary) =>
-      this.composeProfitability(p, costMap.get(p.id) ?? 0, paymentMap.get(p.id) ?? 0),
+      this.composeProfitability(
+        p,
+        costMap.get(p.id) ?? money(0),
+        paymentMap.get(p.id) ?? money(0),
+      ),
     );
     return buildPaginated(items, total, query);
   }
@@ -121,8 +127,8 @@ export class ReportsService {
 
     return this.composeProfitability(
       project as unknown as Parameters<ReportsService['composeProfitability']>[0],
-      costMap.get(projectId) ?? 0,
-      paymentMap.get(projectId) ?? 0,
+      costMap.get(projectId) ?? money(0),
+      paymentMap.get(projectId) ?? money(0),
     );
   }
 
@@ -138,11 +144,11 @@ export class ReportsService {
     return {
       dateFrom: query.dateFrom?.toISOString() ?? null,
       dateTo: query.dateTo?.toISOString() ?? null,
-      totalRevenue: round2(totalRevenue),
-      totalCollected: round2(totalCollected),
-      outstandingBalance: round2(totalRevenue - totalCollected),
-      totalCosts: round2(totalCosts),
-      netCashFlow: round2(totalCollected - totalCosts),
+      totalRevenue: toMoneyString(totalRevenue),
+      totalCollected: toMoneyString(totalCollected),
+      outstandingBalance: toMoneyString(totalRevenue.minus(totalCollected)),
+      totalCosts: toMoneyString(totalCosts),
+      netCashFlow: toMoneyString(totalCollected.minus(totalCosts)),
     };
   }
 
@@ -155,6 +161,7 @@ export class ReportsService {
     });
 
     const grouped = new Map<string, OverduePaymentsByProject>();
+    const totals = new Map<string, Money>();
     for (const p of payments) {
       let group = grouped.get(p.projectId);
       if (!group) {
@@ -165,25 +172,30 @@ export class ReportsService {
           contractNumber: p.project.contract?.contractNumber ?? null,
           customerId: p.project.contract?.customer.id ?? null,
           customerName: p.project.contract?.customer.name ?? null,
-          totalOverdueAmount: 0,
+          totalOverdueAmount: '0.00',
           overduePaymentsCount: 0,
           oldestDueDate: p.dueDate,
           payments: [],
         };
         grouped.set(p.projectId, group);
+        totals.set(p.projectId, money(0));
       }
       const daysOverdue = Math.floor((now.getTime() - p.dueDate.getTime()) / MS_PER_DAY);
       group.payments.push({
         id: p.id,
-        amount: Number(p.amount),
+        amount: toMoneyString(p.amount),
         dueDate: p.dueDate,
         daysOverdue,
         reference: p.reference,
         method: p.method,
       });
-      group.totalOverdueAmount = round2(group.totalOverdueAmount + Number(p.amount));
+      totals.set(p.projectId, totals.get(p.projectId)!.plus(money(p.amount)));
       group.overduePaymentsCount += 1;
       if (p.dueDate < group.oldestDueDate) group.oldestDueDate = p.dueDate;
+    }
+
+    for (const [projectId, group] of grouped) {
+      group.totalOverdueAmount = toMoneyString(totals.get(projectId)!);
     }
 
     return Array.from(grouped.values()).sort(
@@ -231,10 +243,10 @@ export class ReportsService {
         customer: { id: string; name: string };
       } | null;
     },
-    totalCosts: number,
-    totalPaid: number,
+    totalCosts: Money,
+    totalPaid: Money,
   ): ProjectProfitability {
-    const contractValue = project.contract ? Number(project.contract.totalPrice) : null;
+    const contractValue = project.contract ? money(project.contract.totalPrice) : null;
     return {
       projectId: project.id,
       name: project.name,
@@ -242,20 +254,17 @@ export class ReportsService {
       contractNumber: project.contract?.contractNumber ?? null,
       customerId: project.contract?.customer.id ?? null,
       customerName: project.contract?.customer.name ?? null,
-      contractValue,
-      totalCosts: round2(totalCosts),
-      totalPaid: round2(totalPaid),
-      remainingBalance: contractValue !== null ? round2(contractValue - totalPaid) : null,
-      profit: contractValue !== null ? round2(contractValue - totalCosts) : null,
-      cashPosition: round2(totalPaid - totalCosts),
+      contractValue: toMoneyStringOrNull(contractValue),
+      totalCosts: toMoneyString(totalCosts),
+      totalPaid: toMoneyString(totalPaid),
+      remainingBalance:
+        contractValue !== null ? toMoneyString(contractValue.minus(totalPaid)) : null,
+      profit: contractValue !== null ? toMoneyString(contractValue.minus(totalCosts)) : null,
+      cashPosition: toMoneyString(totalPaid.minus(totalCosts)),
       progressPercentage: Number(project.progressPercentage),
       status: project.status,
       startDate: project.startDate,
       deliveryDate: project.deliveryDate,
     };
   }
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
 }

@@ -11,12 +11,12 @@ export interface ProjectProfitability {
   contractNumber: string | null;
   customerId: string | null;
   customerName: string | null;
-  contractValue: number | null;
-  totalCosts: number;
-  totalPaid: number;
-  remainingBalance: number | null;
-  profit: number | null;
-  cashPosition: number;
+  contractValue: string | null;
+  totalCosts: string;
+  totalPaid: string;
+  remainingBalance: string | null;
+  profit: string | null;
+  cashPosition: string;
   progressPercentage: number;
   status: ProjectStatus;
   startDate: string | null;
@@ -26,16 +26,16 @@ export interface ProjectProfitability {
 export interface CashFlowReport {
   dateFrom: string | null;
   dateTo: string | null;
-  totalRevenue: number;
-  totalCollected: number;
-  outstandingBalance: number;
-  totalCosts: number;
-  netCashFlow: number;
+  totalRevenue: string;
+  totalCollected: string;
+  outstandingBalance: string;
+  totalCosts: string;
+  netCashFlow: string;
 }
 
 export interface OverduePaymentRow {
   id: string;
-  amount: number;
+  amount: string;
   dueDate: string;
   daysOverdue: number;
   reference: string | null;
@@ -49,7 +49,7 @@ export interface OverduePaymentsByProject {
   contractNumber: string | null;
   customerId: string | null;
   customerName: string | null;
-  totalOverdueAmount: number;
+  totalOverdueAmount: string;
   overduePaymentsCount: number;
   oldestDueDate: string;
   payments: OverduePaymentRow[];

@@ -7,15 +7,19 @@ import type {
   ProjectStatus,
 } from '@prisma/client';
 
+// Money values are serialized as fixed-precision STRINGS on the wire to avoid
+// any float precision loss; non-monetary values (counts, percentages, areas)
+// stay numbers.
+
 export interface DashboardSummary {
   activeProjects: number;
   delayedProjects: number;
   overduePayments: number;
-  monthlyRevenue: number;
-  monthlyCosts: number;
-  monthlyProfit: number;
-  totalCashCollected: number;
-  pendingCollections: number;
+  monthlyRevenue: string;
+  monthlyCosts: string;
+  monthlyProfit: string;
+  totalCashCollected: string;
+  pendingCollections: string;
   recentProjects: RecentProject[];
   recentPayments: Payment[];
   asOf: string;
@@ -36,12 +40,12 @@ export interface ProjectProfitability {
   contractNumber: string | null;
   customerId: string | null;
   customerName: string | null;
-  contractValue: number | null;
-  totalCosts: number;
-  totalPaid: number;
-  remainingBalance: number | null;
-  profit: number | null;
-  cashPosition: number;
+  contractValue: string | null;
+  totalCosts: string;
+  totalPaid: string;
+  remainingBalance: string | null;
+  profit: string | null;
+  cashPosition: string;
   progressPercentage: number;
   status: ProjectStatus;
   startDate: Date | null;
@@ -51,16 +55,16 @@ export interface ProjectProfitability {
 export interface CashFlowReport {
   dateFrom: string | null;
   dateTo: string | null;
-  totalRevenue: number;
-  totalCollected: number;
-  outstandingBalance: number;
-  totalCosts: number;
-  netCashFlow: number;
+  totalRevenue: string;
+  totalCollected: string;
+  outstandingBalance: string;
+  totalCosts: string;
+  netCashFlow: string;
 }
 
 export interface OverduePaymentRow {
   id: string;
-  amount: number;
+  amount: string;
   dueDate: Date;
   daysOverdue: number;
   reference: string | null;
@@ -74,7 +78,7 @@ export interface OverduePaymentsByProject {
   contractNumber: string | null;
   customerId: string | null;
   customerName: string | null;
-  totalOverdueAmount: number;
+  totalOverdueAmount: string;
   overduePaymentsCount: number;
   oldestDueDate: Date;
   payments: OverduePaymentRow[];

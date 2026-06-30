@@ -32,6 +32,17 @@ const userInitial = computed(() => (auth.user?.fullName ?? '?').charAt(0).toUppe
       <v-icon>{{ ui.sidebarCollapsed ? 'mdi-menu' : 'mdi-menu-open' }}</v-icon>
     </v-btn>
 
+    <v-btn
+      variant="tonal"
+      class="ms-2 cp-search-btn"
+      prepend-icon="mdi-magnify"
+      :aria-label="t('palette.openLabel')"
+      @click="ui.openPalette()"
+    >
+      <span class="cp-search-label">{{ t('palette.openLabel') }}</span>
+      <kbd class="cp-search-kbd">Ctrl K</kbd>
+    </v-btn>
+
     <v-spacer />
 
     <TunnelStatusChip class="me-2" />
@@ -92,5 +103,24 @@ const userInitial = computed(() => (auth.user?.fullName ?? '?').charAt(0).toUppe
   background: linear-gradient(135deg, #1e5f8c 0%, #2a7ab5 100%);
   color: #fff;
   box-shadow: 0 4px 10px -3px rgba(30, 95, 140, 0.4);
+}
+.cp-search-btn {
+  text-transform: none;
+  font-weight: 400;
+  color: rgba(var(--v-theme-on-surface), 0.7);
+}
+.cp-search-kbd {
+  margin-inline-start: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.2);
+  background: rgba(var(--v-theme-on-surface), 0.06);
+  font-size: 0.7rem;
+}
+@media (max-width: 600px) {
+  .cp-search-label,
+  .cp-search-kbd {
+    display: none;
+  }
 }
 </style>

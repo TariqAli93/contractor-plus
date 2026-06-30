@@ -5,7 +5,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios';
 import { ApiError, type ApiErrorPayload } from '@/types/api';
-import { tokenStorage } from '@/lib/token-storage';
+import { readXsrfToken } from '@/lib/csrf';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -16,6 +16,8 @@ const AUTH_BYPASS_PATHS = ['/auth/login', '/auth/refresh', '/auth/logout'];
 export const apiClient: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 15000,
+  // Send cookies (the HttpOnly refresh token + the CSRF cookies) with requests.
+  withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -27,6 +29,12 @@ apiClient.interceptors.request.use((config) => {
   const accessToken = getAccessTokenLazy();
   if (accessToken && config.headers) {
     config.headers.Authorization = `Bearer ${accessToken}`;
+  }
+  // CSRF double-submit: echo the readable XSRF-TOKEN cookie back as a header so
+  // the cookie-authenticated endpoints (/auth/refresh, /auth/logout) can validate it.
+  const xsrfToken = readXsrfToken();
+  if (xsrfToken && config.headers) {
+    config.headers['X-XSRF-TOKEN'] = xsrfToken;
   }
   return config;
 });
@@ -92,16 +100,20 @@ async function ensureRefresh(): Promise<string | null> {
 }
 
 async function doRefresh(): Promise<string | null> {
-  const refreshToken = tokenStorage.getRefreshToken();
-  if (!refreshToken) return null;
+  // The refresh token now travels as an HttpOnly cookie the browser attaches
+  // automatically, so there is nothing to read or send in the body. We still use
+  // a bare axios call (not apiClient) to stay outside the 401-refresh loop, so we
+  // must opt into credentials + the CSRF header explicitly. No XSRF cookie ⇒ no
+  // active session to refresh.
+  const xsrfToken = readXsrfToken();
+  if (!xsrfToken) return null;
   try {
-    const res = await axios.post<{
-      accessToken: string;
-      refreshToken: string;
-      expiresIn: number;
-    }>(`${BASE_URL}/auth/refresh`, { refreshToken });
+    const res = await axios.post<{ accessToken: string; expiresIn: number }>(
+      `${BASE_URL}/auth/refresh`,
+      undefined,
+      { withCredentials: true, headers: { 'X-XSRF-TOKEN': xsrfToken } },
+    );
     setAccessTokenLazy(res.data.accessToken);
-    tokenStorage.setRefreshToken(res.data.refreshToken);
     return res.data.accessToken;
   } catch {
     return null;

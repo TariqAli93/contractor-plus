@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import type { UserProfile } from '@/types/auth';
 import { RoleName } from '@/types/enums';
-import { tokenStorage } from '@/lib/token-storage';
+import { readXsrfToken } from '@/lib/csrf';
 import { authApi } from '@/services/api/auth.api';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -15,42 +15,34 @@ export const useAuthStore = defineStore('auth', () => {
   const isOwner = computed(() => role.value === RoleName.OWNER);
   const permissions = computed<string[]>(() => user.value?.permissions ?? []);
 
-  function setSession(payload: {
-    accessToken: string;
-    refreshToken: string;
-    user: UserProfile;
-  }) {
+  // The refresh token lives in an HttpOnly cookie the browser manages for us; the
+  // store only ever holds the in-memory access token and the user profile.
+  function setSession(payload: { accessToken: string; user: UserProfile }) {
     accessToken.value = payload.accessToken;
     user.value = payload.user;
-    tokenStorage.setRefreshToken(payload.refreshToken);
   }
 
-  function setTokensOnly(payload: { accessToken: string; refreshToken: string }) {
+  function setTokensOnly(payload: { accessToken: string }) {
     accessToken.value = payload.accessToken;
-    tokenStorage.setRefreshToken(payload.refreshToken);
   }
 
   function clear() {
     accessToken.value = null;
     user.value = null;
-    tokenStorage.clearRefreshToken();
   }
 
   async function login(username: string, password: string): Promise<void> {
     const res = await authApi.login({ username, password });
-    setSession({
-      accessToken: res.tokens.accessToken,
-      refreshToken: res.tokens.refreshToken,
-      user: res.user,
-    });
+    setSession({ accessToken: res.tokens.accessToken, user: res.user });
   }
 
   async function logout(): Promise<void> {
-    const refreshToken = tokenStorage.getRefreshToken();
     try {
-      if (refreshToken) await authApi.logout({ refreshToken });
+      // The cookie carries the refresh token; the server revokes it and clears
+      // all auth cookies. Best-effort — we clear local state regardless.
+      await authApi.logout();
     } catch {
-      /* best-effort; clear local state regardless */
+      /* ignore */
     }
     clear();
   }
@@ -58,17 +50,15 @@ export const useAuthStore = defineStore('auth', () => {
   // Called once on app boot from main.ts.
   async function initialize(): Promise<void> {
     if (initialized.value) return;
-    const refreshToken = tokenStorage.getRefreshToken();
-    if (!refreshToken) {
+    // No CSRF cookie ⇒ no prior session to restore. Mirrors the old "no stored
+    // refresh token" fast-path and avoids a guaranteed-to-fail refresh call.
+    if (!readXsrfToken()) {
       initialized.value = true;
       return;
     }
     try {
-      const tokens = await authApi.refresh({ refreshToken });
-      setTokensOnly({
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      });
+      const tokens = await authApi.refresh();
+      setTokensOnly({ accessToken: tokens.accessToken });
       // Pull user profile separately (refresh endpoint returns tokens only).
       user.value = await authApi.me();
     } catch {
