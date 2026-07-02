@@ -19,6 +19,7 @@ import type {
   GridColumn,
   GridPastePayload,
   GridRow,
+  GridRowAction,
 } from '@/components/shared/datagrid/types';
 import DataGrid from '@/components/shared/datagrid/DataGrid.vue';
 import { buildCostColumns, numOrNull } from '@/components/features/cost/costGridColumns';
@@ -239,6 +240,19 @@ async function onDeleteRows(ids: string[]) {
   }
 }
 
+function rowActions(row: GridRow): GridRowAction[] {
+  const actions: GridRowAction[] = [];
+  if (canDelete.value) {
+    actions.push({
+      label: t('datagrid.deleteRow'),
+      icon: 'mdi-delete',
+      danger: true,
+      perform: () => void onDeleteRows([String(row.id)]),
+    });
+  }
+  return actions;
+}
+
 // Detailed add dialog (kept for material link / unit / notes).
 const addOpen = ref(false);
 async function onCreated() {
@@ -304,6 +318,7 @@ async function onCreated() {
         :show-new-row="canAdd"
         :new-row-factory="newRowFactory"
         :selectable="canDelete"
+        :row-actions="rowActions"
         :enable-csv="true"
         export-name="costs"
         :loading="loading"

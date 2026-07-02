@@ -49,6 +49,15 @@ export interface GridColumn {
   validate?: (value: unknown, row: GridRow) => string | null;
 }
 
+/** A right-click context-menu action supplied by the parent for a given row. */
+export interface GridRowAction {
+  label: string;
+  icon?: string;
+  /** Render in the error colour (e.g. destructive actions). */
+  danger?: boolean;
+  perform: () => void;
+}
+
 /** A single edited cell on an existing row, ready for the parent to persist. */
 export interface GridCellCommit {
   id: string;

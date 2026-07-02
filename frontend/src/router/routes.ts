@@ -141,7 +141,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/projects/new',
     name: 'project-new',
-    component: () => import('@/views/projects/ProjectEditView.vue'),
+    component: () => import('@/views/projects/ProjectWizardView.vue'),
     meta: { layout: 'app', access: { permissions: ['projects.create'], roles: WRITE_PROJECTS } },
   },
   {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { t } from '@/i18n';
 import { materialsApi } from '@/services/api/materials.api';
 import { useApiError } from '@/composables/useApiError';
@@ -15,6 +16,7 @@ import type {
   GridColumn,
   GridPastePayload,
   GridRow,
+  GridRowAction,
 } from '@/components/shared/datagrid/types';
 import DataGrid from '@/components/shared/datagrid/DataGrid.vue';
 import { buildMaterialColumns } from '@/components/features/material/materialGridColumns';
@@ -26,6 +28,7 @@ const toast = useToast();
 const { canAccess } = useAccess();
 const { confirm } = useConfirm();
 const { format: money } = useCurrencyFormat();
+const router = useRouter();
 
 const WRITE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ACCOUNTANT];
 const canCreate = computed(() => canAccess({ permissions: ['materials.create'], roles: WRITE_ROLES }));
@@ -138,6 +141,25 @@ async function onPaste(payload: GridPastePayload) {
   }
 }
 
+function rowActions(row: GridRow): GridRowAction[] {
+  const actions: GridRowAction[] = [
+    {
+      label: t('datagrid.openDetail'),
+      icon: 'mdi-open-in-new',
+      perform: () => void router.push(`/materials/${row.id}`),
+    },
+  ];
+  if (canDelete.value) {
+    actions.push({
+      label: t('datagrid.deleteRow'),
+      icon: 'mdi-delete',
+      danger: true,
+      perform: () => void onDeleteRows([String(row.id)]),
+    });
+  }
+  return actions;
+}
+
 async function onDeleteRows(ids: string[]) {
   const ok = await confirm({
     title: t('materials.deleteManyTitle'),
@@ -180,6 +202,7 @@ async function onDeleteRows(ids: string[]) {
       :show-new-row="canCreate"
       :new-row-factory="newRowFactory"
       :selectable="canDelete"
+      :row-actions="rowActions"
       :enable-csv="true"
       export-name="materials"
       :loading="loading"

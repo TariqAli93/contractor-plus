@@ -51,6 +51,16 @@ const userInitial = computed(() => (auth.user?.fullName ?? '?').charAt(0).toUppe
       icon
       variant="text"
       class="me-1"
+      :aria-label="t('shortcuts.title')"
+      @click="ui.toggleHelp"
+    >
+      <v-icon>mdi-help-circle-outline</v-icon>
+    </v-btn>
+
+    <v-btn
+      icon
+      variant="text"
+      class="me-1"
       :aria-label="t('appearance.toggle')"
       @click="theme.toggleTheme"
     >

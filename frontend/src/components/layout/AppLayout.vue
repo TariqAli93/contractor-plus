@@ -3,7 +3,9 @@ import { onKeyStroke } from '@vueuse/core';
 import TopBar from './TopBar.vue';
 import SideNav from './SideNav.vue';
 import CommandPalette from './CommandPalette.vue';
+import ShortcutsHelp from './ShortcutsHelp.vue';
 import { useUiStore } from '@/stores/ui.store';
+import { useQuickNav } from '@/composables/useQuickNav';
 
 const ui = useUiStore();
 
@@ -13,6 +15,18 @@ onKeyStroke(['k', 'K'], (e) => {
     e.preventDefault();
     ui.togglePalette();
   }
+});
+
+// Gmail-style "g then <key>" section jumps.
+useQuickNav();
+
+// `?` opens the keyboard-shortcuts help (ignored while typing in a field).
+onKeyStroke(['?'], (e) => {
+  const el = e.target as HTMLElement | null;
+  const tag = el?.tagName;
+  if (el?.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  e.preventDefault();
+  ui.toggleHelp();
 });
 </script>
 
@@ -30,6 +44,7 @@ onKeyStroke(['k', 'K'], (e) => {
       </div>
     </v-main>
     <CommandPalette />
+    <ShortcutsHelp />
   </v-app>
 </template>
 

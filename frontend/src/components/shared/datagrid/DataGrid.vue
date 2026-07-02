@@ -17,6 +17,7 @@ import type {
   GridColumn,
   GridPastePayload,
   GridRow,
+  GridRowAction,
 } from './types';
 
 const props = withDefaults(
@@ -35,6 +36,9 @@ const props = withDefaults(
     /** Per-row CSS class — used for status colouring. The grid ships reusable
      *  `cp-row-success|error|warning|muted` classes for this. */
     rowClass?: (row: GridRow) => string | undefined;
+    /** Right-click menu actions for a row (parent-supplied; e.g. delete/open).
+     *  A built-in "copy row" action is always prepended. */
+    rowActions?: (row: GridRow) => GridRowAction[];
     /** Show the CSV export (and, when showNewRow is set, import) toolbar. */
     enableCsv?: boolean;
     /** Base filename for CSV export (no extension). */
@@ -116,8 +120,7 @@ function parseColValue(col: GridColumn, raw: unknown, row: GridRow): unknown {
   return s;
 }
 
-const valuesEqual = (a: unknown, b: unknown) =>
-  String(a ?? '') === String(b ?? '');
+const valuesEqual = (a: unknown, b: unknown) => String(a ?? '') === String(b ?? '');
 
 // ---------------------------------------------------------------------------
 // Sort + filter (client-side)
@@ -139,12 +142,7 @@ function compareVals(a: unknown, b: unknown): number {
   if (b == null) return 1;
   const na = Number(a);
   const nb = Number(b);
-  if (
-    !Number.isNaN(na) &&
-    !Number.isNaN(nb) &&
-    String(a).trim() !== '' &&
-    String(b).trim() !== ''
-  )
+  if (!Number.isNaN(na) && !Number.isNaN(nb) && String(a).trim() !== '' && String(b).trim() !== '')
     return na - nb;
   return String(a).localeCompare(String(b), 'ar');
 }
@@ -213,8 +211,7 @@ const gridEl = ref<HTMLElement | null>(null);
 
 const isActiveCell = (rowId: string, field: string) =>
   active.value?.rowId === rowId && active.value?.field === field;
-const isEditingCell = (rowId: string, field: string) =>
-  editing.value && isActiveCell(rowId, field);
+const isEditingCell = (rowId: string, field: string) => editing.value && isActiveCell(rowId, field);
 const cellErrorMsg = (rowId: string, field: string) =>
   cellError.value && cellError.value.rowId === rowId && cellError.value.field === field
     ? cellError.value.msg
@@ -238,8 +235,7 @@ function startEditAt(rowId: string, field: string, seed?: string) {
     editing.value = false;
     return;
   }
-  editValue.value =
-    seed !== undefined ? seed : initialEditValue(col, row);
+  editValue.value = seed !== undefined ? seed : initialEditValue(col, row);
   editing.value = true;
   cellError.value = null;
   void nextTick(() => editorRef.value?.focus?.());
@@ -506,8 +502,7 @@ function onPaste(ev: ClipboardEvent) {
       } else {
         const createIdx = targetR - displayRows.value.length;
         const bucket =
-          createMap.get(createIdx) ??
-          (props.newRowFactory ? props.newRowFactory() : {});
+          createMap.get(createIdx) ?? (props.newRowFactory ? props.newRowFactory() : {});
         bucket[col.field] = parseColValue(col, raw, bucket);
         createMap.set(createIdx, bucket);
       }
@@ -655,8 +650,7 @@ function pinStyle(colIndex: number) {
     : { insetInlineStart: `${pinnedOffset(colIndex)}px` };
 }
 
-const isRtl = () =>
-  typeof document !== 'undefined' && document.dir === 'rtl';
+const isRtl = () => typeof document !== 'undefined' && document.dir === 'rtl';
 let resizing: { field: string; startX: number; startW: number } | null = null;
 function startResize(col: GridColumn, ev: MouseEvent) {
   resizing = { field: col.field, startX: ev.clientX, startW: widthPx(col) };
@@ -682,6 +676,44 @@ function cellClasses(col: GridColumn, row: GridRow) {
     'cp-editable': isCellEditable(col, row),
     [`text-${col.align ?? 'start'}`]: true,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Right-click context menu
+// ---------------------------------------------------------------------------
+const rowMenu = reactive<{ open: boolean; x: number; y: number; items: GridRowAction[] }>({
+  open: false,
+  x: 0,
+  y: 0,
+  items: [],
+});
+
+async function copyRow(row: GridRow) {
+  const tsv = stringifyTsv([props.columns.map((c) => displayValue(c, row))]);
+  try {
+    await navigator.clipboard.writeText(tsv);
+  } catch {
+    /* clipboard blocked — silently ignore */
+  }
+}
+
+function onRowContextMenu(row: GridRow, ev: MouseEvent) {
+  if (isNewRow(row)) return; // entry row has no context actions
+  ev.preventDefault();
+  const builtIn: GridRowAction = {
+    label: t('datagrid.copyRow'),
+    icon: 'mdi-content-copy',
+    perform: () => void copyRow(row),
+  };
+  rowMenu.items = [builtIn, ...(props.rowActions ? props.rowActions(row) : [])];
+  rowMenu.x = ev.clientX;
+  rowMenu.y = ev.clientY;
+  rowMenu.open = true;
+}
+
+function runRowAction(a: GridRowAction) {
+  rowMenu.open = false;
+  a.perform();
 }
 </script>
 
@@ -771,7 +803,10 @@ function cellClasses(col: GridColumn, row: GridRow) {
               v-for="(col, ci) in columns"
               :key="col.field"
               class="cp-th"
-              :class="[{ 'cp-pin': col.pinned, 'cp-sortable': col.sortable !== false }, `text-${col.align ?? 'start'}`]"
+              :class="[
+                { 'cp-pin': col.pinned, 'cp-sortable': col.sortable !== false },
+                `text-${col.align ?? 'start'}`,
+              ]"
               :style="col.pinned ? pinStyle(ci) : undefined"
               @click="toggleSort(col.field)"
             >
@@ -844,6 +879,7 @@ function cellClasses(col: GridColumn, row: GridRow) {
               :data-row="idOf(row)"
               @mousedown="onCellMouseDown(idOf(row), col.field)"
               @dblclick="onCellDblClick(idOf(row), col.field)"
+              @contextmenu="onRowContextMenu(row, $event)"
             >
               <!-- Editor (only the single active+editing cell renders one) -->
               <template v-if="isEditingCell(idOf(row), col.field)">
@@ -867,7 +903,13 @@ function cellClasses(col: GridColumn, row: GridRow) {
                   v-else
                   :ref="(el: any) => (editorRef = el)"
                   v-model="editValue"
-                  :type="col.type === 'number' || col.type === 'money' ? 'number' : col.type === 'date' ? 'date' : 'text'"
+                  :type="
+                    col.type === 'number' || col.type === 'money'
+                      ? 'number'
+                      : col.type === 'date'
+                        ? 'date'
+                        : 'text'
+                  "
                   :step="col.step"
                   :min="col.min"
                   density="compact"
@@ -881,10 +923,9 @@ function cellClasses(col: GridColumn, row: GridRow) {
                 />
               </template>
               <template v-else>
-                <span
-                  v-if="isNewRow(row) && displayValue(col, row) === ''"
-                  class="cp-ph"
-                >{{ col.type ? col.title : '' }}</span>
+                <span v-if="isNewRow(row) && displayValue(col, row) === ''" class="cp-ph">{{
+                  col.type ? col.title : ''
+                }}</span>
                 <span v-else class="cp-val">{{ displayValue(col, row) }}</span>
               </template>
             </td>
@@ -896,8 +937,26 @@ function cellClasses(col: GridColumn, row: GridRow) {
         <v-progress-circular indeterminate size="28" />
       </div>
     </div>
+
+    <!-- Right-click row menu, positioned at the cursor. -->
+    <v-menu v-model="rowMenu.open" :target="[rowMenu.x, rowMenu.y]" location="end">
+      <v-list density="compact" min-width="184">
+        <v-list-item
+          v-for="(a, i) in rowMenu.items"
+          :key="i"
+          :title="a.label"
+          :class="{ 'text-error': a.danger }"
+          @click="runRowAction(a)"
+        >
+          <template v-if="a.icon" #prepend>
+            <v-icon size="18" :color="a.danger ? 'error' : undefined">{{ a.icon }}</v-icon>
+          </template>
+        </v-list-item>
+      </v-list>
+    </v-menu>
   </div>
 </template>
+
 
 <style scoped>
 .cp-grid {
