@@ -87,7 +87,7 @@ async function handleDelete(customer: Customer) {
 
 <template>
   <div>
-    <PageHeader :title="t('nav.customers')" icon="mdi-account-multiple-outline" :count="total || null">
+    <PageHeader :title="t('nav.customers')" icon="mdi-account-multiple-outline" :count="total || null" :hint="t('help.customers')">
       <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" to="/customers/new">
           {{ t('customers.new') }}

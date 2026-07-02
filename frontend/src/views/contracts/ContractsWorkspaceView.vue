@@ -58,7 +58,7 @@ onMounted(fetch);
 
 <template>
   <div>
-    <PageHeader :title="t('nav.contracts')" :count="total || null" icon="mdi-file-sign">
+    <PageHeader :title="t('nav.contracts')" :count="total || null" icon="mdi-file-sign" :hint="t('help.contracts')">
       <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" to="/contracts/new">
           {{ t('contracts.new') }}

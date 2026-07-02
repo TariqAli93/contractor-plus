@@ -182,7 +182,7 @@ async function onDeleteRows(ids: string[]) {
 
 <template>
   <div>
-    <PageHeader :title="t('nav.materials')" icon="mdi-cube-outline" :count="total || null">
+    <PageHeader :title="t('nav.materials')" icon="mdi-cube-outline" :count="total || null" :hint="t('help.materials')">
       <RoleGate :permissions="['materials.create']" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" to="/materials/new">
           {{ t('materials.new') }}

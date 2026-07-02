@@ -41,7 +41,7 @@ const cards: ReportCard[] = [
 
 <template>
   <div>
-    <PageHeader :title="t('nav.reports')" icon="mdi-chart-box-outline" />
+    <PageHeader :title="t('nav.reports')" icon="mdi-chart-box-outline" :hint="t('help.reports')" />
     <p class="text-body-2 text-medium-emphasis mb-4">{{ t('reports.subtitle') }}</p>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

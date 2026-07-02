@@ -16,14 +16,18 @@ withDefaults(
     /** Optional back-navigation target — renders a back button before the
      *  title (replaces the old ad-hoc back-arrow + heading rows). */
     back?: string | null;
+    /** Optional plain-language "what to do here" line rendered muted under the
+     *  header — the simplification layer for non-technical users. */
+    hint?: string | null;
   }>(),
-  { count: null, subtitle: null, icon: null, back: null },
+  { count: null, subtitle: null, icon: null, back: null, hint: null },
 );
 </script>
 
 <template>
-  <div class="cp-page-header">
-    <div class="cp-page-header-lead">
+  <div class="cp-page-header-wrap">
+    <div class="cp-page-header">
+      <div class="cp-page-header-lead">
       <v-btn
         v-if="back"
         icon="mdi-arrow-right"
@@ -39,19 +43,30 @@ withDefaults(
       <span v-if="subtitle" class="cp-page-header-sub">{{ subtitle }}</span>
     </div>
     <div class="cp-page-header-actions">
-      <slot />
+        <slot />
+      </div>
     </div>
+    <p v-if="hint" class="cp-page-hint">{{ hint }}</p>
   </div>
 </template>
 
 <style scoped>
+.cp-page-header-wrap {
+  margin-bottom: 8px;
+}
 .cp-page-header {
   display: flex;
   align-items: center;
   gap: 10px;
   min-height: 32px;
-  margin-bottom: 8px;
   flex-wrap: wrap;
+}
+.cp-page-hint {
+  margin: 3px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--cp-text-muted);
+  max-width: 68ch;
 }
 .cp-page-header-lead {
   display: flex;

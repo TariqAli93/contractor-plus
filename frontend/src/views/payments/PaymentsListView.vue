@@ -190,7 +190,7 @@ function canEditDelete(p: Payment) {
 
 <template>
   <div>
-    <PageHeader :title="t('nav.payments')" :count="total || null" icon="mdi-cash-plus">
+    <PageHeader :title="t('nav.payments')" :count="total || null" icon="mdi-cash-plus" :hint="t('help.payments')">
       <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" @click="newPayment">
           {{ t('payments.new') }}

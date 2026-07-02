@@ -149,7 +149,7 @@ async function handleDelete(cost: CostWithMaterial) {
 
 <template>
   <div>
-    <PageHeader :title="t('nav.costs')" :count="total || null" icon="mdi-cash-minus">
+    <PageHeader :title="t('nav.costs')" :count="total || null" icon="mdi-cash-minus" :hint="t('help.costs')">
       <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" @click="newCost">
           {{ t('costs.new') }}

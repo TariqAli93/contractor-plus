@@ -100,7 +100,7 @@ async function handleDelete(template: BuildingTemplate) {
 
 <template>
   <div>
-    <PageHeader :title="t('nav.templates')" icon="mdi-file-document-multiple-outline" :count="total || null">
+    <PageHeader :title="t('nav.templates')" icon="mdi-file-document-multiple-outline" :count="total || null" :hint="t('help.templates')">
       <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" to="/templates/new">
           {{ t('templates.new') }}

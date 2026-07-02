@@ -76,7 +76,7 @@ onMounted(fetch);
 
 <template>
   <div>
-    <PageHeader :title="t('nav.projects')" :count="total || null" icon="mdi-office-building-outline">
+    <PageHeader :title="t('nav.projects')" :count="total || null" icon="mdi-office-building-outline" :hint="t('help.projects')">
       <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-btn color="primary" size="small" prepend-icon="mdi-plus" to="/projects/new">
           {{ t('projects.new') }}
