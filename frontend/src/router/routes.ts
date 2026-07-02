@@ -113,7 +113,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/contracts',
     name: 'contracts',
-    component: () => import('@/views/contracts/ContractsListView.vue'),
+    component: () => import('@/views/contracts/ContractsWorkspaceView.vue'),
     meta: { layout: 'app', access: { permissions: ['contracts.read'], roles: ALL_ROLES } },
   },
   {

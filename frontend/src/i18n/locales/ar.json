@@ -391,6 +391,10 @@
     "edit": "العقد",
     "searchPlaceholder": "ابحث برقم العقد أو اسم العميل",
     "saveFirstHint": "احفظ العقد أولاً للوصول إلى المواد والتقدير والمشروع.",
+    "openFull": "فتح كامل",
+    "workspace": {
+      "selectHint": "اختر عقداً من القائمة لعرض تفاصيله هنا."
+    },
     "deleteConfirmTitle": "حذف هذا العقد؟",
     "deleteConfirmMessage": "سيتم إخفاء العقد {number}. يمكن استعادته لاحقاً.",
     "docx": {
