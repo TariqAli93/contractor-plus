@@ -8,6 +8,7 @@ import ErrorState from '@/components/shared/ErrorState.vue';
 import EmptyState from '@/components/shared/EmptyState.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 
 const groups = ref<OverduePaymentsByProject[]>([]);
 const loading = ref(false);
@@ -30,14 +31,11 @@ onMounted(fetch);
 
 <template>
   <div>
-    <div class="flex items-center gap-2 mb-4">
-      <v-btn icon="mdi-arrow-right" variant="text" to="/reports" />
-      <h1 class="text-h5">{{ t('reports.overdue.title') }}</h1>
-      <v-spacer />
+    <PageHeader :title="t('reports.overdue.title')" back="/reports">
       <v-btn variant="text" prepend-icon="mdi-refresh" :loading="loading" @click="fetch">
         {{ t('common.retry') }}
       </v-btn>
-    </div>
+    </PageHeader>
 
     <ErrorState v-if="error" :error="error" @retry="fetch" />
 

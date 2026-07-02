@@ -22,6 +22,7 @@ import DataGrid from '@/components/shared/datagrid/DataGrid.vue';
 import { buildMaterialColumns } from '@/components/features/material/materialGridColumns';
 import ErrorState from '@/components/shared/ErrorState.vue';
 import RoleGate from '@/components/shared/RoleGate.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 
 const { handle } = useApiError();
 const toast = useToast();
@@ -181,14 +182,13 @@ async function onDeleteRows(ids: string[]) {
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
-      <h1 class="text-h5">{{ t('nav.materials') }}</h1>
+    <PageHeader :title="t('nav.materials')" icon="mdi-cube-outline" :count="total || null">
       <RoleGate :permissions="['materials.create']" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" to="/materials/new">
           {{ t('materials.new') }}
         </v-btn>
       </RoleGate>
-    </div>
+    </PageHeader>
 
     <p class="text-caption text-medium-emphasis mb-2">{{ t('datagrid.hint') }}</p>
 

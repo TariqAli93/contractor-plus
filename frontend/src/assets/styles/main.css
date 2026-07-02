@@ -10,7 +10,11 @@ html,
 body,
 .v-application,
 .v-overlay-container {
-  font-family: 'IBM Plex Sans Arabic', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Native Windows feel first: Segoe UI (ships Arabic) leads, Tahoma covers
+     older Windows, the self-hosted IBM Plex Sans Arabic is the cross-platform
+     fallback. On the target Electron/Windows build Segoe UI renders — which is
+     exactly the "desktop program, not web app" cue we want. */
+  font-family: 'Segoe UI', 'Tahoma', 'IBM Plex Sans Arabic', system-ui, -apple-system, sans-serif;
 }
 
 /* ---------- design tokens ---------- */
@@ -36,23 +40,30 @@ body,
   --cp-error: #dc2626;
   --cp-error-soft: #fdecec;
 
-  /* Elevation — soft, layered shadows tuned for light surfaces. */
-  --cp-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --cp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
-  --cp-shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
-  --cp-shadow-lg: 0 12px 24px -8px rgba(15, 23, 42, 0.14), 0 4px 8px -4px rgba(15, 23, 42, 0.08);
+  /* Elevation — desktop chrome is defined by hairline borders, not float.
+     Shadows are reserved for genuinely floating layers (menus, dialogs) and
+     kept shallow so panels sit flat against the workspace. */
+  --cp-shadow-xs: 0 1px 0 rgba(15, 23, 42, 0.03);
+  --cp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --cp-shadow-md: 0 2px 8px -2px rgba(15, 23, 42, 0.12);
+  --cp-shadow-lg: 0 8px 24px -6px rgba(15, 23, 42, 0.18);
 
-  /* Radii. */
-  --cp-radius-sm: 8px;
-  --cp-radius-md: 12px;
-  --cp-radius-lg: 16px;
-  --cp-radius-xl: 20px;
+  /* Radii — low and crisp, like native window controls. */
+  --cp-radius-sm: 3px;
+  --cp-radius-md: 5px;
+  --cp-radius-lg: 7px;
+  --cp-radius-xl: 10px;
 
-  /* Motion. */
+  /* Toolbar / chrome metrics — tightened for a denser, data-first workspace. */
+  --cp-topbar-h: 42px;
+  --cp-statusbar-h: 24px;
+  --cp-row-h: 30px;
+
+  /* Motion — snappy, no soft web easing. */
   --cp-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --cp-dur-fast: 120ms;
-  --cp-dur-base: 180ms;
-  --cp-dur-slow: 260ms;
+  --cp-dur-fast: 90ms;
+  --cp-dur-base: 140ms;
+  --cp-dur-slow: 220ms;
 }
 
 /* ---------- dark theme tokens ----------
@@ -245,16 +256,35 @@ body {
    leaves the inactive items flat. Add a soft hover ring + an accent rail on
    the active item. Scoped to .cp-nav so we don't touch other v-list usages. */
 .cp-nav .v-list-item {
-  margin: 2px 8px;
+  margin: 1px 5px;
   border-radius: var(--cp-radius-sm);
-  min-height: 40px;
+  min-height: 28px !important;
+  padding-block: 0 !important;
+  padding-inline: 8px !important;
+  font-size: 0.8rem;
   transition: background-color var(--cp-dur-fast) var(--cp-ease),
     color var(--cp-dur-fast) var(--cp-ease);
+}
+.cp-nav .v-list-item__prepend > .v-icon {
+  margin-inline-end: 9px !important;
+  font-size: 18px;
 }
 .cp-nav .v-list-item--active {
   background: var(--cp-primary-soft);
   color: var(--cp-primary);
   font-weight: 600;
+  position: relative;
+}
+/* Accent rail on the inline-start edge — the classic active-item marker in
+   desktop navigation panes. Logical inset keeps it correct under RTL. */
+.cp-nav .v-list-item--active::before {
+  content: '';
+  position: absolute;
+  inset-block: 4px;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--cp-primary);
 }
 .cp-nav .v-list-item--active .v-list-item__prepend > .v-icon {
   color: var(--cp-primary);
@@ -265,11 +295,11 @@ body {
 }
 
 .cp-nav-group-label {
-  padding: 14px 20px 6px;
+  padding: 12px 16px 3px;
   color: var(--cp-text-subtle);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -278,42 +308,138 @@ body {
   display: none;
 }
 
-/* Brand block at the top of the drawer. */
+/* Brand block at the top of the drawer — compact, flat, aligned to the
+   toolbar height so the sidebar header lines up with the top bar. */
 .cp-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 16px 18px 12px;
+  gap: 9px;
+  height: var(--cp-topbar-h);
+  padding: 0 14px;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--cp-text);
 }
 .cp-brand-mark {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--cp-primary) 0%, #2a7ab5 100%);
+  width: 26px;
+  height: 26px;
+  border-radius: var(--cp-radius-sm);
+  background: var(--cp-primary);
   color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  box-shadow: 0 4px 10px -3px rgba(30, 95, 140, 0.45);
+  font-size: 0.85rem;
 }
 .v-navigation-drawer--rail .cp-brand-text { display: none; }
 
-/* Top bar refinement — keep Vuetify structure, just lift the visual layer. */
+/* Top bar — a solid application toolbar with a hairline underline. No glass
+   blur (that reads as "web header"); desktop toolbars are opaque and flat. */
 .cp-topbar {
-  background: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: saturate(180%) blur(8px);
-  -webkit-backdrop-filter: saturate(180%) blur(8px);
+  background: var(--cp-surface) !important;
   border-bottom: 1px solid var(--cp-border) !important;
 }
-.v-theme--contractorPlusDark .cp-topbar {
-  background: rgba(30, 41, 59, 0.85) !important;
+
+/* Toolbar building blocks — quick-action clusters separated by thin rules,
+   the way native ribbons/toolbars group commands. */
+.cp-toolbar-sep {
+  width: 1px;
+  align-self: stretch;
+  margin-block: 8px;
+  margin-inline: 3px;
+  background: var(--cp-border);
+}
+/* Toolbar buttons: shrink Vuetify's small size a touch more + kill the wide
+   default gutters so quick-actions pack tightly like a real app toolbar. */
+.cp-topbar .v-btn {
+  min-width: 0 !important;
+}
+.cp-topbar .v-btn--size-small {
+  height: 28px;
+  --v-btn-height: 28px;
+  padding-inline: 8px;
+  font-size: 0.8rem;
+}
+.cp-topbar .v-btn--icon.v-btn--size-small {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+}
+.cp-toolbar-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ---------- status bar ----------
+   The bottom strip found in every desktop business app: connection state,
+   context, clock. Small, dense, quietly informative. */
+.cp-statusbar {
+  height: var(--cp-statusbar-h);
+  min-height: var(--cp-statusbar-h) !important;
+  background: var(--cp-surface) !important;
+  border-top: 1px solid var(--cp-border);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 !important;
+  font-size: 0.72rem;
+  color: var(--cp-text-muted);
+}
+.cp-statusbar-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+.cp-statusbar-item + .cp-statusbar-item {
+  border-inline-start: 1px solid var(--cp-border);
+}
+.cp-statusbar-item--tabular {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Skeleton shimmer — Vuetify's default sometimes shows a hard grey. */
 .v-skeleton-loader__text {
   border-radius: 6px;
+}
+
+/* ---------- dialogs ----------
+   Vuetify's default dialog card is roomy (title 20px+ / generous gutters) which
+   reads as a web modal. Tighten to the app's desktop density: compact title,
+   snug body, low-profile action bar. Scoped to `.v-dialog` so page cards are
+   untouched. */
+.v-dialog .v-card {
+  border-radius: var(--cp-radius-md);
+}
+.v-dialog .v-card-title,
+.v-dialog .v-card-item {
+  padding: 12px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+  min-height: 0;
+}
+.v-dialog .v-card-subtitle {
+  padding-inline: 16px;
+}
+.v-dialog .v-card-text {
+  padding: 10px 16px;
+  font-size: 0.875rem;
+}
+.v-dialog .v-card-actions {
+  padding: 8px 12px;
+  min-height: 0;
+  gap: 6px;
+}
+/* Menus/list overlays: tighten the dropdown items to match toolbar density. */
+.v-overlay__content > .v-list {
+  padding: 4px;
+}
+.v-overlay__content > .v-list .v-list-item {
+  border-radius: var(--cp-radius-sm);
+  min-height: 34px;
 }

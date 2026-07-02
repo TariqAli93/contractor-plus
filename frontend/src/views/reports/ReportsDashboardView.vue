@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { t } from '@/i18n';
+import PageHeader from '@/components/shared/PageHeader.vue';
 
 // Hub page — links to the four detail reports. The home dashboard already
 // surfaces the summary cards; this page is a navigable index.
@@ -40,10 +41,8 @@ const cards: ReportCard[] = [
 
 <template>
   <div>
-    <div class="mb-4">
-      <h1 class="text-h5 mb-1">{{ t('nav.reports') }}</h1>
-      <p class="text-body-2 text-medium-emphasis mb-0">{{ t('reports.subtitle') }}</p>
-    </div>
+    <PageHeader :title="t('nav.reports')" icon="mdi-chart-box-outline" />
+    <p class="text-body-2 text-medium-emphasis mb-4">{{ t('reports.subtitle') }}</p>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <RouterLink v-for="c in cards" :key="c.to" :to="c.to" class="no-underline">

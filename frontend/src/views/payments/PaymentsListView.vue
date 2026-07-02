@@ -15,6 +15,7 @@ import type { ProjectWithContract } from '@/types/project';
 import SearchBar from '@/components/shared/SearchBar.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
 import RoleGate from '@/components/shared/RoleGate.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import PaymentStatusBadge from '@/components/features/payment/PaymentStatusBadge.vue';
@@ -189,14 +190,13 @@ function canEditDelete(p: Payment) {
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
-      <h1 class="text-h5">{{ t('nav.payments') }}</h1>
+    <PageHeader :title="t('nav.payments')" :count="total || null" icon="mdi-cash-plus">
       <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" @click="newPayment">
           {{ t('payments.new') }}
         </v-btn>
       </RoleGate>
-    </div>
+    </PageHeader>
 
     <v-card>
       <v-card-text class="space-y-3">

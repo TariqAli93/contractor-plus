@@ -13,6 +13,7 @@ import type { Customer } from '@/types/customer';
 import SearchBar from '@/components/shared/SearchBar.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
 import RoleGate from '@/components/shared/RoleGate.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 
 const router = useRouter();
@@ -86,14 +87,13 @@ async function handleDelete(customer: Customer) {
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
-      <h1 class="text-h5">{{ t('nav.customers') }}</h1>
+    <PageHeader :title="t('nav.customers')" icon="mdi-account-multiple-outline" :count="total || null">
       <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" to="/customers/new">
           {{ t('customers.new') }}
         </v-btn>
       </RoleGate>
-    </div>
+    </PageHeader>
 
     <v-card>
       <v-card-text>

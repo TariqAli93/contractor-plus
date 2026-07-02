@@ -8,6 +8,7 @@ import ErrorState from '@/components/shared/ErrorState.vue';
 import EmptyState from '@/components/shared/EmptyState.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 import ProjectStatusBadge from '@/components/features/project/ProjectStatusBadge.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 
 const rows = ref<DelayedProjectRow[]>([]);
 const loading = ref(false);
@@ -39,14 +40,11 @@ const headers = computed(() => [
 
 <template>
   <div>
-    <div class="flex items-center gap-2 mb-4">
-      <v-btn icon="mdi-arrow-right" variant="text" to="/reports" />
-      <h1 class="text-h5">{{ t('reports.delayed.title') }}</h1>
-      <v-spacer />
+    <PageHeader :title="t('reports.delayed.title')" back="/reports">
       <v-btn variant="text" prepend-icon="mdi-refresh" :loading="loading" @click="fetch">
         {{ t('common.retry') }}
       </v-btn>
-    </div>
+    </PageHeader>
 
     <ErrorState v-if="error" :error="error" @retry="fetch" />
 

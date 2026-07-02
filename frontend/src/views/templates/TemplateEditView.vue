@@ -6,6 +6,7 @@ import TemplateGeneralTab from '@/components/features/template/TemplateGeneralTa
 import TemplateMaterialsTab from '@/components/features/template/TemplateMaterialsTab.vue';
 import TemplateStepsTab from '@/components/features/template/TemplateStepsTab.vue';
 import TemplateEstimateTab from '@/components/features/template/TemplateEstimateTab.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 
 const route = useRoute();
 
@@ -26,10 +27,7 @@ const tabsLocked = computed(() => !templateId.value);
 
 <template>
   <div>
-    <div class="flex items-center gap-2 mb-4">
-      <v-btn icon="mdi-arrow-right" variant="text" to="/templates" />
-      <h1 class="text-h5">{{ heading }}</h1>
-    </div>
+    <PageHeader :title="heading" back="/templates" />
 
     <v-card>
       <v-tabs v-model="activeTab" color="primary" align-tabs="start">

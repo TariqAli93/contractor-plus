@@ -171,7 +171,12 @@
     "retry": "إعادة المحاولة",
     "language": "اللغة",
     "logout": "تسجيل الخروج",
-    "comingSoon": "قريباً"
+    "comingSoon": "قريباً",
+    "new": "جديد",
+    "menu": "القائمة"
+  },
+  "statusbar": {
+    "ready": "جاهز"
   },
   "datagrid": {
     "selected": "محدّد",

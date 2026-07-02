@@ -6,6 +6,7 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { t } from '@/i18n';
 import ProjectDetailPanel from '@/components/features/project/ProjectDetailPanel.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 
 const route = useRoute();
 
@@ -19,10 +20,7 @@ const heading = computed(() => (projectId.value ? t('projects.edit') : t('projec
 
 <template>
   <div>
-    <div class="flex items-center gap-2 mb-4">
-      <v-btn icon="mdi-arrow-right" variant="text" to="/projects" />
-      <h1 class="text-h5">{{ heading }}</h1>
-    </div>
+    <PageHeader :title="heading" back="/projects" />
 
     <ProjectDetailPanel :project-id="projectId" />
   </div>

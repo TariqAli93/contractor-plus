@@ -4,6 +4,7 @@ import { t } from '@/i18n';
 import { useEventListener } from '@vueuse/core';
 import { useTunnel } from '@/composables/useTunnel';
 import { useTunnelStore } from '@/stores/tunnel.store';
+import PageHeader from '@/components/shared/PageHeader.vue';
 import TunnelStatusHero from '@/components/features/tunnel/TunnelStatusHero.vue';
 import TunnelActionPanel from '@/components/features/tunnel/TunnelActionPanel.vue';
 import TunnelErrorGuidance from '@/components/features/tunnel/TunnelErrorGuidance.vue';
@@ -29,13 +30,7 @@ onUnmounted(() => {
 <template>
   <div class="space-y-4">
     <!-- Header -->
-    <header class="flex items-center justify-between gap-3 flex-wrap">
-      <div>
-        <h1 class="text-h5 font-medium mb-1">{{ t('tunnel.page.title') }}</h1>
-        <p class="text-body-2 text-medium-emphasis mb-0">
-          {{ t('tunnel.page.subtitle') }}
-        </p>
-      </div>
+    <PageHeader :title="t('tunnel.page.title')" :subtitle="t('tunnel.page.subtitle')" icon="mdi-tunnel">
       <v-btn
         variant="text"
         prepend-icon="mdi-refresh"
@@ -45,7 +40,7 @@ onUnmounted(() => {
       >
         {{ t('tunnel.actions.refresh') }}
       </v-btn>
-    </header>
+    </PageHeader>
 
     <!-- First-load skeleton. Once we have ever loaded data, we keep it
          visible during refreshes (preserve last-known state). -->

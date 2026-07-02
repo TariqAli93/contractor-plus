@@ -8,6 +8,7 @@ import ErrorState from '@/components/shared/ErrorState.vue';
 import SummaryCard from '@/components/shared/SummaryCard.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 
 const data = ref<CashFlowReport | null>(null);
 const loading = ref(false);
@@ -44,10 +45,7 @@ const netClass = computed(() => {
 
 <template>
   <div>
-    <div class="flex items-center gap-2 mb-4">
-      <v-btn icon="mdi-arrow-right" variant="text" to="/reports" />
-      <h1 class="text-h5">{{ t('reports.cashFlow.title') }}</h1>
-    </div>
+    <PageHeader :title="t('reports.cashFlow.title')" back="/reports" />
 
     <v-card class="mb-4">
       <v-card-text class="flex flex-wrap items-end gap-3">

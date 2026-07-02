@@ -10,6 +10,7 @@ import ErrorState from '@/components/shared/ErrorState.vue';
 import EmptyState from '@/components/shared/EmptyState.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import ProjectStatusBadge from '@/components/features/project/ProjectStatusBadge.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 
 const router = useRouter();
 
@@ -130,10 +131,7 @@ function profitClass(p: string | null) {
 
 <template>
   <div>
-    <div class="flex items-center gap-2 mb-4">
-      <v-btn icon="mdi-arrow-right" variant="text" to="/reports" />
-      <h1 class="text-h5">{{ t('reports.profitability.title') }}</h1>
-    </div>
+    <PageHeader :title="t('reports.profitability.title')" back="/reports" />
 
     <v-card>
       <v-card-text>

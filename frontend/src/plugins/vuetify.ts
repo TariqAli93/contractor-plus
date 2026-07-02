@@ -23,12 +23,27 @@ const mdiNamedSvg: IconSet = {
 
 export const vuetify = createVuetify({
   icons: { defaultSet: 'mdi', aliases, sets: { mdi: mdiNamedSvg } },
+  // Desktop-native defaults: compact density everywhere, small crisp buttons,
+  // low corner radius. These cascade to every screen so the app reads as a
+  // business tool (tight, functional) rather than a roomy web dashboard.
   defaults: {
-    VBtn: { variant: 'flat' },
-    VTextField: { variant: 'outlined', density: 'comfortable' },
-    VSelect: { variant: 'outlined', density: 'comfortable' },
-    VAutocomplete: { variant: 'outlined', density: 'comfortable' },
-    VCard: { rounded: 'lg' },
+    VBtn: { variant: 'flat', size: 'small', rounded: 'sm' },
+    VTextField: { variant: 'outlined', density: 'compact', rounded: 'sm' },
+    VSelect: { variant: 'outlined', density: 'compact', rounded: 'sm' },
+    VAutocomplete: { variant: 'outlined', density: 'compact', rounded: 'sm' },
+    VCombobox: { variant: 'outlined', density: 'compact', rounded: 'sm' },
+    VTextarea: { variant: 'outlined', density: 'compact', rounded: 'sm' },
+    VNumberInput: { variant: 'outlined', density: 'compact', rounded: 'sm' },
+    VFileInput: { variant: 'outlined', density: 'compact', rounded: 'sm' },
+    VCard: { rounded: 'md' },
+    VList: { density: 'compact' },
+    VChip: { size: 'small' },
+    VTable: { density: 'compact' },
+    VCheckbox: { density: 'compact' },
+    VSwitch: { density: 'compact', inset: true },
+    VTabs: { density: 'compact' },
+    VToolbar: { density: 'compact' },
+    VDataTable: { density: 'compact' },
   },
   theme: {
     defaultTheme: LIGHT_THEME,

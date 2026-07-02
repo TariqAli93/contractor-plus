@@ -14,6 +14,7 @@ import { RoleName } from '@/types/enums';
 import type { User } from '@/types/user';
 import SearchBar from '@/components/shared/SearchBar.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 import UserRoleBadge from '@/components/features/user/UserRoleBadge.vue';
 import UserStatusBadge from '@/components/features/user/UserStatusBadge.vue';
@@ -145,12 +146,11 @@ async function handleDelete(user: User) {
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
-      <h1 class="text-h5">{{ t('nav.users') }}</h1>
+    <PageHeader :title="t('nav.users')" :count="total || null" icon="mdi-account-cog-outline">
       <v-btn color="primary" prepend-icon="mdi-account-plus-outline" to="/users/new">
         {{ t('users.new') }}
       </v-btn>
-    </div>
+    </PageHeader>
 
     <v-card>
       <v-card-text class="grid grid-cols-1 md:grid-cols-3 gap-3">

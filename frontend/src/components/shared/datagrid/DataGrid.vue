@@ -962,15 +962,15 @@ function runRowAction(a: GridRowAction) {
 .cp-grid {
   position: relative;
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 8px;
+  border-radius: 5px;
   overflow: hidden;
 }
 .cp-grid-bar {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  background: rgba(var(--v-theme-primary), 0.08);
+  padding: 4px 8px;
+  background: var(--cp-surface-2);
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 .cp-grid-scroll {
@@ -981,15 +981,15 @@ function runRowAction(a: GridRowAction) {
   border-collapse: separate;
   border-spacing: 0;
   width: 100%;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   background: rgb(var(--v-theme-surface));
 }
 .cp-th,
 .cp-td {
   border-inline-end: 1px solid rgba(var(--v-border-color), 0.5);
   border-bottom: 1px solid rgba(var(--v-border-color), 0.5);
-  padding: 0 8px;
-  height: 36px;
+  padding: 0 7px;
+  height: 30px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1014,9 +1014,9 @@ function runRowAction(a: GridRowAction) {
 }
 /* Filter row sits below the header row; offset so it also stays pinned. */
 .cp-filter-row .cp-th {
-  top: 36px;
+  top: 30px;
   z-index: 2;
-  height: 30px;
+  height: 26px;
   font-weight: 400;
 }
 .cp-filter-input {
@@ -1100,11 +1100,11 @@ function runRowAction(a: GridRowAction) {
   justify-content: center;
   background: rgba(var(--v-theme-surface), 0.6);
 }
-/* Tighten the Vuetify editors so they sit flush inside a 36px cell. */
+/* Tighten the Vuetify editors so they sit flush inside a 30px cell. */
 .cp-editor :deep(.v-field__input) {
   padding: 0;
-  min-height: 34px;
-  font-size: 0.875rem;
+  min-height: 28px;
+  font-size: 0.8125rem;
 }
 .cp-editor :deep(.v-field) {
   padding-inline: 4px;

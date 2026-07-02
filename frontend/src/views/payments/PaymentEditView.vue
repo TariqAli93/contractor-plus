@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { t } from '@/i18n';
 import PaymentForm from '@/components/features/payment/PaymentForm.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 
 const route = useRoute();
 
@@ -21,10 +22,7 @@ const heading = computed(() => (paymentId.value ? t('payments.edit') : t('paymen
 
 <template>
   <div>
-    <div class="flex items-center gap-2 mb-4">
-      <v-btn icon="mdi-arrow-right" variant="text" to="/payments" />
-      <h1 class="text-h5">{{ heading }}</h1>
-    </div>
+    <PageHeader :title="heading" back="/payments" />
 
     <PaymentForm :id="paymentId" :initial-project-id="initialProjectId" />
   </div>
