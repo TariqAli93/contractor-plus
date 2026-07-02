@@ -32,6 +32,7 @@ export const PERMISSION_MODULES = [
   'users',
   'rbac',
   'profile',
+  'voice',
 ] as const;
 export type PermissionModule = (typeof PERMISSION_MODULES)[number];
 
@@ -99,6 +100,7 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   p('settings.company.manage', 'settings', 'company.manage', 'إدارة بيانات الشركة'),
   p('settings.currency.manage', 'settings', 'currency.manage', 'إدارة العملات'),
   p('settings.contract_templates.manage', 'settings', 'contract_templates.manage', 'إدارة قوالب العقود'),
+  p('settings.voice_ai.manage', 'settings', 'voice_ai.manage', 'إدارة إعدادات المساعد الصوتي (LLM)'),
 
   p('users.read', 'users', 'read', 'عرض المستخدمين'),
   p('users.create', 'users', 'create', 'إنشاء مستخدم'),
@@ -113,6 +115,8 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   p('profile.read', 'profile', 'read', 'عرض الملف الشخصي'),
   p('profile.update', 'profile', 'update', 'تعديل الملف الشخصي'),
   p('profile.change_password', 'profile', 'change_password', 'تغيير كلمة المرور'),
+
+  p('voice.use', 'voice', 'use', 'استخدام المساعد الصوتي'),
 ];
 
 export const ALL_PERMISSION_KEYS: string[] = PERMISSION_CATALOG.map((d) => d.key);
@@ -141,9 +145,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'reports.read',
     'audit.read',
     'tunnel.manage',
-    'settings.read', 'settings.manage', 'settings.company.manage', 'settings.currency.manage', 'settings.contract_templates.manage',
+    'settings.read', 'settings.manage', 'settings.company.manage', 'settings.currency.manage', 'settings.contract_templates.manage', 'settings.voice_ai.manage',
     'users.read', 'users.create', 'users.update', 'users.delete', 'users.reset_password', 'users.activate',
     'rbac.read', // ADMIN can view, but NOT rbac.manage
+    'voice.use',
     ...PROFILE,
   ],
   [RoleName.ACCOUNTANT]: [
@@ -154,6 +159,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'costs.read', 'costs.create', 'costs.update', 'costs.delete',
     'payments.read', 'payments.create', 'payments.update', 'payments.delete', 'payments.mark_paid', 'payments.cancel',
     'reports.read',
+    'voice.use',
     ...PROFILE,
   ],
   [RoleName.ENGINEER]: [
@@ -166,6 +172,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'costs.read', 'costs.create', 'costs.update', 'costs.delete',
     'payments.read',
     'reports.read',
+    'voice.use',
     ...PROFILE,
   ],
   [RoleName.VIEWER]: [
@@ -177,6 +184,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'projects.read',
     'costs.read',
     'payments.read',
+    'voice.use',
     ...PROFILE,
   ],
 };

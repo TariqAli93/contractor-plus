@@ -4,6 +4,7 @@ import TopBar from './TopBar.vue';
 import SideNav from './SideNav.vue';
 import CommandPalette from './CommandPalette.vue';
 import ShortcutsHelp from './ShortcutsHelp.vue';
+import VoiceAssistant from '@/components/voice/VoiceAssistant.vue';
 import { useUiStore } from '@/stores/ui.store';
 import { useQuickNav } from '@/composables/useQuickNav';
 
@@ -45,6 +46,7 @@ onKeyStroke(['?'], (e) => {
     </v-main>
     <CommandPalette />
     <ShortcutsHelp />
+    <VoiceAssistant />
   </v-app>
 </template>
 

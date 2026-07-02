@@ -34,6 +34,15 @@ export class ProjectsRepository {
     return client.project.findFirst({ where: { id, deletedAt: null } });
   }
 
+  // First STANDALONE (un-linked) project whose name matches — used by the voice
+  // engine to resolve "اربط مشروع بيت 100 …" to a concrete project.
+  findStandaloneByName(search: string, client: DbClient = this.prisma): Promise<Project | null> {
+    return client.project.findFirst({
+      where: { deletedAt: null, contractId: null, name: { contains: search, mode: 'insensitive' } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   findByIdWithContract(id: string): Promise<ProjectWithContract | null> {
     return this.prisma.project.findFirst({
       where: { id, deletedAt: null },

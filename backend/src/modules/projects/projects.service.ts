@@ -117,6 +117,74 @@ export class ProjectsService {
     });
   }
 
+  // ---------- Link to contract ----------
+  //
+  // Links an EXISTING standalone project to a contract (distinct from
+  // `ContractsService.createProject`, which CREATES a project from an APPROVED
+  // contract). Used by the voice `link_project_to_contract` command so a
+  // voice-created standalone project can later gain a contract (and thus accept
+  // payments). Guards against duplicate/conflicting links (one project ↔ one
+  // contract, enforced here and by the DB @unique). A CANCELLED contract is
+  // rejected; DRAFT/APPROVED are allowed (linking ≠ approving).
+
+  async linkToContract(projectId: string, contractId: string, actor: AuditActor): Promise<Project> {
+    return this.prisma.$transaction((tx) =>
+      this.linkToContractWithinTx(tx, projectId, contractId, actor),
+    );
+  }
+
+  async linkToContractWithinTx(
+    tx: Prisma.TransactionClient,
+    projectId: string,
+    contractId: string,
+    actor: AuditActor,
+  ): Promise<Project> {
+    const project = await this.repo.findById(projectId, tx);
+    if (!project) throw new NotFoundError('Project', 'PROJECT_NOT_FOUND');
+    if (project.contractId) {
+      throw new ConflictError(
+        project.contractId === contractId
+          ? 'Project is already linked to this contract'
+          : 'Project is already linked to another contract',
+        'PROJECT_ALREADY_LINKED',
+      );
+    }
+
+    const contract = await tx.contract.findFirst({
+      where: { id: contractId, deletedAt: null },
+      select: { id: true, status: true, contractNumber: true },
+    });
+    if (!contract) throw new NotFoundError('Contract', 'CONTRACT_NOT_FOUND');
+    if (contract.status === ContractStatus.CANCELLED) {
+      throw new ConflictError('Cannot link to a cancelled contract', 'CONTRACT_CANCELLED');
+    }
+    if (await this.repo.existsByContractId(contractId, undefined, tx)) {
+      throw new ConflictError('Contract already has a linked project', 'CONTRACT_HAS_PROJECT');
+    }
+
+    const updated = await this.repo.update(
+      projectId,
+      { contract: { connect: { id: contractId } } },
+      tx,
+    );
+    await this.audit.log(
+      actor,
+      {
+        action: 'UPDATE',
+        entity: PROJECT,
+        entityId: projectId,
+        oldValues: toJsonValue({ contractId: null }),
+        newValues: toJsonValue({
+          event: 'linked_to_contract',
+          contractId,
+          contractNumber: contract.contractNumber,
+        }),
+      },
+      tx,
+    );
+    return updated;
+  }
+
   async update(
     id: string,
     data: UpdateProjectInput,

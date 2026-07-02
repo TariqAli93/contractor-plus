@@ -162,6 +162,8 @@ model User {
   role          Role           @relation(fields: [roleId], references: [id])
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]
+  voiceSessions VoiceSession[]
+  voiceCommands VoiceCommandLog[]
   documentTemplatesCreated DocumentTemplate[] @relation("DocumentTemplateCreator")
   documentsGenerated       GeneratedDocument[] @relation("GeneratedDocumentCreator")
   createdAt     DateTime       @default(now())
@@ -622,4 +624,80 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ============================================================
+// Voice Command System
+//
+// A VoiceSession is one conversational thread (the "Voice Session" context
+// that resolves pronouns like "باسمه"/"نفس المشروع"). Each utterance becomes
+// one VoiceCommandLog row — an immutable audit trail of: original transcript,
+// recognised intent, extracted entities, the plan, the outcome, and any error.
+// ============================================================
+
+enum VoiceSessionStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum VoiceCommandStatus {
+  INTERPRETED // understood, awaiting a slot or confirmation
+  CLARIFYING // asked the user for a missing slot
+  AWAITING_CONFIRMATION // plan built, waiting for yes/no
+  EXECUTED // carried out successfully
+  REJECTED // permission denied / invalid / unknown
+  CANCELLED // user declined at confirmation
+  FAILED // execution threw and rolled back
+}
+
+model VoiceSession {
+  id        String             @id @default(uuid()) @db.Uuid
+  userId    String             @db.Uuid
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locale    String             @default("ar")
+  status    VoiceSessionStatus @default(ACTIVE)
+  // Rolling conversational memory (last entities, last created project/customer,
+  // pending plan). A JSON bag so the dialog engine can evolve its context shape
+  // without a migration.
+  context   Json?
+  commands  VoiceCommandLog[]
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  closedAt  DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@map("voice_sessions")
+}
+
+model VoiceCommandLog {
+  id          String             @id @default(uuid()) @db.Uuid
+  sessionId   String             @db.Uuid
+  session     VoiceSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId      String?            @db.Uuid
+  user        User?              @relation(fields: [userId], references: [id])
+  // Raw + normalised transcript.
+  transcript  String
+  normalized  String?
+  // NLU output.
+  intent      String
+  confidence  Decimal            @default(0) @db.Decimal(4, 3)
+  entities    Json?
+  // Built plan (steps) + resolved permissions, for transparency/replay.
+  plan        Json?
+  status      VoiceCommandStatus
+  // Outcome.
+  resultMessage String?
+  createdEntities Json?
+  errorCode   String?
+  errorMessage String?
+  provider    String? // which NLU provider answered (rule-based / llm / …)
+  createdAt   DateTime           @default(now())
+
+  @@index([sessionId])
+  @@index([userId])
+  @@index([intent])
+  @@index([status])
+  @@index([createdAt])
+  @@map("voice_command_logs")
 }
