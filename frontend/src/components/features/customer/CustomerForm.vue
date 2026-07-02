@@ -10,9 +10,11 @@ const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } =
 
 onMounted(load);
 
-const requiredRule = (v: unknown) => !!v || ' ';
+const requiredRule = (v: unknown) => !!v || t('errors.required');
 const emailRule = (v: string | null | undefined) =>
   !v || /.+@.+\..+/.test(v) || t('customers.errors.email');
+const phoneRule = (v: string | null | undefined) =>
+  !v || /^[\d+\-\s()]{7,}$/.test(v) || t('customers.errors.phone');
 </script>
 
 <template>
@@ -32,6 +34,7 @@ const emailRule = (v: string | null | undefined) =>
           v-model="form.phone"
           :label="t('customers.fields.phone')"
           :placeholder="t('customers.placeholders.phone')"
+          :rules="[phoneRule]"
           :error-messages="fieldErrors.phone"
         />
         <v-text-field

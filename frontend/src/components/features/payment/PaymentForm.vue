@@ -54,7 +54,7 @@ const methodOptions = computed(() => [
   { value: PaymentMethod.OTHER, title: t('payments.method.OTHER') },
 ]);
 
-const requiredRule = (v: unknown) => !!v || ' ';
+const requiredRule = (v: unknown) => !!v || t('errors.required');
 const positiveRule = (v: number | null | undefined) =>
   (typeof v === 'number' && v > 0) || t('payments.errors.positiveAmount');
 </script>

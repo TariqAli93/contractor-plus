@@ -93,7 +93,7 @@ const derivedTotal = computed(() => {
   return null;
 });
 
-const requiredRule = (v: unknown) => !!v || ' ';
+const requiredRule = (v: unknown) => !!v || t('errors.required');
 const nonNegRule = (v: number | null | undefined) =>
   v === null || v === undefined || v >= 0 || t('common.error');
 </script>

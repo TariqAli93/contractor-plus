@@ -9,7 +9,7 @@ const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } =
 
 onMounted(load);
 
-const requiredRule = (v: unknown) => !!v || ' ';
+const requiredRule = (v: unknown) => !!v || t('errors.required');
 const nonNegativeRule = (v: number | string | null | undefined) =>
   v === null || v === undefined || v === '' || Number(v) >= 0 || t('materials.errors.price');
 </script>

@@ -1,10 +1,12 @@
 import { ref } from 'vue';
 import { ApiError } from '@/types/api';
+import { friendlyError } from '@/lib/errorMessages';
 import { useToast } from './useToast';
 
 // Surfaces a thrown error from an API call:
 //  - validation errors are returned as field-level maps (controller assigns to form)
-//  - everything else fires a toast with the message + reqId
+//  - everything else fires a toast with a plain-Arabic "what + how to fix" message
+//    (never the raw backend/JS message, which may be technical English).
 export function useApiError() {
   const toast = useToast();
   const fieldErrors = ref<Record<string, string[]>>({});
@@ -15,14 +17,10 @@ export function useApiError() {
         fieldErrors.value = err.fieldErrors();
         return { handled: true, isValidation: true };
       }
-      toast.error(err.message, err.reqId);
+      toast.error(friendlyError(err), err.reqId);
       return { handled: true, isValidation: false };
     }
-    if (err instanceof Error) {
-      toast.error(err.message);
-    } else {
-      toast.error('Unexpected error');
-    }
+    toast.error(friendlyError(err));
     return { handled: false, isValidation: false };
   }
 

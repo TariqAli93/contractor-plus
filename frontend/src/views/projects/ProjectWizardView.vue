@@ -153,7 +153,7 @@ async function createProject() {
   }
 }
 
-const requiredRule = (v: unknown) => !!v || ' ';
+const requiredRule = (v: unknown) => !!v || t('errors.required');
 </script>
 
 <template>
