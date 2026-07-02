@@ -21,6 +21,7 @@ const nonNegativeRule = (v: number | string | null | undefined) =>
         <v-text-field
           v-model="form.name"
           :label="t('materials.fields.name')"
+          :placeholder="t('materials.placeholders.name')"
           :rules="[requiredRule]"
           :error-messages="fieldErrors.name"
           autofocus
@@ -29,6 +30,7 @@ const nonNegativeRule = (v: number | string | null | undefined) =>
         <v-text-field
           v-model="form.unit"
           :label="t('materials.fields.unit')"
+          :placeholder="t('materials.placeholders.unit')"
           :rules="[requiredRule]"
           :error-messages="fieldErrors.unit"
           :hint="t('materials.fields.unitHint')"
@@ -38,6 +40,7 @@ const nonNegativeRule = (v: number | string | null | undefined) =>
         <v-text-field
           v-model.number="form.defaultPrice"
           :label="t('materials.fields.defaultPrice')"
+          :placeholder="t('materials.placeholders.defaultPrice')"
           type="number"
           step="0.01"
           min="0"

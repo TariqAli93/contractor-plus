@@ -193,6 +193,7 @@ const requiredRule = (v: unknown) => !!v || ' ';
               <v-text-field
                 v-model="wizard.name"
                 :label="t('projects.fields.name')"
+                :placeholder="t('projects.placeholders.name')"
                 :rules="[requiredRule]"
                 autofocus
                 required

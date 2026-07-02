@@ -22,6 +22,7 @@ const emailRule = (v: string | null | undefined) =>
         <v-text-field
           v-model="form.name"
           :label="t('customers.fields.name')"
+          :placeholder="t('customers.placeholders.name')"
           :rules="[requiredRule]"
           :error-messages="fieldErrors.name"
           autofocus
@@ -30,11 +31,13 @@ const emailRule = (v: string | null | undefined) =>
         <v-text-field
           v-model="form.phone"
           :label="t('customers.fields.phone')"
+          :placeholder="t('customers.placeholders.phone')"
           :error-messages="fieldErrors.phone"
         />
         <v-text-field
           v-model="form.email"
           :label="t('customers.fields.email')"
+          :placeholder="t('customers.placeholders.email')"
           type="email"
           :rules="[emailRule]"
           :error-messages="fieldErrors.email"
@@ -42,6 +45,7 @@ const emailRule = (v: string | null | undefined) =>
         <v-text-field
           v-model="form.address"
           :label="t('customers.fields.address')"
+          :placeholder="t('customers.placeholders.address')"
           :error-messages="fieldErrors.address"
           class="md:col-span-2"
         />

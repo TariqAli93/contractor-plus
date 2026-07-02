@@ -75,6 +75,7 @@ const positiveRule = (v: number | null | undefined) =>
         <v-text-field
           v-model.number="form.amount"
           :label="t('payments.fields.amount')"
+          :placeholder="t('payments.placeholders.amount')"
           type="number"
           step="0.01"
           min="0"
@@ -100,6 +101,7 @@ const positiveRule = (v: number | null | undefined) =>
         <v-text-field
           v-model="form.reference"
           :label="t('payments.fields.reference')"
+          :placeholder="t('payments.placeholders.reference')"
           :error-messages="fieldErrors.reference"
           class="md:col-span-2"
         />

@@ -122,6 +122,7 @@ const nonNegRule = (v: number | null | undefined) =>
         <v-text-field
           v-model="form.description"
           :label="t('costs.fields.description')"
+          :placeholder="t('costs.placeholders.description')"
           :rules="[requiredRule]"
           :error-messages="fieldErrors.description"
           class="md:col-span-2"
@@ -137,11 +138,13 @@ const nonNegRule = (v: number | null | undefined) =>
         <v-text-field
           v-model="form.unit"
           :label="t('costs.fields.unit')"
+          :placeholder="t('costs.placeholders.unit')"
           :error-messages="fieldErrors.unit"
         />
         <v-text-field
           v-model.number="form.quantity"
           :label="t('costs.fields.quantity')"
+          :placeholder="t('costs.placeholders.quantity')"
           type="number"
           step="0.001"
           min="0"
@@ -151,6 +154,7 @@ const nonNegRule = (v: number | null | undefined) =>
         <v-text-field
           v-model.number="form.unitPrice"
           :label="t('costs.fields.unitPrice')"
+          :placeholder="t('costs.placeholders.unitPrice')"
           type="number"
           step="0.01"
           min="0"

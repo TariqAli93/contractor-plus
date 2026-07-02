@@ -12,13 +12,7 @@
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { t } from '@/i18n';
 import { parseCsv, parseTsv, stringifyCsv, stringifyTsv } from '@/lib/tsv';
-import type {
-  GridCellCommit,
-  GridColumn,
-  GridPastePayload,
-  GridRow,
-  GridRowAction,
-} from './types';
+import type { GridCellCommit, GridColumn, GridPastePayload, GridRow, GridRowAction } from './types';
 
 const props = withDefaults(
   defineProps<{
@@ -956,7 +950,6 @@ function runRowAction(a: GridRowAction) {
     </v-menu>
   </div>
 </template>
-
 
 <style scoped>
 .cp-grid {
