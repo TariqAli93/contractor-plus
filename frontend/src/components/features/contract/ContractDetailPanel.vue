@@ -101,7 +101,11 @@ async function onChanged() {
                 />
               </v-window-item>
               <v-window-item value="project" class="pa-4">
-                <ContractProjectTab v-if="activeTab === 'project' && contract" :contract="contract" />
+                <ContractProjectTab
+                  v-if="activeTab === 'project' && contract"
+                  :contract="contract"
+                  @changed="onChanged"
+                />
               </v-window-item>
             </v-window>
           </v-card>
