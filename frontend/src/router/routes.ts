@@ -113,7 +113,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/contracts',
     name: 'contracts',
-    component: () => import('@/views/contracts/ContractsListView.vue'),
+    component: () => import('@/views/contracts/ContractsWorkspaceView.vue'),
     meta: { layout: 'app', access: { permissions: ['contracts.read'], roles: ALL_ROLES } },
   },
   {
@@ -141,7 +141,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/projects/new',
     name: 'project-new',
-    component: () => import('@/views/projects/ProjectEditView.vue'),
+    component: () => import('@/views/projects/ProjectWizardView.vue'),
     meta: { layout: 'app', access: { permissions: ['projects.create'], roles: WRITE_PROJECTS } },
   },
   {

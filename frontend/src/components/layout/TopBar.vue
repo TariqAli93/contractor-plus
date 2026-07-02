@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useUiStore } from '@/stores/ui.store';
 import { useThemeStore } from '@/stores/theme.store';
 import TunnelStatusChip from './TunnelStatusChip.vue';
+import NotificationsBell from './NotificationsBell.vue';
 
 const auth = useAuthStore();
 const ui = useUiStore();
@@ -46,6 +47,18 @@ const userInitial = computed(() => (auth.user?.fullName ?? '?').charAt(0).toUppe
     <v-spacer />
 
     <TunnelStatusChip class="me-2" />
+
+    <NotificationsBell />
+
+    <v-btn
+      icon
+      variant="text"
+      class="me-1"
+      :aria-label="t('shortcuts.title')"
+      @click="ui.toggleHelp"
+    >
+      <v-icon>mdi-help-circle-outline</v-icon>
+    </v-btn>
 
     <v-btn
       icon

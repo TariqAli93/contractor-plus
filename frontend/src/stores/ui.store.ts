@@ -31,6 +31,12 @@ export const useUiStore = defineStore('ui', () => {
     paletteOpen.value = !paletteOpen.value;
   }
 
+  // Keyboard-shortcuts help overlay (opened with `?` or the topbar button).
+  const helpOpen = ref(false);
+  function toggleHelp() {
+    helpOpen.value = !helpOpen.value;
+  }
+
   return {
     sidebarCollapsed,
     toggleSidebar,
@@ -38,5 +44,7 @@ export const useUiStore = defineStore('ui', () => {
     openPalette,
     closePalette,
     togglePalette,
+    helpOpen,
+    toggleHelp,
   };
 });

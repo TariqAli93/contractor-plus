@@ -20,6 +20,7 @@ import type {
   GridColumn,
   GridPastePayload,
   GridRow,
+  GridRowAction,
 } from '@/components/shared/datagrid/types';
 import DataGrid from '@/components/shared/datagrid/DataGrid.vue';
 import {
@@ -184,6 +185,19 @@ async function onDeleteRows(ids: string[]) {
   }
 }
 
+function rowActions(row: GridRow): GridRowAction[] {
+  const actions: GridRowAction[] = [];
+  if (canDelete.value) {
+    actions.push({
+      label: t('datagrid.deleteRow'),
+      icon: 'mdi-delete',
+      danger: true,
+      perform: () => void onDeleteRows([String(row.id)]),
+    });
+  }
+  return actions;
+}
+
 const addOpen = ref(false);
 async function onCreated() {
   await refresh();
@@ -239,6 +253,7 @@ async function onCreated() {
         :show-new-row="canCreate"
         :new-row-factory="newRowFactory"
         :selectable="canDelete"
+        :row-actions="rowActions"
         :row-class="paymentRowClass"
         :enable-csv="true"
         export-name="payments"
