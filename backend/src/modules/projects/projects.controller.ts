@@ -5,6 +5,7 @@ import {
   createProjectSchema,
   listProjectsQuerySchema,
   projectIdParamSchema,
+  unlinkContractBodySchema,
   updateProjectSchema,
 } from './projects.schemas.js';
 import { UnauthorizedError } from '../../shared/errors/unauthorized.error.js';
@@ -74,6 +75,13 @@ export class ProjectsController {
     const { id } = projectIdParamSchema.parse(request.params);
     const body = cancelProjectBodySchema.parse(request.body ?? {});
     const project = await this.service.cancel(id, body, this.actor(request));
+    return reply.code(200).send(project);
+  };
+
+  unlinkContract = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = projectIdParamSchema.parse(request.params);
+    const body = unlinkContractBodySchema.parse(request.body ?? {});
+    const project = await this.service.unlinkFromContract(id, body.reason, this.actor(request));
     return reply.code(200).send(project);
   };
 

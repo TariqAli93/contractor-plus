@@ -185,6 +185,52 @@ export class ProjectsService {
     return updated;
   }
 
+  // ---------- Unlink from contract (safe) ----------
+  //
+  // Audit prompt 10: safely detach a project from its contract WITHOUT deleting
+  // the project, contract, costs or payments. The contract simply becomes
+  // "unlinked" (project.contractId → null). A reason is required and recorded in
+  // the audit log; the route restricts this to OWNER/ADMIN.
+  async unlinkFromContract(
+    projectId: string,
+    reason: string,
+    actor: AuditActor,
+  ): Promise<Project> {
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await this.repo.findById(projectId, tx);
+      if (!existing) throw new NotFoundError('Project', 'PROJECT_NOT_FOUND');
+      if (!existing.contractId) {
+        throw new ConflictError(
+          'Project is not linked to a contract',
+          'PROJECT_NOT_LINKED',
+        );
+      }
+
+      const previousContractId = existing.contractId;
+      const updated = await this.repo.update(
+        projectId,
+        { contract: { disconnect: true } },
+        tx,
+      );
+      await this.audit.log(
+        actor,
+        {
+          action: 'UPDATE',
+          entity: PROJECT,
+          entityId: projectId,
+          oldValues: toJsonValue({ contractId: previousContractId }),
+          newValues: toJsonValue({
+            event: 'unlinked_from_contract',
+            reason,
+            previousContractId,
+          }),
+        },
+        tx,
+      );
+      return updated;
+    });
+  }
+
   async update(
     id: string,
     data: UpdateProjectInput,

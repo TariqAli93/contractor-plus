@@ -76,6 +76,7 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   p('projects.resume', 'projects', 'resume', 'استئناف مشروع'),
   p('projects.complete', 'projects', 'complete', 'إنهاء مشروع'),
   p('projects.cancel', 'projects', 'cancel', 'إلغاء مشروع'),
+  p('projects.unlink_contract', 'projects', 'unlink_contract', 'فك ربط عقد عن مشروع'),
 
   p('costs.read', 'costs', 'read', 'عرض المصاريف'),
   p('costs.create', 'costs', 'create', 'إنشاء مصروف'),
