@@ -69,6 +69,16 @@ class AnthropicLlmClient implements LlmClient {
   }
 }
 
+/** Map an OpenAI HTTP failure to a stable, key-safe error code. The response
+ *  body is drained by the caller (it may carry OpenAI's reason but NEVER the API
+ *  key — that only ever travels in the request) and is never logged. */
+export function mapOpenAiStatus(status: number): string {
+  if (status === 401) return 'openai_invalid_api_key';
+  if (status === 404) return 'openai_model_not_found_or_not_available';
+  if (status === 429) return 'openai_rate_limited';
+  return `openai_http_${status}`;
+}
+
 class OpenAiLlmClient implements LlmClient {
   readonly name = 'openai' as const;
   constructor(
@@ -98,7 +108,13 @@ class OpenAiLlmClient implements LlmClient {
           ],
         }),
       });
-      if (!res.ok) throw new Error(`openai_http_${res.status}`);
+      if (!res.ok) {
+        // Read (and discard) the error body so the socket frees promptly; it may
+        // carry OpenAI's reason but never the API key, and we never log it. Then
+        // surface a stable, understandable code.
+        await res.text().catch(() => undefined);
+        throw new Error(mapOpenAiStatus(res.status));
+      }
       const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
       const text = data.choices?.[0]?.message?.content;
       if (!text) throw new Error('openai_empty_response');

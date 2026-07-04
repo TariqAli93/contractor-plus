@@ -15,9 +15,16 @@
 import type { PrismaClient } from '@prisma/client';
 import { AuditService, type AuditActor } from '../../../audit/audit.service.js';
 import { decryptSecret, encryptSecret } from '../../../../lib/crypto.js';
+import { ValidationError } from '../../../../shared/errors/validation.error.js';
 import { toJsonValue } from '../../../../shared/utils/json.js';
 import { createLlmClient } from './llm-client.js';
-import { loadVoiceLlmConfig, type LlmProviderName, type VoiceLlmConfig } from './voice-llm.config.js';
+import {
+  isValidModelForProvider,
+  loadVoiceLlmConfig,
+  normalizeModel,
+  type LlmProviderName,
+  type VoiceLlmConfig,
+} from './voice-llm.config.js';
 
 const PREFIX = 'voiceAi.';
 const KEY_ENC = `${PREFIX}apiKeyEnc`;
@@ -98,6 +105,23 @@ export class VoiceLlmStore {
   async update(input: VoiceLlmSettingsUpdate, actor: AuditActor): Promise<VoiceLlmSettingsView> {
     const before = await this.view();
 
+    // Normalize + validate the model against the EFFECTIVE provider (the one
+    // being set in this call, else the current one) BEFORE persisting: OpenAI
+    // ids are trimmed + lowercased ("GPT-5.5" → "gpt-5.5"), and a name that
+    // isn't a plausible OpenAI model is rejected here rather than failing later
+    // at the provider. Anthropic ids are only trimmed (case-sensitive).
+    const provider = input.provider ?? before.provider;
+    let normalizedModel: string | undefined;
+    if (input.model !== undefined) {
+      normalizedModel = normalizeModel(provider, input.model);
+      if (!isValidModelForProvider(provider, normalizedModel)) {
+        throw new ValidationError(
+          'اسم موديل OpenAI غير صالح — يجب أن يكون بأحرف صغيرة ويبدأ بـ gpt- أو o أو chatgpt- (مثل gpt-4o-mini).',
+          { model: ['invalid_openai_model'] },
+        );
+      }
+    }
+
     await this.prisma.$transaction(async (tx) => {
       const set = (key: string, value: unknown) =>
         tx.systemSetting.upsert({
@@ -108,7 +132,7 @@ export class VoiceLlmStore {
 
       if (input.enabled !== undefined) await set('enabled', input.enabled);
       if (input.provider !== undefined) await set('provider', input.provider);
-      if (input.model !== undefined) await set('model', input.model);
+      if (input.model !== undefined) await set('model', normalizedModel);
       if (input.timeoutMs !== undefined) await set('timeoutMs', input.timeoutMs);
       if (input.maxTokens !== undefined) await set('maxTokens', input.maxTokens);
 
@@ -146,7 +170,8 @@ export class VoiceLlmStore {
   }): Promise<TestConnectionResult> {
     const stored = await this.resolve();
     const provider = input.provider ?? stored.provider;
-    const model = input.model ?? stored.model;
+    // Same normalization as the save path, so a draft "GPT-5.5" tests as "gpt-5.5".
+    const model = normalizeModel(provider, input.model ?? stored.model);
     const apiKey = input.apiKey && input.apiKey.trim() ? input.apiKey.trim() : stored.apiKey;
 
     if (!apiKey) {

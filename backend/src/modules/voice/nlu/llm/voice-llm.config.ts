@@ -38,6 +38,22 @@ const DEFAULT_MODELS: Record<LlmProviderName, string> = {
   openai: 'gpt-4o-mini',
 };
 
+// OpenAI model ids are lowercase and (currently) start with `gpt-`, `o`, or
+// `chatgpt-`. Anthropic ids are case-sensitive, so those are only trimmed. These
+// pure helpers back the Settings store's save-time normalization + validation
+// (and the test-connection path), so a typo like "GPT-5.5" becomes "gpt-5.5"
+// and a genuinely wrong name (e.g. "davinci") is rejected before it reaches the
+// provider.
+export function normalizeModel(provider: LlmProviderName, model: string): string {
+  const trimmed = model.trim();
+  return provider === 'openai' ? trimmed.toLowerCase() : trimmed;
+}
+
+export function isValidModelForProvider(provider: LlmProviderName, model: string): boolean {
+  if (provider !== 'openai') return true;
+  return model.startsWith('gpt-') || model.startsWith('o') || model.startsWith('chatgpt-');
+}
+
 function bool(v: string | undefined, fallback: boolean): boolean {
   if (v === undefined) return fallback;
   return ['1', 'true', 'yes', 'on'].includes(v.trim().toLowerCase());

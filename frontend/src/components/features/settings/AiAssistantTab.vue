@@ -64,6 +64,18 @@ const modelPlaceholder = computed(() =>
   form.provider === 'openai' ? 'gpt-4o-mini' : 'claude-haiku-4-5',
 );
 
+// Mirror the backend rule so an invalid OpenAI model is caught inline, before
+// the save round-trip. OpenAI ids are lowercase and start with gpt-/o/chatgpt-.
+function isValidOpenAiModel(model: string): boolean {
+  const m = model.trim().toLowerCase();
+  return m.startsWith('gpt-') || m.startsWith('o') || m.startsWith('chatgpt-');
+}
+const modelRule = (v: string) =>
+  form.provider !== 'openai' ||
+  !v?.trim() ||
+  isValidOpenAiModel(v) ||
+  t('settings.ai.errors.invalidOpenaiModel');
+
 // What will actually happen right now, in plain language.
 const statusKind = computed<'active' | 'noKey' | 'off'>(() => {
   if (!form.enabled) return 'off';
@@ -107,10 +119,13 @@ onMounted(load);
 function friendlyTestError(code: string | undefined): string {
   const c = (code ?? '').toLowerCase();
   if (c.includes('no_api_key')) return t('settings.ai.testErrors.noKey');
-  if (c.includes('401') || c.includes('403') || c.includes('invalid')) {
+  if (c.includes('invalid_api_key') || c.includes('401') || c.includes('403') || c.includes('invalid')) {
     return t('settings.ai.testErrors.badKey');
   }
-  if (c.includes('429')) return t('settings.ai.testErrors.rateLimited');
+  if (c.includes('model_not_found') || c.includes('not_available') || c.includes('404')) {
+    return t('settings.ai.testErrors.modelNotFound');
+  }
+  if (c.includes('rate_limited') || c.includes('429')) return t('settings.ai.testErrors.rateLimited');
   if (c.includes('timeout') || c.includes('abort')) return t('settings.ai.testErrors.timeout');
   if (c.includes('unavailable') || c.includes('client')) return t('settings.ai.testErrors.unavailable');
   return t('settings.ai.testErrors.generic');
@@ -135,12 +150,17 @@ async function testConnection() {
 }
 
 async function save() {
+  const model = form.provider === 'openai' ? form.model.trim().toLowerCase() : form.model.trim();
+  if (model && form.provider === 'openai' && !isValidOpenAiModel(model)) {
+    toast.error(t('settings.ai.errors.invalidOpenaiModel'));
+    return;
+  }
   saving.value = true;
   try {
     const patch = {
       enabled: form.enabled,
       provider: form.provider,
-      model: form.model.trim() || undefined,
+      model: model || undefined,
       timeoutMs: form.timeoutMs,
       maxTokens: form.maxTokens,
       ...(form.apiKey.trim() ? { apiKey: form.apiKey.trim() } : {}),
@@ -207,6 +227,7 @@ async function save() {
           v-model="form.model"
           :label="t('settings.ai.model')"
           :placeholder="modelPlaceholder"
+          :rules="[modelRule]"
           :disabled="!canManage"
         />
         <v-text-field
