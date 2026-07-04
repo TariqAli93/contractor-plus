@@ -27,6 +27,7 @@ import { LinkProjectContractHandler } from './link-project-contract.handler.js';
 import { NavigateHandler } from './navigate.handler.js';
 import { OpenEntityHandler } from './open-entity.handler.js';
 import { SearchHandler } from './search.handler.js';
+import { UpdateProjectHandler } from './update-project.handler.js';
 
 export function buildIntentRegistry(prisma: PrismaClient): IntentRegistry {
   const registry = new IntentRegistry();
@@ -53,6 +54,7 @@ export function buildIntentRegistry(prisma: PrismaClient): IntentRegistry {
   registry.register(new NavigateHandler());
   registry.register(new OpenEntityHandler({ projects, customers, contractsRepo }));
   registry.register(new SearchHandler());
+  registry.register(new UpdateProjectHandler({ projects: projectsService, projectsRepo: projects }));
 
   return registry;
 }

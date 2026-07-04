@@ -129,6 +129,15 @@ export const INTENT_LEXICON: IntentLexicon[] = [
     boosters: ['عن', 'علي'],
   },
   {
+    // Change an EXISTING project's status. "ابدأ/باشر" are intentionally omitted
+    // (they belong to create_project) — "شغّل" covers start without the clash.
+    intent: VoiceIntent.UPDATE_PROJECT,
+    verbs: ['غير', 'عدل', 'حدث', 'حول', 'انجز', 'خلص', 'اوقف', 'علق', 'شغل', 'استانف', 'جمد', 'انهي'],
+    nouns: ['المشروع', 'مشروع', 'حاله', 'الحاله'],
+    phrases: ['غير حاله المشروع', 'خلص المشروع', 'انجز المشروع', 'اوقف المشروع', 'حاله المشروع'],
+    boosters: ['الي', 'منجز', 'مكتمل', 'متوقف', 'معلق'],
+  },
+  {
     intent: VoiceIntent.HELP,
     verbs: [],
     nouns: [],
