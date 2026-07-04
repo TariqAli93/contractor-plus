@@ -1,0 +1,292 @@
+<script setup lang="ts">
+// Settings → المساعد الذكي. Configures the LLM behind the voice/command
+// assistant against the existing, secure backend (/voice/settings):
+//  - enable/disable (when off, the assistant still works via local rules)
+//  - provider (Anthropic / OpenAI), model
+//  - API key — write-only: we send a new key to be encrypted server-side and
+//    only ever read back `apiKeySet` (the key itself never returns to the UI)
+//  - test connection, plus advanced timeout / max-tokens
+// Gated by settings.voice_ai.manage; the whole Settings area is OWNER/ADMIN.
+import { computed, onMounted, reactive, ref } from 'vue';
+import { t } from '@/i18n';
+import { voiceApi, type VoiceAiSettings } from '@/services/api/voice.api';
+import { useToast } from '@/composables/useToast';
+import { useApiError } from '@/composables/useApiError';
+import { useAccess } from '@/composables/useAccess';
+import { RoleName } from '@/types/enums';
+import SettingsCard from './SettingsCard.vue';
+import AdvancedOptions from '@/components/shared/AdvancedOptions.vue';
+import ErrorState from '@/components/shared/ErrorState.vue';
+
+const toast = useToast();
+const { handle } = useApiError();
+const { canAccess } = useAccess();
+
+const canManage = computed(() =>
+  canAccess({ permissions: ['settings.voice_ai.manage'], roles: [RoleName.OWNER, RoleName.ADMIN] }),
+);
+
+const loading = ref(false);
+const saving = ref(false);
+const testing = ref(false);
+const error = ref<unknown>(null);
+
+// Loaded server view — source of truth for apiKeySet / effective.
+const view = ref<VoiceAiSettings | null>(null);
+
+interface FormState {
+  enabled: boolean;
+  provider: 'anthropic' | 'openai';
+  model: string;
+  timeoutMs: number;
+  maxTokens: number;
+  apiKey: string; // write-only; empty = keep the existing key
+  clearApiKey: boolean;
+}
+const form = reactive<FormState>({
+  enabled: false,
+  provider: 'anthropic',
+  model: '',
+  timeoutMs: 6000,
+  maxTokens: 700,
+  apiKey: '',
+  clearApiKey: false,
+});
+
+const testResult = ref<{ ok: boolean; reason?: string } | null>(null);
+
+const providerOptions = computed(() => [
+  { value: 'anthropic', title: t('settings.ai.providers.anthropic') },
+  { value: 'openai', title: t('settings.ai.providers.openai') },
+]);
+
+const modelPlaceholder = computed(() =>
+  form.provider === 'openai' ? 'gpt-4o-mini' : 'claude-haiku-4-5',
+);
+
+// What will actually happen right now, in plain language.
+const statusKind = computed<'active' | 'noKey' | 'off'>(() => {
+  if (!form.enabled) return 'off';
+  const hasKey = (!!view.value?.apiKeySet && !form.clearApiKey) || !!form.apiKey.trim();
+  return hasKey ? 'active' : 'noKey';
+});
+
+const apiKeyHint = computed(() =>
+  view.value?.apiKeySet && !form.clearApiKey
+    ? t('settings.ai.apiKeySet')
+    : t('settings.ai.apiKeyEncrypted'),
+);
+
+function applyView(v: VoiceAiSettings) {
+  view.value = v;
+  form.enabled = v.enabled;
+  form.provider = v.provider;
+  form.model = v.model;
+  form.timeoutMs = v.timeoutMs;
+  form.maxTokens = v.maxTokens;
+  form.apiKey = '';
+  form.clearApiKey = false;
+  testResult.value = null;
+}
+
+async function load() {
+  loading.value = true;
+  error.value = null;
+  try {
+    applyView(await voiceApi.getSettings());
+  } catch (e) {
+    error.value = e;
+  } finally {
+    loading.value = false;
+  }
+}
+onMounted(load);
+
+// Turn the backend's terse test codes (e.g. anthropic_http_401) into a plain
+// "what's wrong" message — no raw provider codes leak to the user.
+function friendlyTestError(code: string | undefined): string {
+  const c = (code ?? '').toLowerCase();
+  if (c.includes('no_api_key')) return t('settings.ai.testErrors.noKey');
+  if (c.includes('401') || c.includes('403') || c.includes('invalid')) {
+    return t('settings.ai.testErrors.badKey');
+  }
+  if (c.includes('429')) return t('settings.ai.testErrors.rateLimited');
+  if (c.includes('timeout') || c.includes('abort')) return t('settings.ai.testErrors.timeout');
+  if (c.includes('unavailable') || c.includes('client')) return t('settings.ai.testErrors.unavailable');
+  return t('settings.ai.testErrors.generic');
+}
+
+async function testConnection() {
+  testing.value = true;
+  testResult.value = null;
+  try {
+    const res = await voiceApi.testConnection({
+      provider: form.provider,
+      model: form.model.trim() || undefined,
+      apiKey: form.apiKey.trim() || undefined,
+      timeoutMs: form.timeoutMs,
+    });
+    testResult.value = res.ok ? { ok: true } : { ok: false, reason: friendlyTestError(res.error) };
+  } catch (e) {
+    handle(e);
+  } finally {
+    testing.value = false;
+  }
+}
+
+async function save() {
+  saving.value = true;
+  try {
+    const patch = {
+      enabled: form.enabled,
+      provider: form.provider,
+      model: form.model.trim() || undefined,
+      timeoutMs: form.timeoutMs,
+      maxTokens: form.maxTokens,
+      ...(form.apiKey.trim() ? { apiKey: form.apiKey.trim() } : {}),
+      ...(form.clearApiKey ? { clearApiKey: true } : {}),
+    };
+    applyView(await voiceApi.updateSettings(patch));
+    toast.success(t('settings.ai.saved'));
+  } catch (e) {
+    handle(e);
+  } finally {
+    saving.value = false;
+  }
+}
+</script>
+
+<template>
+  <SettingsCard
+    :title="t('settings.ai.title')"
+    :description="t('settings.ai.description')"
+    icon="mdi-robot-outline"
+  >
+    <ErrorState v-if="error" :error="error" @retry="load" />
+
+    <div v-else-if="loading && !view" class="space-y-2">
+      <v-skeleton-loader type="article" />
+    </div>
+
+    <div v-else class="cp-ai-form">
+      <!-- Live status: exactly what happens right now. -->
+      <v-alert
+        :type="statusKind === 'active' ? 'success' : statusKind === 'noKey' ? 'warning' : 'info'"
+        variant="tonal"
+        density="comfortable"
+        :icon="
+          statusKind === 'active'
+            ? 'mdi-check-circle-outline'
+            : statusKind === 'noKey'
+              ? 'mdi-key-alert-outline'
+              : 'mdi-shield-outline'
+        "
+        class="mb-4"
+      >
+        {{ t('settings.ai.status.' + statusKind) }}
+      </v-alert>
+
+      <v-switch
+        v-model="form.enabled"
+        :label="t('settings.ai.enable')"
+        :hint="t('settings.ai.enableHint')"
+        persistent-hint
+        color="primary"
+        :disabled="!canManage"
+        inset
+      />
+
+      <div v-if="form.enabled" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+        <v-select
+          v-model="form.provider"
+          :items="providerOptions"
+          :label="t('settings.ai.provider')"
+          :disabled="!canManage"
+        />
+        <v-text-field
+          v-model="form.model"
+          :label="t('settings.ai.model')"
+          :placeholder="modelPlaceholder"
+          :disabled="!canManage"
+        />
+        <v-text-field
+          v-model="form.apiKey"
+          :label="t('settings.ai.apiKey')"
+          :placeholder="view?.apiKeySet ? t('settings.ai.apiKeySet') : t('settings.ai.apiKeyPlaceholder')"
+          type="password"
+          autocomplete="off"
+          prepend-inner-icon="mdi-key-outline"
+          :disabled="!canManage || form.clearApiKey"
+          :hint="apiKeyHint"
+          persistent-hint
+          class="md:col-span-2"
+        />
+        <v-checkbox
+          v-if="view?.apiKeySet"
+          v-model="form.clearApiKey"
+          :label="t('settings.ai.clearKey')"
+          :disabled="!canManage"
+          density="compact"
+          hide-details
+          class="md:col-span-2"
+        />
+
+        <AdvancedOptions>
+          <v-text-field
+            v-model.number="form.timeoutMs"
+            :label="t('settings.ai.timeout')"
+            type="number"
+            min="1000"
+            max="60000"
+            step="500"
+            :disabled="!canManage"
+          />
+          <v-text-field
+            v-model.number="form.maxTokens"
+            :label="t('settings.ai.maxTokens')"
+            type="number"
+            min="64"
+            max="4000"
+            step="50"
+            :disabled="!canManage"
+          />
+        </AdvancedOptions>
+      </div>
+
+      <!-- Test-connection result. -->
+      <v-alert
+        v-if="testResult"
+        :type="testResult.ok ? 'success' : 'error'"
+        variant="tonal"
+        density="compact"
+        class="mt-3"
+      >
+        {{ testResult.ok ? t('settings.ai.testOk') : testResult.reason }}
+      </v-alert>
+
+      <div class="flex items-center gap-2 mt-4 flex-wrap">
+        <v-btn
+          v-if="form.enabled"
+          variant="tonal"
+          prepend-icon="mdi-connection"
+          :loading="testing"
+          :disabled="!canManage"
+          @click="testConnection"
+        >
+          {{ t('settings.ai.test') }}
+        </v-btn>
+        <v-spacer />
+        <v-btn
+          color="primary"
+          variant="flat"
+          prepend-icon="mdi-content-save-outline"
+          :loading="saving"
+          :disabled="!canManage"
+          @click="save"
+        >
+          {{ t('settings.ai.save') }}
+        </v-btn>
+      </div>
+    </div>
+  </SettingsCard>
+</template>
