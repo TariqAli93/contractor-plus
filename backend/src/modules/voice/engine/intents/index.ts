@@ -25,6 +25,7 @@ import { AddPaymentHandler } from './add-payment.handler.js';
 import { GenerateMaterialsHandler } from './generate-materials.handler.js';
 import { LinkProjectContractHandler } from './link-project-contract.handler.js';
 import { NavigateHandler } from './navigate.handler.js';
+import { OpenEntityHandler } from './open-entity.handler.js';
 
 export function buildIntentRegistry(prisma: PrismaClient): IntentRegistry {
   const registry = new IntentRegistry();
@@ -49,6 +50,7 @@ export function buildIntentRegistry(prisma: PrismaClient): IntentRegistry {
   registry.register(new AddCostHandler({ costs, costsRepo }));
   registry.register(new AddPaymentHandler({ payments, paymentsRepo, projectsRepo: projects }));
   registry.register(new NavigateHandler());
+  registry.register(new OpenEntityHandler({ projects, customers, contractsRepo }));
 
   return registry;
 }

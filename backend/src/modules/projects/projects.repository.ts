@@ -43,6 +43,15 @@ export class ProjectsRepository {
     });
   }
 
+  // First project (linked OR standalone) whose name matches — used by the voice
+  // engine to resolve "افتح مشروع فيلا أحمد" to a concrete project to open.
+  findFirstByName(search: string, client: DbClient = this.prisma): Promise<Project | null> {
+    return client.project.findFirst({
+      where: { deletedAt: null, name: { contains: search, mode: 'insensitive' } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   findByIdWithContract(id: string): Promise<ProjectWithContract | null> {
     return this.prisma.project.findFirst({
       where: { id, deletedAt: null },
