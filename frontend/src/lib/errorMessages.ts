@@ -21,6 +21,8 @@ const CODE_KEYS: Record<string, string> = {
   CONTRACT_NUMBER_TAKEN: 'errors.codes.CONTRACT_NUMBER_TAKEN',
   CONTRACT_LOCKED: 'errors.codes.CONTRACT_LOCKED',
   CONTRACT_NOT_DRAFT: 'errors.codes.CONTRACT_NOT_DRAFT',
+  CONTRACT_NOT_APPROVED_FOR_CO: 'errors.codes.CONTRACT_NOT_APPROVED_FOR_CO',
+  CHANGE_ORDER_NOT_DRAFT: 'errors.codes.CHANGE_ORDER_NOT_DRAFT',
   // Identity / settings
   EMAIL_TAKEN: 'errors.codes.EMAIL_TAKEN',
   USERNAME_TAKEN: 'errors.codes.USERNAME_TAKEN',
