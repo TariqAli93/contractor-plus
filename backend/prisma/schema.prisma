@@ -26,6 +26,12 @@ enum ContractStatus {
   CANCELLED
 }
 
+enum ChangeOrderStatus {
+  DRAFT
+  APPROVED
+  REJECTED
+}
+
 enum ProjectStatus {
   PLANNED
   IN_PROGRESS
@@ -321,6 +327,7 @@ model Contract {
   items                ContractItem[]
   project              Project?
   generatedDocuments   GeneratedDocument[] @relation("GeneratedFromContract")
+  changeOrders         ChangeOrder[]
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt
   deletedAt            DateTime?
@@ -348,6 +355,30 @@ model ContractItem {
   @@index([contractId])
   @@index([materialId])
   @@map("contract_items")
+}
+
+// A formal amendment to an APPROVED contract: a signed `amount` delta (positive
+// = addition, negative = deduction). Approved change orders shift the contract's
+// revised total; to reverse one you issue a new (negative) order. Sequential
+// `number` per contract. DRAFT → APPROVED | REJECTED (terminal).
+model ChangeOrder {
+  id          String            @id @default(uuid()) @db.Uuid
+  contractId  String            @db.Uuid
+  contract    Contract          @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  number      Int
+  title       String
+  description String?
+  amount      Decimal           @db.Decimal(14, 2)
+  status      ChangeOrderStatus @default(DRAFT)
+  approvedAt  DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  deletedAt   DateTime?
+
+  @@unique([contractId, number])
+  @@index([contractId])
+  @@index([status])
+  @@map("change_orders")
 }
 
 // ============================================================
