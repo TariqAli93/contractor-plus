@@ -55,6 +55,11 @@ const form = reactive<FormState>({
 
 const testResult = ref<{ ok: boolean; reason?: string } | null>(null);
 
+// Throttle: at most one test-connection every 10s, so the settings screen can't
+// hammer the provider's rate limit.
+const TEST_COOLDOWN_MS = 10_000;
+const lastTestAt = ref(0);
+
 const providerOptions = computed(() => [
   { value: 'anthropic', title: t('settings.ai.providers.anthropic') },
   { value: 'openai', title: t('settings.ai.providers.openai') },
@@ -132,6 +137,12 @@ function friendlyTestError(code: string | undefined): string {
 }
 
 async function testConnection() {
+  const now = Date.now();
+  if (now - lastTestAt.value < TEST_COOLDOWN_MS) {
+    testResult.value = { ok: false, reason: t('settings.ai.testErrors.cooldown') };
+    return;
+  }
+  lastTestAt.value = now;
   testing.value = true;
   testResult.value = null;
   try {

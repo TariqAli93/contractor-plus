@@ -184,13 +184,13 @@ export class VoiceLlmStore {
       model,
       apiKey,
       timeoutMs: input.timeoutMs ?? stored.timeoutMs,
-      maxTokens: 16,
+      maxTokens: 8,
       minConfidence: stored.minConfidence,
     });
     if (!client) return { ok: false, provider, model, error: 'client_unavailable' };
 
     try {
-      await client.complete({ system: 'Reply with OK.', user: 'ping' });
+      await client.complete({ system: 'Return JSON only.', user: '{"ping":true}' });
       return { ok: true, provider, model };
     } catch (err) {
       // err messages are status codes (e.g. anthropic_http_401) — never the key.

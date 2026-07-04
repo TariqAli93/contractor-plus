@@ -8,6 +8,7 @@
 // ============================================================
 
 import type { LlmProviderName, VoiceLlmConfig } from './voice-llm.config.js';
+import { logger } from '../../../../lib/logger.js';
 
 export interface LlmCompletionRequest {
   system: string;
@@ -69,6 +70,28 @@ class AnthropicLlmClient implements LlmClient {
   }
 }
 
+// OpenAI 429 retry policy: up to 3 retries with 500/1000/2000ms backoff
+// (+ 0–250ms jitter). A Retry-After header, when present, overrides the delay.
+// After the retries are exhausted the client throws `openai_rate_limited`, which
+// the interpreter catches and degrades to RuleBased (never disables the voice).
+const OPENAI_BACKOFF_MS: readonly number[] = [500, 1000, 2000];
+const OPENAI_MAX_RETRIES = OPENAI_BACKOFF_MS.length;
+
+function jitter(): number {
+  return Math.floor(Math.random() * 251); // 0–250ms
+}
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+/** Parse a Retry-After header (delta-seconds) to ms, capped so a rogue value
+ *  can't stall a voice turn. The HTTP-date form is ignored (backoff is used). */
+export function parseRetryAfter(header: string | null): number | null {
+  if (!header) return null;
+  const secs = Number(header.trim());
+  if (Number.isFinite(secs) && secs >= 0) return Math.min(Math.round(secs * 1000), 20000);
+  return null;
+}
+
 /** Map an OpenAI HTTP failure to a stable, key-safe error code. The response
  *  body is drained by the caller (it may carry OpenAI's reason but NEVER the API
  *  key — that only ever travels in the request) and is never logged. */
@@ -89,37 +112,66 @@ class OpenAiLlmClient implements LlmClient {
   ) {}
 
   async complete(req: LlmCompletionRequest): Promise<string> {
-    return withTimeout(this.timeoutMs, async (signal) => {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        signal,
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: this.model,
-          max_tokens: this.maxTokens,
-          temperature: 0,
-          response_format: { type: 'json_object' },
-          messages: [
-            { role: 'system', content: req.system },
-            { role: 'user', content: req.user },
-          ],
+    const body = JSON.stringify({
+      model: this.model,
+      max_tokens: this.maxTokens,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: req.system },
+        { role: 'user', content: req.user },
+      ],
+    });
+
+    let retryAfterMs: number | null = null;
+    // attempt 0 = initial call; 1..MAX = retries. ONLY a 429 is retried — every
+    // other failure (400/401/403/404, …) is terminal and thrown at once. Each
+    // request is independently timeout-bounded; the backoff sleeps sit between.
+    for (let attempt = 0; attempt <= OPENAI_MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        const base = retryAfterMs ?? OPENAI_BACKOFF_MS[attempt - 1] ?? 2000;
+        // Retry-After is honored verbatim; the default backoff gets 0–250ms jitter.
+        await sleep(retryAfterMs != null ? base : base + jitter());
+      }
+
+      const res = await withTimeout(this.timeoutMs, (signal) =>
+        fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          signal,
+          headers: {
+            'content-type': 'application/json',
+            authorization: `Bearer ${this.apiKey}`,
+          },
+          body,
         }),
-      });
-      if (!res.ok) {
-        // Read (and discard) the error body so the socket frees promptly; it may
-        // carry OpenAI's reason but never the API key, and we never log it. Then
-        // surface a stable, understandable code.
-        await res.text().catch(() => undefined);
+      );
+
+      if (res.ok) {
+        const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+        const text = data.choices?.[0]?.message?.content;
+        if (!text) throw new Error('openai_empty_response');
+        return text;
+      }
+
+      // Drain the error body — it may carry OpenAI's reason but never the API
+      // key (that only travels in the request), and we never log it.
+      await res.text().catch(() => undefined);
+
+      if (res.status !== 429) {
+        logger.warn({ provider: 'openai', status: res.status }, '[voice-llm] request failed');
         throw new Error(mapOpenAiStatus(res.status));
       }
-      const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-      const text = data.choices?.[0]?.message?.content;
-      if (!text) throw new Error('openai_empty_response');
-      return text;
-    });
+
+      // Rate-limited: note any Retry-After hint and back off (unless exhausted).
+      retryAfterMs = parseRetryAfter(res.headers.get('retry-after'));
+      logger.warn(
+        { provider: 'openai', status: 429, attempt },
+        '[voice-llm] rate-limited — backing off',
+      );
+    }
+
+    logger.warn({ provider: 'openai', status: 429 }, '[voice-llm] rate-limited — giving up');
+    throw new Error('openai_rate_limited');
   }
 }
 
