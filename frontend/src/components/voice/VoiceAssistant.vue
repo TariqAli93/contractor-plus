@@ -138,7 +138,8 @@ function togglePanel(): void {
 
       <div class="voice-body pa-3">
         <p v-if="voice.history.length === 0" class="text-medium-emphasis text-body-2 text-center py-6">
-          قل أمرك… مثل: «سوي مشروع بيت مساحة 100» أو «روح للمشاريع».
+          قل أمرك… مثل: «سوي مشروع بيت مساحة 100»، «أضف مصروف 500 ألف»، «افتح مشروع فيلا أحمد»،
+          «ابحث عن أحمد»، أو «أنجز المشروع». قل «مساعدة» لعرض كل الأوامر.
         </p>
 
         <div
