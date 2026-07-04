@@ -229,7 +229,7 @@ function fieldError(name: string): string {
           prepend-icon="mdi-content-save-outline"
           @click="save"
         >
-          {{ t('common.save') }}
+          {{ isEdit ? t('common.saveChanges') : t('settings.currency.addNew') }}
         </v-btn>
       </v-card-actions>
     </v-card>

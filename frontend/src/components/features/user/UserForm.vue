@@ -109,7 +109,7 @@ const emailRule = (v: string | null | undefined) =>
         <v-btn variant="text" :disabled="submitting" @click="cancel">{{ t('common.cancel') }}</v-btn>
         <v-spacer />
         <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
-          {{ isEdit ? t('common.update') : t('common.create') }}
+          {{ isEdit ? t('common.saveChanges') : t('users.add') }}
         </v-btn>
       </v-card-actions>
     </v-form>

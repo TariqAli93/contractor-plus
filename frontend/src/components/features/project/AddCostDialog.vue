@@ -326,7 +326,7 @@ useSaveShortcut(submit, { enabled: () => props.modelValue && !submitting.value }
           </v-btn>
           <v-spacer />
           <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
-            {{ t('common.create') }}
+            {{ t('costs.add') }}
           </v-btn>
         </v-card-actions>
       </v-form>

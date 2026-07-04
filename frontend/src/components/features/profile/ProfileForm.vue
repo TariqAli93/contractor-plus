@@ -70,7 +70,7 @@ async function submit() {
       <v-card-actions class="px-4 py-3">
         <v-spacer />
         <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
-          {{ t('common.save') }}
+          {{ t('common.saveChanges') }}
         </v-btn>
       </v-card-actions>
     </v-form>

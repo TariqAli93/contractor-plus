@@ -102,7 +102,7 @@ async function handleSubmit() {
           </v-btn>
           <v-spacer />
           <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
-            {{ isEdit ? t('common.update') : t('common.create') }}
+            {{ isEdit ? t('common.saveChanges') : t('projects.add') }}
           </v-btn>
         </div>
       </RoleGate>

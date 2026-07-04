@@ -123,7 +123,7 @@ const positiveRule = (v: number | null | undefined) =>
         </v-btn>
         <v-spacer />
         <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
-          {{ isEdit ? t('common.update') : t('common.create') }}
+          {{ isEdit ? t('common.saveChanges') : t('payments.add') }}
         </v-btn>
       </v-card-actions>
     </v-form>

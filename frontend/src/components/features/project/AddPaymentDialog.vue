@@ -196,7 +196,7 @@ useSaveShortcut(submit, { enabled: () => props.modelValue && !submitting.value }
           </v-btn>
           <v-spacer />
           <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
-            {{ form.alreadyPaid ? t('projects.payments.recordPaid') : t('common.create') }}
+            {{ form.alreadyPaid ? t('projects.payments.recordPaid') : t('payments.add') }}
           </v-btn>
         </v-card-actions>
       </v-form>

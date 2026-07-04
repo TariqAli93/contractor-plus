@@ -123,7 +123,7 @@ async function submit() {
           <v-btn variant="text" :disabled="submitting" @click="close">{{ t('common.cancel') }}</v-btn>
           <v-spacer />
           <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
-            {{ role ? t('common.save') : t('common.create') }}
+            {{ role ? t('common.saveChanges') : t('rbac.addRole') }}
           </v-btn>
         </v-card-actions>
       </v-form>

@@ -126,7 +126,7 @@ function reset() {
             :loading="submitting"
             @click="save"
           >
-            {{ t('common.save') }}
+            {{ t('projects.saveProgress') }}
           </v-btn>
         </v-card-actions>
       </RoleGate>

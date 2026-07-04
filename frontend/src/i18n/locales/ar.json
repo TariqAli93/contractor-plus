@@ -22,6 +22,7 @@
   },
   "users": {
     "new": "مستخدم جديد",
+    "add": "إضافة مستخدم",
     "edit": "تعديل المستخدم",
     "searchPlaceholder": "ابحث بالاسم أو اسم المستخدم أو البريد أو الهاتف",
     "usernameLocked": "لا يمكن تغيير اسم المستخدم بعد الإنشاء.",
@@ -102,6 +103,8 @@
     "userCount": "{n} مستخدم",
     "permissionCount": "{n} صلاحية",
     "createRole": "دور مخصص جديد",
+    "addRole": "إضافة دور",
+    "savePermissions": "حفظ الصلاحيات",
     "editRole": "تعديل الدور",
     "editMetadata": "تعديل البيانات",
     "editPermissions": "تعديل الصلاحيات",
@@ -154,6 +157,7 @@
   "common": {
     "loading": "جاري التحميل...",
     "save": "حفظ",
+    "saveChanges": "حفظ التعديلات",
     "saved": "تم الحفظ",
     "create": "إنشاء",
     "update": "تحديث",
@@ -287,6 +291,7 @@
   },
   "customers": {
     "new": "عميل جديد",
+    "add": "إضافة عميل",
     "edit": "تعديل العميل",
     "searchPlaceholder": "ابحث بالاسم أو رقم الهاتف",
     "placeholders": {
@@ -312,6 +317,7 @@
   },
   "materials": {
     "new": "مادة جديدة",
+    "add": "إضافة مادة",
     "edit": "تعديل المادة",
     "searchPlaceholder": "ابحث بالاسم أو الوحدة",
     "placeholders": {
@@ -348,6 +354,7 @@
   },
   "templates": {
     "new": "قالب جديد",
+    "add": "إضافة قالب",
     "edit": "تعديل القالب",
     "searchPlaceholder": "ابحث باسم القالب",
     "saveFirstHint": "احفظ القالب أولاً لإضافة المواد والمراحل وعرض التقدير.",
@@ -421,6 +428,7 @@
   },
   "contracts": {
     "new": "عقد جديد",
+    "add": "إنشاء عقد",
     "edit": "العقد",
     "searchPlaceholder": "ابحث برقم العقد أو اسم العميل",
     "saveFirstHint": "احفظ العقد أولاً للوصول إلى المواد والتقدير والمشروع.",
@@ -578,6 +586,8 @@
   },
   "projects": {
     "new": "مشروع جديد",
+    "add": "إنشاء مشروع",
+    "saveProgress": "حفظ التقدّم",
     "edit": "المشروع",
     "searchPlaceholder": "ابحث باسم المشروع أو رقم العقد",
     "placeholders": {
@@ -917,6 +927,7 @@
   },
   "costs": {
     "new": "مصروف جديد",
+    "add": "إضافة مصروف",
     "edit": "تعديل المصروف",
     "searchPlaceholder": "ابحث بالوصف",
     "placeholders": {
@@ -961,6 +972,7 @@
   },
   "payments": {
     "new": "دفعة جديدة",
+    "add": "إضافة دفعة",
     "edit": "تعديل الدفعة",
     "searchPlaceholder": "ابحث بالمرجع أو الملاحظات",
     "placeholders": {
