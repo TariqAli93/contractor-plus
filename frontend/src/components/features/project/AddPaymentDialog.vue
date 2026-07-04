@@ -6,6 +6,7 @@ import { useApiError } from '@/composables/useApiError';
 import { useToast } from '@/composables/useToast';
 import { useSaveShortcut } from '@/composables/useSaveShortcut';
 import { PaymentMethod } from '@/types/enums';
+import AdvancedOptions from '@/components/shared/AdvancedOptions.vue';
 import type { CreatePaymentInput, MarkPaidBody } from '@/types/payment';
 
 // Inline create dialog hosted by ProjectPaymentsTab. Project is fixed by the
@@ -149,27 +150,6 @@ useSaveShortcut(submit, { enabled: () => props.modelValue && !submitting.value }
             :error-messages="fieldErrors.dueDate"
             required
           />
-          <v-select
-            v-model="form.method"
-            :items="methodOptions"
-            :label="t('payments.fields.method')"
-            :error-messages="fieldErrors.method"
-            clearable
-          />
-          <v-text-field
-            v-model="form.reference"
-            :label="t('payments.fields.reference')"
-            :error-messages="fieldErrors.reference"
-          />
-          <v-textarea
-            v-model="form.notes"
-            :label="t('payments.fields.notes')"
-            :error-messages="fieldErrors.notes"
-            rows="2"
-            auto-grow
-            class="md:col-span-2"
-          />
-
           <!-- Collapses create + mark-paid into one step. -->
           <v-switch
             v-model="form.alreadyPaid"
@@ -186,6 +166,29 @@ useSaveShortcut(submit, { enabled: () => props.modelValue && !submitting.value }
             type="date"
             class="md:col-span-2"
           />
+
+          <AdvancedOptions>
+            <v-select
+              v-model="form.method"
+              :items="methodOptions"
+              :label="t('payments.fields.method')"
+              :error-messages="fieldErrors.method"
+              clearable
+            />
+            <v-text-field
+              v-model="form.reference"
+              :label="t('payments.fields.reference')"
+              :error-messages="fieldErrors.reference"
+            />
+            <v-textarea
+              v-model="form.notes"
+              :label="t('payments.fields.notes')"
+              :error-messages="fieldErrors.notes"
+              rows="2"
+              auto-grow
+              class="md:col-span-2"
+            />
+          </AdvancedOptions>
         </v-card-text>
 
         <v-divider />

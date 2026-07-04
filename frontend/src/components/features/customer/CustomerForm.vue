@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import { t } from '@/i18n';
 import { useCustomerForm } from '@/composables/useCustomerForm';
+import AdvancedOptions from '@/components/shared/AdvancedOptions.vue';
 
 const props = defineProps<{ id?: string }>();
 const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } = useCustomerForm(
@@ -15,6 +16,11 @@ const emailRule = (v: string | null | undefined) =>
   !v || /.+@.+\..+/.test(v) || t('customers.errors.email');
 const phoneRule = (v: string | null | undefined) =>
   !v || /^[\d+\-\s()]{7,}$/.test(v) || t('customers.errors.phone');
+
+// Reveal the advanced section on edit when any hidden field already has a value.
+const hasAdvanced = computed(
+  () => !!(form.value.email || form.value.address || form.value.notes),
+);
 </script>
 
 <template>
@@ -37,29 +43,31 @@ const phoneRule = (v: string | null | undefined) =>
           :rules="[phoneRule]"
           :error-messages="fieldErrors.phone"
         />
-        <v-text-field
-          v-model="form.email"
-          :label="t('customers.fields.email')"
-          :placeholder="t('customers.placeholders.email')"
-          type="email"
-          :rules="[emailRule]"
-          :error-messages="fieldErrors.email"
-        />
-        <v-text-field
-          v-model="form.address"
-          :label="t('customers.fields.address')"
-          :placeholder="t('customers.placeholders.address')"
-          :error-messages="fieldErrors.address"
-          class="md:col-span-2"
-        />
-        <v-textarea
-          v-model="form.notes"
-          :label="t('customers.fields.notes')"
-          :error-messages="fieldErrors.notes"
-          rows="3"
-          auto-grow
-          class="md:col-span-2"
-        />
+        <AdvancedOptions :default-open="hasAdvanced">
+          <v-text-field
+            v-model="form.email"
+            :label="t('customers.fields.email')"
+            :placeholder="t('customers.placeholders.email')"
+            type="email"
+            :rules="[emailRule]"
+            :error-messages="fieldErrors.email"
+          />
+          <v-text-field
+            v-model="form.address"
+            :label="t('customers.fields.address')"
+            :placeholder="t('customers.placeholders.address')"
+            :error-messages="fieldErrors.address"
+            class="md:col-span-2"
+          />
+          <v-textarea
+            v-model="form.notes"
+            :label="t('customers.fields.notes')"
+            :error-messages="fieldErrors.notes"
+            rows="3"
+            auto-grow
+            class="md:col-span-2"
+          />
+        </AdvancedOptions>
       </v-card-text>
 
       <v-divider />

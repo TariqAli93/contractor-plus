@@ -2,6 +2,7 @@
 import { computed, onMounted } from 'vue';
 import { t } from '@/i18n';
 import { useUserForm } from '@/composables/useUserForm';
+import AdvancedOptions from '@/components/shared/AdvancedOptions.vue';
 import { useAuthStore } from '@/stores/auth.store';
 import { useAccess } from '@/composables/useAccess';
 import { RoleName } from '@/types/enums';
@@ -30,6 +31,9 @@ const usernameRule = (v: string) => (v?.trim().length ?? 0) >= 3 || t('users.err
 const passwordRule = (v: string) => (v?.length ?? 0) >= 8 || t('users.errors.passwordMin');
 const emailRule = (v: string | null | undefined) =>
   !v || /.+@.+\..+/.test(v) || t('users.errors.email');
+
+// Reveal on edit when the user already has an email or phone on file.
+const hasAdvanced = computed(() => !!(form.value.email || form.value.phone));
 </script>
 
 <template>
@@ -79,19 +83,6 @@ const emailRule = (v: string | null | undefined) =>
           :persistent-hint="isSelf"
           :error-messages="fieldErrors.roleName"
         />
-        <v-text-field
-          v-model="form.email"
-          :label="t('users.fields.email')"
-          type="email"
-          :rules="[emailRule]"
-          :error-messages="fieldErrors.email"
-        />
-        <v-text-field
-          v-model="form.phone"
-          :label="t('users.fields.phone')"
-          :error-messages="fieldErrors.phone"
-        />
-
         <v-switch
           v-model="form.isActive"
           :label="t('users.fields.active')"
@@ -101,6 +92,21 @@ const emailRule = (v: string | null | undefined) =>
           :persistent-hint="isSelf"
           inset
         />
+
+        <AdvancedOptions :default-open="hasAdvanced">
+          <v-text-field
+            v-model="form.email"
+            :label="t('users.fields.email')"
+            type="email"
+            :rules="[emailRule]"
+            :error-messages="fieldErrors.email"
+          />
+          <v-text-field
+            v-model="form.phone"
+            :label="t('users.fields.phone')"
+            :error-messages="fieldErrors.phone"
+          />
+        </AdvancedOptions>
       </v-card-text>
 
       <v-divider />

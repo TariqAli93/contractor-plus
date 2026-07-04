@@ -7,6 +7,7 @@ import { useApiError } from '@/composables/useApiError';
 import { useToast } from '@/composables/useToast';
 import { useSaveShortcut } from '@/composables/useSaveShortcut';
 import { CostCategory } from '@/types/enums';
+import AdvancedOptions from '@/components/shared/AdvancedOptions.vue';
 import type { CreateCostInput } from '@/types/cost';
 import type { Material } from '@/types/material';
 
@@ -286,21 +287,6 @@ useSaveShortcut(submit, { enabled: () => props.modelValue && !submitting.value }
             :error-messages="fieldErrors.unitPrice"
           />
           <v-text-field
-            v-model.number="form.totalAmount"
-            :label="t('costs.fields.totalAmount')"
-            type="number"
-            step="0.01"
-            min="0"
-            :hint="
-              derivedTotal !== null && form.totalAmount === null
-                ? t('costs.form.derivedTotalHint', { value: derivedTotal.toFixed(2) })
-                : t('costs.form.totalHint')
-            "
-            persistent-hint
-            :rules="[nonNegRule]"
-            :error-messages="fieldErrors.totalAmount"
-          />
-          <v-text-field
             v-model="form.date"
             :label="t('costs.fields.date')"
             type="date"
@@ -308,14 +294,31 @@ useSaveShortcut(submit, { enabled: () => props.modelValue && !submitting.value }
             :error-messages="fieldErrors.date"
             required
           />
-          <v-textarea
-            v-model="form.notes"
-            :label="t('costs.fields.notes')"
-            :error-messages="fieldErrors.notes"
-            rows="2"
-            auto-grow
-            class="md:col-span-2"
-          />
+          <AdvancedOptions>
+            <v-text-field
+              v-model.number="form.totalAmount"
+              :label="t('costs.fields.totalAmount')"
+              type="number"
+              step="0.01"
+              min="0"
+              :hint="
+                derivedTotal !== null && form.totalAmount === null
+                  ? t('costs.form.derivedTotalHint', { value: derivedTotal.toFixed(2) })
+                  : t('costs.form.totalHint')
+              "
+              persistent-hint
+              :rules="[nonNegRule]"
+              :error-messages="fieldErrors.totalAmount"
+            />
+            <v-textarea
+              v-model="form.notes"
+              :label="t('costs.fields.notes')"
+              :error-messages="fieldErrors.notes"
+              rows="2"
+              auto-grow
+              class="md:col-span-2"
+            />
+          </AdvancedOptions>
         </v-card-text>
 
         <v-divider />

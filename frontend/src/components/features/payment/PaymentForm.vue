@@ -5,6 +5,7 @@ import { usePaymentForm } from '@/composables/usePaymentForm';
 import { useSaveShortcut } from '@/composables/useSaveShortcut';
 import { projectsApi } from '@/services/api/projects.api';
 import { PaymentMethod } from '@/types/enums';
+import AdvancedOptions from '@/components/shared/AdvancedOptions.vue';
 import type { ProjectWithContract } from '@/types/project';
 
 const props = defineProps<{ id?: string; initialProjectId?: string }>();
@@ -57,6 +58,11 @@ const methodOptions = computed(() => [
 const requiredRule = (v: unknown) => !!v || t('errors.required');
 const positiveRule = (v: number | null | undefined) =>
   (typeof v === 'number' && v > 0) || t('payments.errors.positiveAmount');
+
+// Reveal on edit when any optional payment detail is already filled.
+const hasAdvanced = computed(
+  () => !!(form.value.method || form.value.reference || form.value.notes),
+);
 </script>
 
 <template>
@@ -91,28 +97,30 @@ const positiveRule = (v: number | null | undefined) =>
           :error-messages="fieldErrors.dueDate"
           required
         />
-        <v-select
-          v-model="form.method"
-          :items="methodOptions"
-          :label="t('payments.fields.method')"
-          :error-messages="fieldErrors.method"
-          clearable
-        />
-        <v-text-field
-          v-model="form.reference"
-          :label="t('payments.fields.reference')"
-          :placeholder="t('payments.placeholders.reference')"
-          :error-messages="fieldErrors.reference"
-          class="md:col-span-2"
-        />
-        <v-textarea
-          v-model="form.notes"
-          :label="t('payments.fields.notes')"
-          :error-messages="fieldErrors.notes"
-          rows="2"
-          auto-grow
-          class="md:col-span-2"
-        />
+        <AdvancedOptions :default-open="hasAdvanced">
+          <v-select
+            v-model="form.method"
+            :items="methodOptions"
+            :label="t('payments.fields.method')"
+            :error-messages="fieldErrors.method"
+            clearable
+          />
+          <v-text-field
+            v-model="form.reference"
+            :label="t('payments.fields.reference')"
+            :placeholder="t('payments.placeholders.reference')"
+            :error-messages="fieldErrors.reference"
+            class="md:col-span-2"
+          />
+          <v-textarea
+            v-model="form.notes"
+            :label="t('payments.fields.notes')"
+            :error-messages="fieldErrors.notes"
+            rows="2"
+            auto-grow
+            class="md:col-span-2"
+          />
+        </AdvancedOptions>
       </v-card-text>
 
       <v-divider />
