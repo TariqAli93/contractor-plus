@@ -443,3 +443,12 @@ body {
   border-radius: var(--cp-radius-sm);
   min-height: 34px;
 }
+
+/* ---------- full-page forms ----------
+   Create/edit forms render a `<v-card><v-form><v-card-text>` under `.v-main`.
+   Dialogs teleport OUTSIDE `.v-main` (into `.v-overlay-container`), so this
+   scoping keeps the dialog rules above untouched while nudging page-form body
+   gutters tighter — the same desktop-native density, on full-page forms too. */
+.v-main .v-form > .v-card-text {
+  padding-block: 12px;
+}

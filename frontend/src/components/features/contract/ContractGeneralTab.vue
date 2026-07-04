@@ -122,7 +122,7 @@ const percentageRule = (v: unknown) => {
     </v-alert>
 
     <v-form @submit.prevent="handleSubmit">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <v-text-field
           v-model="form.contractNumber"
           :label="t('contracts.fields.contractNumber')"

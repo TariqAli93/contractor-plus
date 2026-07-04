@@ -23,7 +23,7 @@ const percentageRule = (v: unknown) => {
 <template>
   <div :class="{ 'opacity-60 pointer-events-none': loading }">
     <v-form @submit.prevent="submit">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <v-text-field
           v-model="form.name"
           :label="t('templates.fields.name')"

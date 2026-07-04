@@ -61,7 +61,7 @@ async function doUnlink() {
 
     <template v-if="hasProject && contract.project">
       <v-card variant="outlined">
-        <v-card-text class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <v-card-text class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <div class="text-medium-emphasis text-xs">{{ t('contracts.project.fields.name') }}</div>
             <div class="text-h6">{{ contract.project.name }}</div>

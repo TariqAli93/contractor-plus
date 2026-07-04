@@ -45,7 +45,7 @@ async function submit() {
     <v-card-title class="text-h6">{{ t('profile.editTitle') }}</v-card-title>
     <v-divider />
     <v-form @submit.prevent="submit">
-      <v-card-text class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <v-card-text class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <v-text-field
           v-model="form.fullName"
           :label="t('users.fields.fullName')"

@@ -39,7 +39,7 @@ const hasAdvanced = computed(() => !!(form.value.email || form.value.phone));
 <template>
   <v-card :loading="loading">
     <v-form @submit.prevent="submit">
-      <v-card-text class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <v-card-text class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <v-text-field
           v-if="!isEdit"
           v-model="form.username"

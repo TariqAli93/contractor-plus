@@ -39,7 +39,7 @@ watch(
       {{ label ?? t('common.advancedOptions') }}
     </v-btn>
     <v-expand-transition>
-      <div v-show="open" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 pb-1">
+      <div v-show="open" class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 pb-1">
         <slot />
       </div>
     </v-expand-transition>
