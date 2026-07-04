@@ -106,7 +106,7 @@ export interface ExecutionView {
 
 export type ClientAction =
   | { type: 'navigate'; to: string }
-  | { type: 'open_palette' }
+  | { type: 'open_palette'; query?: string }
   | { type: 'toast'; level: 'success' | 'info' | 'error'; message: string };
 
 // ---------- diagnostics (optional, attached for the audit/debug view) ----------

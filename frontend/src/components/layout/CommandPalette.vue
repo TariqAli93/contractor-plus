@@ -242,7 +242,8 @@ watch(
   () => ui.paletteOpen,
   (open) => {
     if (open) {
-      query.value = '';
+      // Seed from a voice "ابحث عن …" command (empty for a normal Ctrl+K open).
+      query.value = ui.paletteQuery;
       results.value = [];
       highlighted.value = 0;
       void loadLatest();

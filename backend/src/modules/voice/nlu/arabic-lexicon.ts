@@ -121,6 +121,14 @@ export const INTENT_LEXICON: IntentLexicon[] = [
     boosters: ['اسمه', 'باسم', 'رقم'],
   },
   {
+    intent: VoiceIntent.SEARCH,
+    verbs: ['ابحث', 'دور', 'فتش', 'بحث', 'لكيلي', 'بحثلي', 'دورلي'],
+    nouns: [],
+    // Decisive multi-word cues (normalised: ى→ي, so "على" → "علي").
+    phrases: ['ابحث عن', 'دور علي', 'فتش عن', 'بحث عن', 'ابحث علي'],
+    boosters: ['عن', 'علي'],
+  },
+  {
     intent: VoiceIntent.HELP,
     verbs: [],
     nouns: [],

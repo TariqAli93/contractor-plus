@@ -14,11 +14,13 @@ import { useVoiceStore } from '@/stores/voice.store';
 import { useSpeechRecognition } from '@/composables/useSpeechRecognition';
 import { useAccess } from '@/composables/useAccess';
 import { useToast } from '@/composables/useToast';
+import { useUiStore } from '@/stores/ui.store';
 
 const router = useRouter();
 const toast = useToast();
 const { canAccess } = useAccess();
 const voice = useVoiceStore();
+const ui = useUiStore();
 
 const canUse = computed(() => canAccess({ permissions: ['voice.use'] }));
 
@@ -46,6 +48,10 @@ function performClientActions(actions: ClientAction[]): void {
   for (const action of actions) {
     if (action.type === 'navigate') void router.push(action.to);
     else if (action.type === 'toast') toast[action.level](action.message);
+    else if (action.type === 'open_palette') {
+      open.value = false; // step aside so the palette is unobstructed
+      ui.openPalette(action.query ?? '');
+    }
   }
 }
 

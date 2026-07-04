@@ -21,7 +21,11 @@ export const useUiStore = defineStore('ui', () => {
   // Global command palette (Ctrl/⌘+K). Open state lives here so any component
   // — the topbar button, a keyboard hook, a quick-action — can drive it.
   const paletteOpen = ref(false);
-  function openPalette() {
+  // An optional initial search term (e.g. from the voice "ابحث عن …" command);
+  // the palette seeds its input from this when it opens.
+  const paletteQuery = ref('');
+  function openPalette(query = '') {
+    paletteQuery.value = query;
     paletteOpen.value = true;
   }
   function closePalette() {
@@ -41,6 +45,7 @@ export const useUiStore = defineStore('ui', () => {
     sidebarCollapsed,
     toggleSidebar,
     paletteOpen,
+    paletteQuery,
     openPalette,
     closePalette,
     togglePalette,
