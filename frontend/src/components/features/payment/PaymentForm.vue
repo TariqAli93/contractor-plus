@@ -5,6 +5,7 @@ import { usePaymentForm } from '@/composables/usePaymentForm';
 import { useSaveShortcut } from '@/composables/useSaveShortcut';
 import { projectsApi } from '@/services/api/projects.api';
 import { PaymentMethod } from '@/types/enums';
+import AdvancedOptions from '@/components/shared/AdvancedOptions.vue';
 import type { ProjectWithContract } from '@/types/project';
 
 const props = defineProps<{ id?: string; initialProjectId?: string }>();
@@ -54,15 +55,20 @@ const methodOptions = computed(() => [
   { value: PaymentMethod.OTHER, title: t('payments.method.OTHER') },
 ]);
 
-const requiredRule = (v: unknown) => !!v || ' ';
+const requiredRule = (v: unknown) => !!v || t('errors.required');
 const positiveRule = (v: number | null | undefined) =>
   (typeof v === 'number' && v > 0) || t('payments.errors.positiveAmount');
+
+// Reveal on edit when any optional payment detail is already filled.
+const hasAdvanced = computed(
+  () => !!(form.value.method || form.value.reference || form.value.notes),
+);
 </script>
 
 <template>
   <v-card :loading="loading || projectsLoading">
     <v-form @submit.prevent="submit">
-      <v-card-text class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <v-card-text class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <v-select
           v-model="form.projectId"
           :items="projectOptions"
@@ -75,6 +81,7 @@ const positiveRule = (v: number | null | undefined) =>
         <v-text-field
           v-model.number="form.amount"
           :label="t('payments.fields.amount')"
+          :placeholder="t('payments.placeholders.amount')"
           type="number"
           step="0.01"
           min="0"
@@ -90,27 +97,30 @@ const positiveRule = (v: number | null | undefined) =>
           :error-messages="fieldErrors.dueDate"
           required
         />
-        <v-select
-          v-model="form.method"
-          :items="methodOptions"
-          :label="t('payments.fields.method')"
-          :error-messages="fieldErrors.method"
-          clearable
-        />
-        <v-text-field
-          v-model="form.reference"
-          :label="t('payments.fields.reference')"
-          :error-messages="fieldErrors.reference"
-          class="md:col-span-2"
-        />
-        <v-textarea
-          v-model="form.notes"
-          :label="t('payments.fields.notes')"
-          :error-messages="fieldErrors.notes"
-          rows="2"
-          auto-grow
-          class="md:col-span-2"
-        />
+        <AdvancedOptions :default-open="hasAdvanced">
+          <v-select
+            v-model="form.method"
+            :items="methodOptions"
+            :label="t('payments.fields.method')"
+            :error-messages="fieldErrors.method"
+            clearable
+          />
+          <v-text-field
+            v-model="form.reference"
+            :label="t('payments.fields.reference')"
+            :placeholder="t('payments.placeholders.reference')"
+            :error-messages="fieldErrors.reference"
+            class="md:col-span-2"
+          />
+          <v-textarea
+            v-model="form.notes"
+            :label="t('payments.fields.notes')"
+            :error-messages="fieldErrors.notes"
+            rows="2"
+            auto-grow
+            class="md:col-span-2"
+          />
+        </AdvancedOptions>
       </v-card-text>
 
       <v-divider />
@@ -121,7 +131,7 @@ const positiveRule = (v: number | null | undefined) =>
         </v-btn>
         <v-spacer />
         <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
-          {{ isEdit ? t('common.update') : t('common.create') }}
+          {{ isEdit ? t('common.saveChanges') : t('payments.add') }}
         </v-btn>
       </v-card-actions>
     </v-form>

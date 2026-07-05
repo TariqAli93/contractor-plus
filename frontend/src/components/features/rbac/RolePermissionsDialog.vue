@@ -128,7 +128,7 @@ async function save() {
           :disabled="locked"
           @click="save"
         >
-          {{ t('common.save') }}
+          {{ t('rbac.savePermissions') }}
         </v-btn>
       </v-card-actions>
     </v-card>

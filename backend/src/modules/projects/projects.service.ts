@@ -21,6 +21,9 @@ import type {
 
 const PROJECT = 'Project';
 
+/** The non-destructive status transitions the voice assistant can drive. */
+export type VoiceStatusAction = 'start' | 'pause' | 'resume' | 'complete';
+
 // Project lifecycle:
 //
 //   PLANNED ──/start──► IN_PROGRESS ◄──/resume── PAUSED
@@ -114,6 +117,120 @@ export class ProjectsService {
         tx,
       );
       return created;
+    });
+  }
+
+  // ---------- Link to contract ----------
+  //
+  // Links an EXISTING standalone project to a contract (distinct from
+  // `ContractsService.createProject`, which CREATES a project from an APPROVED
+  // contract). Used by the voice `link_project_to_contract` command so a
+  // voice-created standalone project can later gain a contract (and thus accept
+  // payments). Guards against duplicate/conflicting links (one project ↔ one
+  // contract, enforced here and by the DB @unique). A CANCELLED contract is
+  // rejected; DRAFT/APPROVED are allowed (linking ≠ approving).
+
+  async linkToContract(projectId: string, contractId: string, actor: AuditActor): Promise<Project> {
+    return this.prisma.$transaction((tx) =>
+      this.linkToContractWithinTx(tx, projectId, contractId, actor),
+    );
+  }
+
+  async linkToContractWithinTx(
+    tx: Prisma.TransactionClient,
+    projectId: string,
+    contractId: string,
+    actor: AuditActor,
+  ): Promise<Project> {
+    const project = await this.repo.findById(projectId, tx);
+    if (!project) throw new NotFoundError('Project', 'PROJECT_NOT_FOUND');
+    if (project.contractId) {
+      throw new ConflictError(
+        project.contractId === contractId
+          ? 'Project is already linked to this contract'
+          : 'Project is already linked to another contract',
+        'PROJECT_ALREADY_LINKED',
+      );
+    }
+
+    const contract = await tx.contract.findFirst({
+      where: { id: contractId, deletedAt: null },
+      select: { id: true, status: true, contractNumber: true },
+    });
+    if (!contract) throw new NotFoundError('Contract', 'CONTRACT_NOT_FOUND');
+    if (contract.status === ContractStatus.CANCELLED) {
+      throw new ConflictError('Cannot link to a cancelled contract', 'CONTRACT_CANCELLED');
+    }
+    if (await this.repo.existsByContractId(contractId, undefined, tx)) {
+      throw new ConflictError('Contract already has a linked project', 'CONTRACT_HAS_PROJECT');
+    }
+
+    const updated = await this.repo.update(
+      projectId,
+      { contract: { connect: { id: contractId } } },
+      tx,
+    );
+    await this.audit.log(
+      actor,
+      {
+        action: 'UPDATE',
+        entity: PROJECT,
+        entityId: projectId,
+        oldValues: toJsonValue({ contractId: null }),
+        newValues: toJsonValue({
+          event: 'linked_to_contract',
+          contractId,
+          contractNumber: contract.contractNumber,
+        }),
+      },
+      tx,
+    );
+    return updated;
+  }
+
+  // ---------- Unlink from contract (safe) ----------
+  //
+  // Audit prompt 10: safely detach a project from its contract WITHOUT deleting
+  // the project, contract, costs or payments. The contract simply becomes
+  // "unlinked" (project.contractId → null). A reason is required and recorded in
+  // the audit log; the route restricts this to OWNER/ADMIN.
+  async unlinkFromContract(
+    projectId: string,
+    reason: string,
+    actor: AuditActor,
+  ): Promise<Project> {
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await this.repo.findById(projectId, tx);
+      if (!existing) throw new NotFoundError('Project', 'PROJECT_NOT_FOUND');
+      if (!existing.contractId) {
+        throw new ConflictError(
+          'Project is not linked to a contract',
+          'PROJECT_NOT_LINKED',
+        );
+      }
+
+      const previousContractId = existing.contractId;
+      const updated = await this.repo.update(
+        projectId,
+        { contract: { disconnect: true } },
+        tx,
+      );
+      await this.audit.log(
+        actor,
+        {
+          action: 'UPDATE',
+          entity: PROJECT,
+          entityId: projectId,
+          oldValues: toJsonValue({ contractId: previousContractId }),
+          newValues: toJsonValue({
+            event: 'unlinked_from_contract',
+            reason,
+            previousContractId,
+          }),
+        },
+        tx,
+      );
+      return updated;
     });
   }
 
@@ -296,6 +413,76 @@ export class ProjectsService {
       );
       return updated;
     });
+  }
+
+  // ---------- Voice engine (tx-aware status transitions) ----------
+  //
+  // The lifecycle methods above each open their OWN transaction, so they can't
+  // be called from the voice executor's transaction (Prisma forbids nesting).
+  // These run inside a provided tx instead. `transitionPatch` is the single
+  // source of the transition rules — Arabic errors, since the assistant speaks
+  // them. `changeStatusWithinTx` reads → validates → writes → audits in `tx`.
+
+  static transitionPatch(existing: Project, action: VoiceStatusAction): Prisma.ProjectUpdateInput {
+    switch (action) {
+      case 'start':
+        if (existing.status !== ProjectStatus.PLANNED) {
+          throw new ConflictError('لا يمكن بدء المشروع إلا وهو "مخطط".', 'PROJECT_NOT_STARTABLE');
+        }
+        return {
+          status: ProjectStatus.IN_PROGRESS,
+          ...(existing.startDate === null && { startDate: new Date() }),
+        };
+      case 'pause':
+        if (existing.status !== ProjectStatus.IN_PROGRESS) {
+          throw new ConflictError('لا يمكن إيقاف مشروع غير قيد التنفيذ.', 'PROJECT_NOT_PAUSABLE');
+        }
+        return { status: ProjectStatus.PAUSED };
+      case 'resume':
+        if (existing.status !== ProjectStatus.PAUSED) {
+          throw new ConflictError('لا يمكن استئناف مشروع غير متوقّف.', 'PROJECT_NOT_RESUMABLE');
+        }
+        return { status: ProjectStatus.IN_PROGRESS };
+      case 'complete':
+        if (
+          existing.status !== ProjectStatus.IN_PROGRESS &&
+          existing.status !== ProjectStatus.PAUSED
+        ) {
+          throw new ConflictError(
+            'لا يمكن إنجاز مشروع إلا وهو قيد التنفيذ أو متوقّف.',
+            'PROJECT_NOT_COMPLETABLE',
+          );
+        }
+        return { status: ProjectStatus.COMPLETED, progressPercentage: 100 };
+    }
+  }
+
+  async changeStatusWithinTx(
+    tx: Prisma.TransactionClient,
+    id: string,
+    action: VoiceStatusAction,
+    actor: AuditActor,
+  ): Promise<Project> {
+    const existing = await this.repo.findById(id, tx);
+    if (!existing) throw new NotFoundError('Project', 'PROJECT_NOT_FOUND');
+    const patch = ProjectsService.transitionPatch(existing, action);
+    const updated = await this.repo.update(id, patch, tx);
+    await this.audit.log(
+      actor,
+      {
+        action: 'UPDATE',
+        entity: PROJECT,
+        entityId: id,
+        oldValues: toJsonValue({ status: existing.status }),
+        newValues: toJsonValue({
+          event: action,
+          status: updated.status,
+          previousStatus: existing.status,
+        }),
+      },
+      tx,
+    );
+    return updated;
   }
 
   private isTerminal(status: ProjectStatus): boolean {

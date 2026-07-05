@@ -22,6 +22,7 @@ import type {
   UpdateContractInput,
 } from './contracts.schemas.js';
 import { money, round, sumMoney, toMoneyString, toMoneyStringOrNull } from '../../lib/money.js';
+import { computeContractEstimate } from './contracts.estimate.js';
 import type { ContractEstimate } from './contracts.types.js';
 
 const CONTRACT = 'Contract';
@@ -82,41 +83,52 @@ export class ContractsService {
   }
 
   async create(data: CreateContractInput, actor: AuditActor): Promise<Contract> {
-    return this.prisma.$transaction(async (tx) => {
-      await this.assertCustomerExists(tx, data.customerId);
-      if (data.templateId) await this.assertTemplateExists(tx, data.templateId);
-      if (await this.repo.existsByContractNumber(data.contractNumber, undefined, tx)) {
-        throw new ConflictError(
-          `Contract number "${data.contractNumber}" already exists`,
-          'CONTRACT_NUMBER_TAKEN',
-        );
-      }
+    return this.prisma.$transaction((tx) => this.createWithinTx(tx, data, actor));
+  }
 
-      const totalPrice = round(money(data.buildingArea).times(data.floors).times(data.meterPrice));
-
-      const created = await this.repo.create(
-        {
-          contractNumber: data.contractNumber,
-          customerId: data.customerId,
-          templateId: data.templateId,
-          buildingArea: data.buildingArea,
-          floors: data.floors,
-          meterPrice: data.meterPrice,
-          totalPrice,
-          expectedProfitMargin: data.expectedProfitMargin,
-          notes: data.notes,
-          status: ContractStatus.DRAFT,
-        },
-        tx,
+  // Transaction-aware core of `create`, exposed so other modules (e.g. the voice
+  // command engine) can compose contract creation atomically with their own
+  // steps. The public `create` simply wraps this in a transaction. Keeping this
+  // the single source of contract-creation logic avoids duplicating the pricing
+  // rule (totalPrice = area × floors × meterPrice).
+  async createWithinTx(
+    tx: Prisma.TransactionClient,
+    data: CreateContractInput,
+    actor: AuditActor,
+  ): Promise<Contract> {
+    await this.assertCustomerExists(tx, data.customerId);
+    if (data.templateId) await this.assertTemplateExists(tx, data.templateId);
+    if (await this.repo.existsByContractNumber(data.contractNumber, undefined, tx)) {
+      throw new ConflictError(
+        `Contract number "${data.contractNumber}" already exists`,
+        'CONTRACT_NUMBER_TAKEN',
       );
+    }
 
-      await this.audit.log(
-        actor,
-        { action: 'CREATE', entity: CONTRACT, entityId: created.id, newValues: toJsonValue(created) },
-        tx,
-      );
-      return created;
-    });
+    const totalPrice = round(money(data.buildingArea).times(data.floors).times(data.meterPrice));
+
+    const created = await this.repo.create(
+      {
+        contractNumber: data.contractNumber,
+        customerId: data.customerId,
+        templateId: data.templateId,
+        buildingArea: data.buildingArea,
+        floors: data.floors,
+        meterPrice: data.meterPrice,
+        totalPrice,
+        expectedProfitMargin: data.expectedProfitMargin,
+        notes: data.notes,
+        status: ContractStatus.DRAFT,
+      },
+      tx,
+    );
+
+    await this.audit.log(
+      actor,
+      { action: 'CREATE', entity: CONTRACT, entityId: created.id, newValues: toJsonValue(created) },
+      tx,
+    );
+    return created;
   }
 
   async update(
@@ -209,7 +221,19 @@ export class ContractsService {
   // ---------- Generate estimate ----------
 
   async generateEstimate(id: string, actor: AuditActor): Promise<ContractEstimate> {
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction((tx) => this.generateEstimateWithinTx(tx, id, actor));
+  }
+
+  // Transaction-aware core of `generateEstimate` (Material Intelligence): scales
+  // the template's items by (area × floors) / 100m² baseline and replaces the
+  // contract's items. Exposed so the voice engine can run create + estimate in
+  // one atomic turn without duplicating the scaling/pricing math.
+  async generateEstimateWithinTx(
+    tx: Prisma.TransactionClient,
+    id: string,
+    actor: AuditActor,
+  ): Promise<ContractEstimate> {
+    {
       const contract = await this.repo.findById(id, tx);
       if (!contract) throw new NotFoundError('Contract', 'CONTRACT_NOT_FOUND');
       if (contract.status !== ContractStatus.DRAFT) {
@@ -232,27 +256,25 @@ export class ContractsService {
 
       const buildingArea = money(contract.buildingArea);
       const floors = contract.floors;
-      const scaleFactor = buildingArea.times(floors).div(TEMPLATE_BASELINE_AREA);
 
-      const newItems = template.items.map((item) => ({
-        contractId: contract.id,
-        materialId: item.materialId,
-        quantity: round(money(item.estimatedQuantity).times(scaleFactor), 3),
-        unit: item.material.unit,
-        estimatedPrice: round(money(item.estimatedPrice).times(scaleFactor)),
-        notes: item.notes,
-      }));
+      // Single source of the scaling/pricing math (shared with previewEstimate).
+      const est = computeContractEstimate({
+        items: template.items.map((item) => ({
+          materialId: item.materialId,
+          unit: item.material.unit,
+          estimatedQuantity: item.estimatedQuantity,
+          estimatedPrice: item.estimatedPrice,
+          notes: item.notes,
+        })),
+        buildingArea: contract.buildingArea,
+        floors,
+        contractMargin: contract.expectedProfitMargin,
+        templateMargin: template.suggestedProfitMargin,
+        baselineArea: TEMPLATE_BASELINE_AREA,
+      });
 
+      const newItems = est.scaledItems.map((item) => ({ contractId: contract.id, ...item }));
       await this.repo.replaceItems(contract.id, newItems, tx);
-
-      const estimatedMaterialCost = round(sumMoney(newItems.map((i) => i.estimatedPrice)));
-
-      // Margin (a percentage): the contract's own, else the template's suggestion.
-      const marginSource =
-        contract.expectedProfitMargin !== null
-          ? contract.expectedProfitMargin
-          : template.suggestedProfitMargin;
-      const margin = marginSource !== null ? money(marginSource) : null;
 
       // Adopt the template's suggested margin if the contract has none yet.
       let marginPersisted = contract.expectedProfitMargin;
@@ -265,18 +287,6 @@ export class ContractsService {
         marginPersisted = updated.expectedProfitMargin;
       }
 
-      const estimatedProfitAmount =
-        margin !== null ? round(estimatedMaterialCost.times(margin.div(100))) : null;
-      const suggestedSellingPrice =
-        estimatedProfitAmount !== null
-          ? round(estimatedMaterialCost.plus(estimatedProfitAmount))
-          : null;
-      const areaTimesFloors = buildingArea.times(floors);
-      const suggestedMeterPrice =
-        suggestedSellingPrice !== null && areaTimesFloors.gt(0)
-          ? round(suggestedSellingPrice.div(areaTimesFloors))
-          : null;
-
       await this.audit.log(
         actor,
         {
@@ -286,9 +296,9 @@ export class ContractsService {
           newValues: toJsonValue({
             event: 'estimate_generated',
             itemsReplaced: newItems.length,
-            scaleFactor: round(scaleFactor, 3).toString(),
-            estimatedMaterialCost: toMoneyString(estimatedMaterialCost),
-            marginUsed: margin !== null ? margin.toString() : null,
+            scaleFactor: round(est.scaleFactor, 3).toString(),
+            estimatedMaterialCost: toMoneyString(est.estimatedMaterialCost),
+            marginUsed: est.marginUsed !== null ? est.marginUsed.toString() : null,
           }),
         },
         tx,
@@ -301,17 +311,54 @@ export class ContractsService {
         templateName: template.name,
         buildingArea: buildingArea.toNumber(),
         floors,
-        scaleFactor: round(scaleFactor, 3).toNumber(),
-        estimatedMaterialCost: toMoneyString(estimatedMaterialCost),
+        scaleFactor: round(est.scaleFactor, 3).toNumber(),
+        estimatedMaterialCost: toMoneyString(est.estimatedMaterialCost),
         expectedProfitMargin: marginPersisted !== null ? Number(marginPersisted) : null,
-        estimatedProfitAmount: toMoneyStringOrNull(estimatedProfitAmount),
-        suggestedSellingPrice: toMoneyStringOrNull(suggestedSellingPrice),
-        suggestedMeterPrice: toMoneyStringOrNull(suggestedMeterPrice),
+        estimatedProfitAmount: toMoneyStringOrNull(est.estimatedProfitAmount),
+        suggestedSellingPrice: toMoneyStringOrNull(est.suggestedSellingPrice),
+        suggestedMeterPrice: toMoneyStringOrNull(est.suggestedMeterPrice),
         currentTotalPrice: toMoneyString(contract.totalPrice),
         currentMeterPrice: toMoneyString(contract.meterPrice),
         itemsReplaced: newItems.length,
       };
+    }
+  }
+
+  // Read-only estimate preview (no writes) — lets the voice engine show the
+  // template's suggested meter price DURING confirmation, computed by the exact
+  // same math that the authoritative generateEstimate persists.
+  async previewEstimate(
+    templateId: string,
+    buildingArea: number,
+    floors: number,
+    contractMargin: number | null,
+  ): Promise<{ suggestedMeterPrice: string | null; estimatedMaterialCost: string; itemCount: number }> {
+    const template = await this.prisma.buildingTemplate.findFirst({
+      where: { id: templateId, deletedAt: null },
+      include: { items: { include: { material: true } } },
     });
+    if (!template) throw new NotFoundError('Template', 'TEMPLATE_NOT_FOUND');
+
+    const est = computeContractEstimate({
+      items: template.items.map((item) => ({
+        materialId: item.materialId,
+        unit: item.material.unit,
+        estimatedQuantity: item.estimatedQuantity,
+        estimatedPrice: item.estimatedPrice,
+        notes: item.notes,
+      })),
+      buildingArea,
+      floors,
+      contractMargin,
+      templateMargin: template.suggestedProfitMargin,
+      baselineArea: TEMPLATE_BASELINE_AREA,
+    });
+
+    return {
+      suggestedMeterPrice: toMoneyStringOrNull(est.suggestedMeterPrice),
+      estimatedMaterialCost: toMoneyString(est.estimatedMaterialCost),
+      itemCount: template.items.length,
+    };
   }
 
   // ---------- Approve ----------

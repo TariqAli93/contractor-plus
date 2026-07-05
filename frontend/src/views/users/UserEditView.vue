@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { t } from '@/i18n';
 import UserForm from '@/components/features/user/UserForm.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 
 const route = useRoute();
 const userId = computed(() => {
@@ -14,10 +15,7 @@ const heading = computed(() => (userId.value ? t('users.edit') : t('users.new'))
 
 <template>
   <div>
-    <div class="flex items-center gap-2 mb-4">
-      <v-btn icon="mdi-arrow-right" variant="text" to="/users" />
-      <h1 class="text-h5">{{ heading }}</h1>
-    </div>
+    <PageHeader :title="heading" back="/users" />
     <UserForm :id="userId" />
   </div>
 </template>

@@ -25,6 +25,7 @@ export const PERMISSION_MODULES = [
   'projects',
   'costs',
   'payments',
+  'change_orders',
   'reports',
   'audit',
   'tunnel',
@@ -32,6 +33,7 @@ export const PERMISSION_MODULES = [
   'users',
   'rbac',
   'profile',
+  'voice',
 ] as const;
 export type PermissionModule = (typeof PERMISSION_MODULES)[number];
 
@@ -75,6 +77,7 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   p('projects.resume', 'projects', 'resume', 'استئناف مشروع'),
   p('projects.complete', 'projects', 'complete', 'إنهاء مشروع'),
   p('projects.cancel', 'projects', 'cancel', 'إلغاء مشروع'),
+  p('projects.unlink_contract', 'projects', 'unlink_contract', 'فك ربط عقد عن مشروع'),
 
   p('costs.read', 'costs', 'read', 'عرض المصاريف'),
   p('costs.create', 'costs', 'create', 'إنشاء مصروف'),
@@ -88,6 +91,12 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   p('payments.mark_paid', 'payments', 'mark_paid', 'تأكيد دفع'),
   p('payments.cancel', 'payments', 'cancel', 'إلغاء دفعة'),
 
+  p('change_orders.read', 'change_orders', 'read', 'عرض أوامر التغيير'),
+  p('change_orders.create', 'change_orders', 'create', 'إنشاء أمر تغيير'),
+  p('change_orders.update', 'change_orders', 'update', 'تعديل أمر تغيير'),
+  p('change_orders.approve', 'change_orders', 'approve', 'اعتماد/رفض أمر تغيير'),
+  p('change_orders.delete', 'change_orders', 'delete', 'حذف أمر تغيير'),
+
   p('reports.read', 'reports', 'read', 'عرض التقارير'),
 
   p('audit.read', 'audit', 'read', 'عرض سجل التدقيق'),
@@ -99,6 +108,7 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   p('settings.company.manage', 'settings', 'company.manage', 'إدارة بيانات الشركة'),
   p('settings.currency.manage', 'settings', 'currency.manage', 'إدارة العملات'),
   p('settings.contract_templates.manage', 'settings', 'contract_templates.manage', 'إدارة قوالب العقود'),
+  p('settings.voice_ai.manage', 'settings', 'voice_ai.manage', 'إدارة إعدادات المساعد الصوتي (LLM)'),
 
   p('users.read', 'users', 'read', 'عرض المستخدمين'),
   p('users.create', 'users', 'create', 'إنشاء مستخدم'),
@@ -113,6 +123,8 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   p('profile.read', 'profile', 'read', 'عرض الملف الشخصي'),
   p('profile.update', 'profile', 'update', 'تعديل الملف الشخصي'),
   p('profile.change_password', 'profile', 'change_password', 'تغيير كلمة المرور'),
+
+  p('voice.use', 'voice', 'use', 'استخدام المساعد الصوتي'),
 ];
 
 export const ALL_PERMISSION_KEYS: string[] = PERMISSION_CATALOG.map((d) => d.key);
@@ -138,12 +150,14 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'projects.read', 'projects.create', 'projects.update', 'projects.delete', 'projects.start', 'projects.pause', 'projects.resume', 'projects.complete', 'projects.cancel',
     'costs.read', 'costs.create', 'costs.update', 'costs.delete',
     'payments.read', 'payments.create', 'payments.update', 'payments.delete', 'payments.mark_paid', 'payments.cancel',
+    'change_orders.read', 'change_orders.create', 'change_orders.update', 'change_orders.approve', 'change_orders.delete',
     'reports.read',
     'audit.read',
     'tunnel.manage',
-    'settings.read', 'settings.manage', 'settings.company.manage', 'settings.currency.manage', 'settings.contract_templates.manage',
+    'settings.read', 'settings.manage', 'settings.company.manage', 'settings.currency.manage', 'settings.contract_templates.manage', 'settings.voice_ai.manage',
     'users.read', 'users.create', 'users.update', 'users.delete', 'users.reset_password', 'users.activate',
     'rbac.read', // ADMIN can view, but NOT rbac.manage
+    'voice.use',
     ...PROFILE,
   ],
   [RoleName.ACCOUNTANT]: [
@@ -153,7 +167,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'projects.read',
     'costs.read', 'costs.create', 'costs.update', 'costs.delete',
     'payments.read', 'payments.create', 'payments.update', 'payments.delete', 'payments.mark_paid', 'payments.cancel',
+    'change_orders.read', 'change_orders.create', 'change_orders.update', 'change_orders.approve', 'change_orders.delete',
     'reports.read',
+    'voice.use',
     ...PROFILE,
   ],
   [RoleName.ENGINEER]: [
@@ -165,7 +181,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'projects.read', 'projects.create', 'projects.update', 'projects.start', 'projects.pause', 'projects.resume', 'projects.complete', 'projects.cancel',
     'costs.read', 'costs.create', 'costs.update', 'costs.delete',
     'payments.read',
+    'change_orders.read',
     'reports.read',
+    'voice.use',
     ...PROFILE,
   ],
   [RoleName.VIEWER]: [
@@ -177,6 +195,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'projects.read',
     'costs.read',
     'payments.read',
+    'change_orders.read',
+    'voice.use',
     ...PROFILE,
   ],
 };

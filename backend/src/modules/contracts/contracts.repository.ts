@@ -26,6 +26,14 @@ export class ContractsRepository {
     return client.contract.findFirst({ where: { id, deletedAt: null } });
   }
 
+  // Resolve a contract by its (case-insensitive) number — used by the voice
+  // engine for "…بالعقد رقم V-2026-0004".
+  findByContractNumber(number: string, client: DbClient = this.prisma): Promise<Contract | null> {
+    return client.contract.findFirst({
+      where: { contractNumber: { equals: number, mode: 'insensitive' }, deletedAt: null },
+    });
+  }
+
   findByIdWithRelations(id: string): Promise<ContractWithRelations | null> {
     return this.prisma.contract.findFirst({
       where: { id, deletedAt: null },

@@ -8,6 +8,7 @@ import type { AuditLog } from '@/types/audit';
 import ErrorState from '@/components/shared/ErrorState.vue';
 import EmptyState from '@/components/shared/EmptyState.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 import AuditActionBadge from '@/components/features/audit/AuditActionBadge.vue';
 import AuditDiffPanel from '@/components/features/audit/AuditDiffPanel.vue';
 
@@ -101,9 +102,7 @@ function openUserHistory(userId: string | null) {
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
-      <h1 class="text-h5">{{ t('nav.audit') }}</h1>
-    </div>
+    <PageHeader :title="t('nav.audit')" icon="mdi-history" />
 
     <v-card>
       <v-card-text class="space-y-3">

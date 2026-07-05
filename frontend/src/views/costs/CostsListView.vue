@@ -15,6 +15,7 @@ import type { ProjectWithContract } from '@/types/project';
 import SearchBar from '@/components/shared/SearchBar.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
 import RoleGate from '@/components/shared/RoleGate.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import CostCategoryBadge from '@/components/features/cost/CostCategoryBadge.vue';
@@ -148,14 +149,13 @@ async function handleDelete(cost: CostWithMaterial) {
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
-      <h1 class="text-h5">{{ t('nav.costs') }}</h1>
+    <PageHeader :title="t('nav.costs')" :count="total || null" icon="mdi-cash-minus" :hint="t('help.costs')">
       <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" @click="newCost">
           {{ t('costs.new') }}
         </v-btn>
       </RoleGate>
-    </div>
+    </PageHeader>
 
     <v-card>
       <v-card-text class="space-y-3">

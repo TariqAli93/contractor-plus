@@ -17,6 +17,7 @@ import ContractGeneralTab from './ContractGeneralTab.vue';
 import ContractItemsTab from './ContractItemsTab.vue';
 import ContractEstimateTab from './ContractEstimateTab.vue';
 import ContractProjectTab from './ContractProjectTab.vue';
+import ContractChangeOrdersTab from './ContractChangeOrdersTab.vue';
 import ContractGenerateDocxPanel from './ContractGenerateDocxPanel.vue';
 
 const props = defineProps<{ contractId: string | undefined }>();
@@ -27,7 +28,7 @@ const contract = ref<ContractWithRelations | null>(null);
 const loading = ref(false);
 const error = ref<unknown>(null);
 
-type TabKey = 'general' | 'items' | 'estimate' | 'project';
+type TabKey = 'general' | 'items' | 'estimate' | 'project' | 'changeOrders';
 const activeTab = ref<TabKey>('general');
 const tabsLocked = computed(() => !props.contractId);
 
@@ -79,6 +80,7 @@ async function onChanged() {
               <v-tab value="items" :disabled="tabsLocked">{{ t('contracts.tabs.items') }}</v-tab>
               <v-tab value="estimate" :disabled="tabsLocked">{{ t('contracts.tabs.estimate') }}</v-tab>
               <v-tab value="project" :disabled="tabsLocked">{{ t('contracts.tabs.project') }}</v-tab>
+              <v-tab value="changeOrders" :disabled="tabsLocked">{{ t('contracts.tabs.changeOrders') }}</v-tab>
             </v-tabs>
             <v-divider />
             <v-window v-model="activeTab">
@@ -101,7 +103,17 @@ async function onChanged() {
                 />
               </v-window-item>
               <v-window-item value="project" class="pa-4">
-                <ContractProjectTab v-if="activeTab === 'project' && contract" :contract="contract" />
+                <ContractProjectTab
+                  v-if="activeTab === 'project' && contract"
+                  :contract="contract"
+                  @changed="onChanged"
+                />
+              </v-window-item>
+              <v-window-item value="changeOrders" class="pa-4">
+                <ContractChangeOrdersTab
+                  v-if="activeTab === 'changeOrders' && contract"
+                  :contract="contract"
+                />
               </v-window-item>
             </v-window>
           </v-card>

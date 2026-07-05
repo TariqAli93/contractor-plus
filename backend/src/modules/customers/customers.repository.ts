@@ -29,6 +29,15 @@ export class CustomersRepository {
     return client.customer.create({ data });
   }
 
+  // Exact (case-insensitive) name match — used by the voice engine's
+  // find-or-create flow. Returns all matches so the caller can disambiguate.
+  findByName(name: string, client: DbClient = this.prisma): Promise<Customer[]> {
+    return client.customer.findMany({
+      where: { name: { equals: name, mode: 'insensitive' }, deletedAt: null },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
   update(
     id: string,
     data: Prisma.CustomerUpdateInput,

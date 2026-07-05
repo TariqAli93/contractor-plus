@@ -4,6 +4,7 @@ import { t } from '@/i18n';
 import { useAuthStore } from '@/stores/auth.store';
 import UserRoleBadge from '@/components/features/user/UserRoleBadge.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 import ProfileForm from '@/components/features/profile/ProfileForm.vue';
 import ChangePasswordDialog from '@/components/features/profile/ChangePasswordDialog.vue';
 
@@ -13,7 +14,7 @@ const pwOpen = ref(false);
 
 <template>
   <div>
-    <h1 class="text-h5 mb-4">{{ t('profile.title') }}</h1>
+    <PageHeader :title="t('profile.title')" icon="mdi-account-circle-outline" />
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <!-- Account summary (read-only) -->

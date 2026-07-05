@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { t } from '@/i18n';
 import CustomerForm from '@/components/features/customer/CustomerForm.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 
 const route = useRoute();
 
@@ -16,10 +17,7 @@ const heading = computed(() => (customerId.value ? t('customers.edit') : t('cust
 
 <template>
   <div>
-    <div class="flex items-center gap-2 mb-4">
-      <v-btn icon="mdi-arrow-right" variant="text" to="/customers" />
-      <h1 class="text-h5">{{ heading }}</h1>
-    </div>
+    <PageHeader :title="heading" back="/customers" />
 
     <CustomerForm :id="customerId" />
   </div>

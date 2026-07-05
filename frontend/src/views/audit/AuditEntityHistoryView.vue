@@ -8,6 +8,7 @@ import type { AuditLog } from '@/types/audit';
 import ErrorState from '@/components/shared/ErrorState.vue';
 import EmptyState from '@/components/shared/EmptyState.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 import AuditActionBadge from '@/components/features/audit/AuditActionBadge.vue';
 import AuditDiffPanel from '@/components/features/audit/AuditDiffPanel.vue';
 
@@ -69,15 +70,10 @@ const expanded = ref<string[]>([]);
 
 <template>
   <div>
-    <div class="flex items-center gap-2 mb-4">
-      <v-btn icon="mdi-arrow-right" variant="text" to="/audit" />
-      <div>
-        <h1 class="text-h5 mb-1">{{ t('audit.entity.title') }}</h1>
-        <p class="text-body-2 text-medium-emphasis mb-0">
-          {{ entity }} · <span class="font-mono">{{ entityId }}</span>
-        </p>
-      </div>
-    </div>
+    <PageHeader :title="t('audit.entity.title')" back="/audit" />
+    <p class="text-body-2 text-medium-emphasis mb-4">
+      {{ entity }} · <span class="font-mono">{{ entityId }}</span>
+    </p>
 
     <v-card>
       <ErrorState v-if="error" :error="error" class="my-4" @retry="fetch" />

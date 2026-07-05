@@ -23,7 +23,7 @@ const percentageRule = (v: unknown) => {
 <template>
   <div :class="{ 'opacity-60 pointer-events-none': loading }">
     <v-form @submit.prevent="submit">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <v-text-field
           v-model="form.name"
           :label="t('templates.fields.name')"
@@ -79,7 +79,7 @@ const percentageRule = (v: unknown) => {
         </v-btn>
         <v-spacer />
         <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
-          {{ isEdit ? t('common.update') : t('common.create') }}
+          {{ isEdit ? t('common.saveChanges') : t('templates.add') }}
         </v-btn>
       </div>
     </v-form>

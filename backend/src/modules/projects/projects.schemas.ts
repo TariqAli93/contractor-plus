@@ -66,6 +66,12 @@ export const cancelProjectBodySchema = z.object({
   reason: z.string().trim().max(500).optional(),
 });
 
+// /unlink-contract requires an explicit reason — it is recorded in the audit
+// log (audit prompt 10: safe unlink asks for and logs the reason).
+export const unlinkContractBodySchema = z.object({
+  reason: z.string().trim().min(3).max(500),
+});
+
 // ----- Params -----
 
 export const projectIdParamSchema = z.object({ id: uuidSchema });
@@ -76,3 +82,4 @@ export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 export type ListProjectsQuery = z.infer<typeof listProjectsQuerySchema>;
 export type CancelProjectBody = z.infer<typeof cancelProjectBodySchema>;
+export type UnlinkContractBody = z.infer<typeof unlinkContractBodySchema>;

@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { t } from '@/i18n';
 import CostForm from '@/components/features/cost/CostForm.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 
 const route = useRoute();
 
@@ -23,10 +24,7 @@ const heading = computed(() => (costId.value ? t('costs.edit') : t('costs.new'))
 
 <template>
   <div>
-    <div class="flex items-center gap-2 mb-4">
-      <v-btn icon="mdi-arrow-right" variant="text" to="/costs" />
-      <h1 class="text-h5">{{ heading }}</h1>
-    </div>
+    <PageHeader :title="heading" back="/costs" />
 
     <CostForm :id="costId" :initial-project-id="initialProjectId" />
   </div>

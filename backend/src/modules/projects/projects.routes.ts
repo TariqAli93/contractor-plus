@@ -40,6 +40,22 @@ const projectsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/:id/resume', g('projects.resume'), controller.resume);
   fastify.post('/:id/complete', g('projects.complete'), controller.complete);
   fastify.post('/:id/cancel', g('projects.cancel'), controller.cancel);
+
+  // Safe unlink is a sensitive op — a dedicated permission, restricted to
+  // OWNER/ADMIN (engineers manage lifecycle but not contract linkage).
+  fastify.post(
+    '/:id/unlink-contract',
+    {
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireAccess({
+          permissions: ['projects.unlink_contract'],
+          roles: [RoleName.OWNER, RoleName.ADMIN],
+        }),
+      ],
+    },
+    controller.unlinkContract,
+  );
 };
 
 export default projectsRoutes;

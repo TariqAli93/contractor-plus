@@ -12,6 +12,7 @@ import { useProjects } from '@/composables/useProjects';
 import { ProjectStatus, RoleName } from '@/types/enums';
 import type { ProjectWithContract } from '@/types/project';
 import SearchBar from '@/components/shared/SearchBar.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
 import RoleGate from '@/components/shared/RoleGate.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
@@ -75,16 +76,15 @@ onMounted(fetch);
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-4 gap-2 flex-wrap">
-      <h1 class="text-h5">{{ t('nav.projects') }}</h1>
+    <PageHeader :title="t('nav.projects')" :count="total || null" icon="mdi-office-building-outline" :hint="t('help.projects')">
       <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
-        <v-btn color="primary" prepend-icon="mdi-plus" to="/projects/new">
+        <v-btn color="primary" size="small" prepend-icon="mdi-plus" to="/projects/new">
           {{ t('projects.new') }}
         </v-btn>
       </RoleGate>
-    </div>
+    </PageHeader>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
       <!-- Master: searchable list -->
       <div class="lg:col-span-4">
         <v-card>
@@ -184,7 +184,7 @@ onMounted(fetch);
 
 <style scoped>
 .cp-master-list {
-  max-height: calc(100vh - 340px);
+  max-height: calc(100vh - 300px);
   min-height: 200px;
   overflow-y: auto;
 }
@@ -192,7 +192,7 @@ onMounted(fetch);
   display: block;
   width: 100%;
   text-align: start;
-  padding: 10px 16px;
+  padding: 7px 12px;
   border-bottom: 1px solid rgba(var(--v-border-color), 0.4);
   cursor: pointer;
 }

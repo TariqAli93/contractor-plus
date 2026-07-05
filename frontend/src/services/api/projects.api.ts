@@ -29,4 +29,8 @@ export const projectsApi = {
   complete: (id: string): Promise<Project> => apiPost(`/projects/${id}/complete`),
   cancel: (id: string, body: CancelProjectBody = {}): Promise<Project> =>
     apiPost(`/projects/${id}/cancel`, body),
+
+  // Safe unlink from contract (reason recorded in the audit log).
+  unlinkContract: (id: string, reason: string): Promise<Project> =>
+    apiPost(`/projects/${id}/unlink-contract`, { reason }),
 };

@@ -95,8 +95,8 @@ function groupLabel(key?: string): string {
   <v-navigation-drawer
     :rail="ui.sidebarCollapsed"
     permanent
-    width="248"
-    rail-width="72"
+    width="198"
+    rail-width="52"
     color="surface"
   >
     <div class="cp-brand">
@@ -114,7 +114,7 @@ function groupLabel(key?: string): string {
         <div v-if="groupLabel(group.labelKey)" class="cp-nav-group-label">
           {{ groupLabel(group.labelKey) }}
         </div>
-        <v-list density="comfortable" nav class="!pa-0">
+        <v-list density="compact" nav class="!pa-0">
           <v-list-item
             v-for="item in group.items"
             :key="item.to"

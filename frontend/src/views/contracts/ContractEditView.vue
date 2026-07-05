@@ -6,6 +6,7 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { t } from '@/i18n';
 import ContractDetailPanel from '@/components/features/contract/ContractDetailPanel.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 
 const route = useRoute();
 
@@ -19,10 +20,7 @@ const heading = computed(() => (contractId.value ? t('contracts.edit') : t('cont
 
 <template>
   <div>
-    <div class="flex items-center gap-2 mb-4">
-      <v-btn icon="mdi-arrow-right" variant="text" to="/contracts" />
-      <h1 class="text-h5">{{ heading }}</h1>
-    </div>
+    <PageHeader :title="heading" back="/contracts" />
 
     <ContractDetailPanel :contract-id="contractId" />
   </div>

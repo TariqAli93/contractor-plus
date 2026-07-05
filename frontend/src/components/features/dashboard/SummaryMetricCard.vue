@@ -64,14 +64,14 @@ const accentVar = computed(() => {
 .cp-metric {
   position: relative;
   overflow: hidden;
-  padding: 16px 18px;
+  padding: 11px 13px;
 }
 .cp-metric::before {
   content: '';
   position: absolute;
   inset-inline-start: 0;
-  top: 14px;
-  bottom: 14px;
+  top: 10px;
+  bottom: 10px;
   width: 3px;
   border-radius: 0 3px 3px 0;
   background: var(--cp-metric-accent);
@@ -81,6 +81,6 @@ const accentVar = computed(() => {
 .cp-metric__inner {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
 }
 </style>

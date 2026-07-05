@@ -70,41 +70,45 @@ export class CostsService {
   }
 
   async create(data: CreateCostInput, actor: AuditActor): Promise<ProjectCost> {
-    return this.prisma.$transaction(async (tx) => {
-      await this.assertProjectExists(tx, data.projectId);
+    return this.prisma.$transaction((tx) => this.createWithinTx(tx, data, actor));
+  }
 
-      this.assertCategoryMaterialCoherence(data.category, data.materialId);
-      if (data.materialId) await this.assertMaterialExists(tx, data.materialId);
+  // Transaction-aware core of `create`, exposed so the voice engine can compose
+  // it atomically inside its own per-intent transaction (no nested $transaction).
+  async createWithinTx(
+    tx: Prisma.TransactionClient,
+    data: CreateCostInput,
+    actor: AuditActor,
+  ): Promise<ProjectCost> {
+    await this.assertProjectExists(tx, data.projectId);
 
-      const totalAmount = this.resolveTotalAmount(
-        data.quantity,
-        data.unitPrice,
-        data.totalAmount,
-      );
+    this.assertCategoryMaterialCoherence(data.category, data.materialId);
+    if (data.materialId) await this.assertMaterialExists(tx, data.materialId);
 
-      const created = await this.repo.create(
-        {
-          projectId: data.projectId,
-          category: data.category,
-          materialId: data.materialId,
-          description: data.description,
-          quantity: data.quantity,
-          unit: data.unit,
-          unitPrice: data.unitPrice,
-          totalAmount,
-          date: data.date,
-          notes: data.notes,
-        },
-        tx,
-      );
+    const totalAmount = this.resolveTotalAmount(data.quantity, data.unitPrice, data.totalAmount);
 
-      await this.audit.log(
-        actor,
-        { action: 'CREATE', entity: COST, entityId: created.id, newValues: toJsonValue(created) },
-        tx,
-      );
-      return created;
-    });
+    const created = await this.repo.create(
+      {
+        projectId: data.projectId,
+        category: data.category,
+        materialId: data.materialId,
+        description: data.description,
+        quantity: data.quantity,
+        unit: data.unit,
+        unitPrice: data.unitPrice,
+        totalAmount,
+        date: data.date,
+        notes: data.notes,
+      },
+      tx,
+    );
+
+    await this.audit.log(
+      actor,
+      { action: 'CREATE', entity: COST, entityId: created.id, newValues: toJsonValue(created) },
+      tx,
+    );
+    return created;
   }
 
   async update(

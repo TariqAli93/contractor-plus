@@ -83,29 +83,37 @@ export class PaymentsService {
   }
 
   async create(data: CreatePaymentInput, actor: AuditActor): Promise<Payment> {
-    return this.prisma.$transaction(async (tx) => {
-      await this.assertProjectHasContract(tx, data.projectId);
+    return this.prisma.$transaction((tx) => this.createWithinTx(tx, data, actor));
+  }
 
-      const created = await this.repo.create(
-        {
-          projectId: data.projectId,
-          amount: data.amount,
-          dueDate: data.dueDate,
-          method: data.method,
-          reference: data.reference,
-          notes: data.notes,
-          // status defaults to PENDING via schema
-        },
-        tx,
-      );
+  // Transaction-aware core of `create`, exposed so the voice engine can compose
+  // it atomically inside its own per-intent transaction (no nested $transaction).
+  async createWithinTx(
+    tx: Prisma.TransactionClient,
+    data: CreatePaymentInput,
+    actor: AuditActor,
+  ): Promise<Payment> {
+    await this.assertProjectHasContract(tx, data.projectId);
 
-      await this.audit.log(
-        actor,
-        { action: 'CREATE', entity: PAYMENT, entityId: created.id, newValues: toJsonValue(created) },
-        tx,
-      );
-      return created;
-    });
+    const created = await this.repo.create(
+      {
+        projectId: data.projectId,
+        amount: data.amount,
+        dueDate: data.dueDate,
+        method: data.method,
+        reference: data.reference,
+        notes: data.notes,
+        // status defaults to PENDING via schema
+      },
+      tx,
+    );
+
+    await this.audit.log(
+      actor,
+      { action: 'CREATE', entity: PAYMENT, entityId: created.id, newValues: toJsonValue(created) },
+      tx,
+    );
+    return created;
   }
 
   async update(

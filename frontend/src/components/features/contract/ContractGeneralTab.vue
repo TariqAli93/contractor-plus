@@ -122,7 +122,7 @@ const percentageRule = (v: unknown) => {
     </v-alert>
 
     <v-form @submit.prevent="handleSubmit">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <v-text-field
           v-model="form.contractNumber"
           :label="t('contracts.fields.contractNumber')"
@@ -254,7 +254,7 @@ const percentageRule = (v: unknown) => {
         </v-btn>
         <v-spacer />
         <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
-          {{ isEdit ? t('common.update') : t('common.create') }}
+          {{ isEdit ? t('common.saveChanges') : t('contracts.add') }}
         </v-btn>
       </div>
     </v-form>

@@ -7,6 +7,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { t } from '@/i18n';
+import PageHeader from '@/components/shared/PageHeader.vue';
 import { projectsApi } from '@/services/api/projects.api';
 import { contractsApi } from '@/services/api/contracts.api';
 import { useApiError } from '@/composables/useApiError';
@@ -152,15 +153,12 @@ async function createProject() {
   }
 }
 
-const requiredRule = (v: unknown) => !!v || ' ';
+const requiredRule = (v: unknown) => !!v || t('errors.required');
 </script>
 
 <template>
   <div class="mx-auto" style="max-width: 900px">
-    <div class="flex items-center gap-2 mb-4">
-      <v-btn icon="mdi-arrow-right" variant="text" to="/projects" />
-      <h1 class="text-h5">{{ t('projects.wizard.title') }}</h1>
-    </div>
+    <PageHeader :title="t('projects.wizard.title')" back="/projects" icon="mdi-folder-plus-outline" />
 
     <v-alert
       v-if="resumed"
@@ -195,6 +193,7 @@ const requiredRule = (v: unknown) => !!v || ' ';
               <v-text-field
                 v-model="wizard.name"
                 :label="t('projects.fields.name')"
+                :placeholder="t('projects.placeholders.name')"
                 :rules="[requiredRule]"
                 autofocus
                 required

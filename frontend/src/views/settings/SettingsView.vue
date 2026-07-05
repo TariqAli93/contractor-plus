@@ -6,10 +6,11 @@ import CompanyProfileTab from '@/components/features/settings/CompanyProfileTab.
 import CurrencyTab from '@/components/features/settings/CurrencyTab.vue';
 import ContractTemplatesTab from '@/components/features/settings/ContractTemplatesTab.vue';
 import AppearanceSettingsTab from '@/components/features/settings/AppearanceSettingsTab.vue';
+import AiAssistantTab from '@/components/features/settings/AiAssistantTab.vue';
 import CompanyLogo from '@/components/shared/CompanyLogo.vue';
 
 const activeTab = ref<
-  'general' | 'appearance' | 'company' | 'currency' | 'contractTemplates' | 'links'
+  'general' | 'appearance' | 'company' | 'currency' | 'contractTemplates' | 'ai' | 'links'
 >('general');
 </script>
 
@@ -49,6 +50,9 @@ const activeTab = ref<
       <v-tab value="contractTemplates" prepend-icon="mdi-file-document-outline">
         {{ t('settings.tabs.contractTemplates') }}
       </v-tab>
+      <v-tab value="ai" prepend-icon="mdi-robot-outline">
+        {{ t('settings.tabs.ai') }}
+      </v-tab>
       <v-tab value="links" prepend-icon="mdi-link-variant">
         {{ t('settings.tabs.links') }}
       </v-tab>
@@ -73,6 +77,10 @@ const activeTab = ref<
 
       <v-window-item value="contractTemplates">
         <ContractTemplatesTab />
+      </v-window-item>
+
+      <v-window-item value="ai">
+        <AiAssistantTab />
       </v-window-item>
 
       <v-window-item value="links">

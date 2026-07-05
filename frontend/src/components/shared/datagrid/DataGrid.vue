@@ -9,16 +9,10 @@
 //
 // Deliberately deferred (see roadmap): row virtualization for >1k rows and the
 // drag fill-handle. `Ctrl+D` fills down from the cell above as a light autofill.
-import { computed, nextTick, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { t } from '@/i18n';
 import { parseCsv, parseTsv, stringifyCsv, stringifyTsv } from '@/lib/tsv';
-import type {
-  GridCellCommit,
-  GridColumn,
-  GridPastePayload,
-  GridRow,
-  GridRowAction,
-} from './types';
+import type { GridCellCommit, GridColumn, GridPastePayload, GridRow, GridRowAction } from './types';
 
 const props = withDefaults(
   defineProps<{
@@ -200,6 +194,89 @@ const navRowIds = computed<string[]>(() => {
 });
 
 // ---------------------------------------------------------------------------
+// Row virtualization (fixed 30px rows)
+// Only rows overlapping the viewport (+ overscan) are painted; top/bottom
+// spacer <tr>s hold the full scroll height so the scrollbar stays honest. The
+// fixed row height keeps the window math exact, so a >1k-row grid (the
+// materials catalogue, a big project's costs) stays light. Every data
+// operation — sort, filter, select, copy, paste — runs on the full row model
+// above; virtualization only trims what the DOM renders.
+// ---------------------------------------------------------------------------
+const ROW_H = 30;
+const OVERSCAN = 8;
+const scrollTop = ref(0);
+const viewportH = ref(600);
+const theadEl = ref<HTMLElement | null>(null);
+
+const vTotal = computed(() => renderRows.value.length);
+// Small grids (project tabs, short lists) render in full — the original, safe
+// path. Windowing only engages past this many rows, where it actually pays off
+// (the materials catalogue, a big project's costs), so a subtle windowing bug
+// can never regress the common small-grid cases.
+const VIRTUAL_MIN = 100;
+const virtualize = computed(() => vTotal.value > VIRTUAL_MIN);
+const vStart = computed(() =>
+  virtualize.value ? Math.max(0, Math.floor(scrollTop.value / ROW_H) - OVERSCAN) : 0,
+);
+const vEnd = computed(() =>
+  virtualize.value
+    ? Math.min(vTotal.value, Math.ceil((scrollTop.value + viewportH.value) / ROW_H) + OVERSCAN)
+    : vTotal.value,
+);
+const windowRows = computed<GridRow[]>(() => renderRows.value.slice(vStart.value, vEnd.value));
+const padTop = computed(() => vStart.value * ROW_H);
+const padBottom = computed(() => Math.max(0, (vTotal.value - vEnd.value) * ROW_H));
+const colSpan = computed(() => props.columns.length + (props.selectable ? 1 : 0));
+
+function onGridScroll() {
+  if (gridEl.value) scrollTop.value = gridEl.value.scrollTop;
+}
+function measureViewport() {
+  if (gridEl.value) viewportH.value = gridEl.value.clientHeight || viewportH.value;
+}
+
+// Keep the active/target row painted during keyboard nav: if it sits outside
+// the window, nudge scrollTop so it lands just below the sticky header (or at
+// the bottom edge), then the window recomputes to include it before we focus.
+function scrollRowIntoView(index: number) {
+  const el = gridEl.value;
+  if (!el) return;
+  const headH = theadEl.value?.offsetHeight ?? 56;
+  const rowTop = index * ROW_H;
+  const contentTop = headH + rowTop;
+  const curr = el.scrollTop;
+  let next = curr;
+  if (contentTop < curr + headH) next = rowTop;
+  else if (contentTop + ROW_H > curr + el.clientHeight) next = contentTop + ROW_H - el.clientHeight;
+  next = Math.max(0, next);
+  if (next !== curr) {
+    el.scrollTop = next;
+    scrollTop.value = next;
+  }
+}
+
+let ro: ResizeObserver | null = null;
+onMounted(() => {
+  measureViewport();
+  if (typeof ResizeObserver !== 'undefined' && gridEl.value) {
+    ro = new ResizeObserver(measureViewport);
+    ro.observe(gridEl.value);
+  }
+});
+onBeforeUnmount(() => {
+  ro?.disconnect();
+  ro = null;
+});
+
+// After the row set changes (filter/sort/refetch) the browser may clamp the
+// scroll position — resync so the window math matches the real scrollTop.
+watch(vTotal, () => {
+  void nextTick(() => {
+    if (gridEl.value) scrollTop.value = gridEl.value.scrollTop;
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Active cell + editing
 // ---------------------------------------------------------------------------
 const active = ref<{ rowId: string; field: string } | null>(null);
@@ -283,6 +360,8 @@ function moveTo(rowIdx: number, colIdx: number, edit: boolean) {
   const rowId = rows[r];
   const col = cols[c];
   if (rowId === undefined || col === undefined) return;
+  // Paint the target row first when it's outside the virtual window.
+  scrollRowIntoView(r);
   if (edit) startEditAt(rowId, col.field);
   else {
     setActive(rowId, col.field);
@@ -769,6 +848,7 @@ function runRowAction(a: GridRowAction) {
       class="cp-grid-scroll"
       :style="{ maxHeight: height }"
       tabindex="0"
+      @scroll.passive="onGridScroll"
       @keydown="onContainerKeydown"
       @copy="onCopy"
       @paste="onPaste"
@@ -783,7 +863,7 @@ function runRowAction(a: GridRowAction) {
           />
         </colgroup>
 
-        <thead>
+        <thead ref="theadEl">
           <tr>
             <th
               v-if="selectable"
@@ -841,8 +921,11 @@ function runRowAction(a: GridRowAction) {
         </thead>
 
         <tbody>
+          <tr v-if="padTop > 0" class="cp-spacer-row" aria-hidden="true">
+            <td :colspan="colSpan" class="cp-spacer" :style="{ height: `${padTop}px` }" />
+          </tr>
           <tr
-            v-for="(row, ri) in renderRows"
+            v-for="(row, wi) in windowRows"
             :key="idOf(row)"
             class="cp-tr"
             :class="[
@@ -854,7 +937,7 @@ function runRowAction(a: GridRowAction) {
               v-if="selectable"
               class="cp-td cp-pin cp-check"
               :style="pinStyle(-1)"
-              @click="!isNewRow(row) && onSelectClick(ri, $event)"
+              @click="!isNewRow(row) && onSelectClick(vStart + wi, $event)"
             >
               <v-icon v-if="isNewRow(row)" size="16" class="text-medium-emphasis">
                 mdi-plus
@@ -930,6 +1013,9 @@ function runRowAction(a: GridRowAction) {
               </template>
             </td>
           </tr>
+          <tr v-if="padBottom > 0" class="cp-spacer-row" aria-hidden="true">
+            <td :colspan="colSpan" class="cp-spacer" :style="{ height: `${padBottom}px` }" />
+          </tr>
         </tbody>
       </table>
 
@@ -957,20 +1043,19 @@ function runRowAction(a: GridRowAction) {
   </div>
 </template>
 
-
 <style scoped>
 .cp-grid {
   position: relative;
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 8px;
+  border-radius: 5px;
   overflow: hidden;
 }
 .cp-grid-bar {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  background: rgba(var(--v-theme-primary), 0.08);
+  padding: 4px 8px;
+  background: var(--cp-surface-2);
   border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 .cp-grid-scroll {
@@ -981,15 +1066,15 @@ function runRowAction(a: GridRowAction) {
   border-collapse: separate;
   border-spacing: 0;
   width: 100%;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   background: rgb(var(--v-theme-surface));
 }
 .cp-th,
 .cp-td {
   border-inline-end: 1px solid rgba(var(--v-border-color), 0.5);
   border-bottom: 1px solid rgba(var(--v-border-color), 0.5);
-  padding: 0 8px;
-  height: 36px;
+  padding: 0 7px;
+  height: 30px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1014,9 +1099,9 @@ function runRowAction(a: GridRowAction) {
 }
 /* Filter row sits below the header row; offset so it also stays pinned. */
 .cp-filter-row .cp-th {
-  top: 36px;
+  top: 30px;
   z-index: 2;
-  height: 30px;
+  height: 26px;
   font-weight: 400;
 }
 .cp-filter-input {
@@ -1100,13 +1185,21 @@ function runRowAction(a: GridRowAction) {
   justify-content: center;
   background: rgba(var(--v-theme-surface), 0.6);
 }
-/* Tighten the Vuetify editors so they sit flush inside a 36px cell. */
+/* Tighten the Vuetify editors so they sit flush inside a 30px cell. */
 .cp-editor :deep(.v-field__input) {
   padding: 0;
-  min-height: 34px;
-  font-size: 0.875rem;
+  min-height: 28px;
+  font-size: 0.8125rem;
 }
 .cp-editor :deep(.v-field) {
   padding-inline: 4px;
+}
+/* Virtualization spacers: invisible fillers that hold the scroll height for the
+   rows not currently painted. No border/padding so they never show as a line. */
+.cp-spacer-row,
+.cp-spacer {
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 </style>

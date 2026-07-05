@@ -7,6 +7,7 @@ import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import type { PermissionMatrix as PermissionMatrixData, Role } from '@/types/rbac';
 import ErrorState from '@/components/shared/ErrorState.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 import RolesList from './RolesList.vue';
 import PermissionMatrix from './PermissionMatrix.vue';
 import RoleEditDialog from '@/components/features/rbac/RoleEditDialog.vue';
@@ -77,7 +78,7 @@ onMounted(fetch);
 
 <template>
   <div>
-    <h1 class="text-h5 mb-1">{{ t('nav.rbac') }}</h1>
+    <PageHeader :title="t('nav.rbac')" icon="mdi-shield-key-outline" />
     <p class="text-medium-emphasis text-body-2 mb-4">{{ t('rbac.intro') }}</p>
 
     <v-tabs v-model="activeTab" color="primary" density="comfortable" class="mb-4">

@@ -2,8 +2,10 @@
 import { onKeyStroke } from '@vueuse/core';
 import TopBar from './TopBar.vue';
 import SideNav from './SideNav.vue';
+import StatusBar from './StatusBar.vue';
 import CommandPalette from './CommandPalette.vue';
 import ShortcutsHelp from './ShortcutsHelp.vue';
+import VoiceAssistant from '@/components/voice/VoiceAssistant.vue';
 import { useUiStore } from '@/stores/ui.store';
 import { useQuickNav } from '@/composables/useQuickNav';
 
@@ -43,8 +45,10 @@ onKeyStroke(['?'], (e) => {
         </router-view>
       </div>
     </v-main>
+    <StatusBar />
     <CommandPalette />
     <ShortcutsHelp />
+    <VoiceAssistant />
   </v-app>
 </template>
 
@@ -52,13 +56,14 @@ onKeyStroke(['?'], (e) => {
 .cp-main {
   background: var(--cp-bg);
 }
+/* Full-bleed workspace — no centered max-width column (that reads as a web
+   page). Tight, even gutters like a desktop document area. */
 .cp-page {
-  margin-inline: auto;
-  padding: 24px clamp(16px, 3vw, 32px) 48px;
+  padding: 10px clamp(10px, 1.2vw, 16px) 14px;
 }
 @media (max-width: 600px) {
   .cp-page {
-    padding: 16px 12px 32px;
+    padding: 8px 8px 12px;
   }
 }
 </style>

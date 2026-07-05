@@ -6,6 +6,7 @@ import { useSaveShortcut } from '@/composables/useSaveShortcut';
 import { projectsApi } from '@/services/api/projects.api';
 import { materialsApi } from '@/services/api/materials.api';
 import { CostCategory } from '@/types/enums';
+import AdvancedOptions from '@/components/shared/AdvancedOptions.vue';
 import type { ProjectWithContract } from '@/types/project';
 import type { Material } from '@/types/material';
 
@@ -93,15 +94,18 @@ const derivedTotal = computed(() => {
   return null;
 });
 
-const requiredRule = (v: unknown) => !!v || ' ';
+const requiredRule = (v: unknown) => !!v || t('errors.required');
 const nonNegRule = (v: number | null | undefined) =>
   v === null || v === undefined || v >= 0 || t('common.error');
+
+// Reveal on edit when a manual total override or notes are already present.
+const hasAdvanced = computed(() => form.value.totalAmount !== null || !!form.value.notes);
 </script>
 
 <template>
   <v-card :loading="loading || projectsLoading || materialsLoading">
     <v-form @submit.prevent="submit">
-      <v-card-text class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <v-card-text class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <v-select
           v-model="form.projectId"
           :items="projectOptions"
@@ -122,6 +126,7 @@ const nonNegRule = (v: number | null | undefined) =>
         <v-text-field
           v-model="form.description"
           :label="t('costs.fields.description')"
+          :placeholder="t('costs.placeholders.description')"
           :rules="[requiredRule]"
           :error-messages="fieldErrors.description"
           class="md:col-span-2"
@@ -137,11 +142,13 @@ const nonNegRule = (v: number | null | undefined) =>
         <v-text-field
           v-model="form.unit"
           :label="t('costs.fields.unit')"
+          :placeholder="t('costs.placeholders.unit')"
           :error-messages="fieldErrors.unit"
         />
         <v-text-field
           v-model.number="form.quantity"
           :label="t('costs.fields.quantity')"
+          :placeholder="t('costs.placeholders.quantity')"
           type="number"
           step="0.001"
           min="0"
@@ -151,26 +158,12 @@ const nonNegRule = (v: number | null | undefined) =>
         <v-text-field
           v-model.number="form.unitPrice"
           :label="t('costs.fields.unitPrice')"
+          :placeholder="t('costs.placeholders.unitPrice')"
           type="number"
           step="0.01"
           min="0"
           :rules="[nonNegRule]"
           :error-messages="fieldErrors.unitPrice"
-        />
-        <v-text-field
-          v-model.number="form.totalAmount"
-          :label="t('costs.fields.totalAmount')"
-          type="number"
-          step="0.01"
-          min="0"
-          :hint="
-            derivedTotal !== null && form.totalAmount === null
-              ? t('costs.form.derivedTotalHint', { value: derivedTotal.toFixed(2) })
-              : t('costs.form.totalHint')
-          "
-          persistent-hint
-          :rules="[nonNegRule]"
-          :error-messages="fieldErrors.totalAmount"
         />
         <v-text-field
           v-model="form.date"
@@ -180,14 +173,31 @@ const nonNegRule = (v: number | null | undefined) =>
           :error-messages="fieldErrors.date"
           required
         />
-        <v-textarea
-          v-model="form.notes"
-          :label="t('costs.fields.notes')"
-          :error-messages="fieldErrors.notes"
-          rows="2"
-          auto-grow
-          class="md:col-span-2"
-        />
+        <AdvancedOptions :default-open="hasAdvanced">
+          <v-text-field
+            v-model.number="form.totalAmount"
+            :label="t('costs.fields.totalAmount')"
+            type="number"
+            step="0.01"
+            min="0"
+            :hint="
+              derivedTotal !== null && form.totalAmount === null
+                ? t('costs.form.derivedTotalHint', { value: derivedTotal.toFixed(2) })
+                : t('costs.form.totalHint')
+            "
+            persistent-hint
+            :rules="[nonNegRule]"
+            :error-messages="fieldErrors.totalAmount"
+          />
+          <v-textarea
+            v-model="form.notes"
+            :label="t('costs.fields.notes')"
+            :error-messages="fieldErrors.notes"
+            rows="2"
+            auto-grow
+            class="md:col-span-2"
+          />
+        </AdvancedOptions>
       </v-card-text>
 
       <v-divider />
@@ -198,7 +208,7 @@ const nonNegRule = (v: number | null | undefined) =>
         </v-btn>
         <v-spacer />
         <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
-          {{ isEdit ? t('common.update') : t('common.create') }}
+          {{ isEdit ? t('common.saveChanges') : t('costs.add') }}
         </v-btn>
       </v-card-actions>
     </v-form>
