@@ -24,6 +24,7 @@ import {
 import type { SessionContext } from '../engine/voice.types.js';
 import { NluProviderRouter } from './nlu-provider-router.js';
 import type { LlmNluProvider } from './llm/llm-nlu.provider.js';
+import { logger } from '../../../lib/logger.js';
 
 export interface Understanding {
   invocations: IntentInvocation[];
@@ -32,6 +33,10 @@ export interface Understanding {
   provider: string;
   llmUsed: boolean;
   reason: string;
+  /** Fields the LLM flagged as missing (empty on the RuleBased paths). */
+  missingFields: string[];
+  /** The LLM's one-line clarification question when something is missing, else null. */
+  clarificationQuestion: string | null;
 }
 
 export interface IntentRegistryView {
@@ -67,6 +72,8 @@ export class NaturalCommandInterpreter {
         provider: ruleNlu.provider,
         llmUsed: false,
         reason: decision.reason,
+        missingFields: [],
+        clarificationQuestion: null,
       };
     }
 
@@ -78,6 +85,20 @@ export class NaturalCommandInterpreter {
       });
 
       const known = li.intents.filter((i) => this.registry.has(i));
+
+      // Safe telemetry — provider + recognised intents + confidence + missing
+      // fields ONLY. Never the transcript, the entity values, or the raw output
+      // (those can carry customer names / amounts).
+      logger.info(
+        {
+          provider: this.llm.name,
+          intents: known,
+          confidence: li.confidence,
+          missingFields: li.missingFields,
+        },
+        '[voice-nlu] llm understanding',
+      );
+
       if (known.length === 0) {
         // Nothing usable — keep RuleBased rather than reject.
         return {
@@ -86,6 +107,8 @@ export class NaturalCommandInterpreter {
           provider: 'rule-based:llm-empty',
           llmUsed: false,
           reason: 'llm_no_usable_intent',
+          missingFields: [],
+          clarificationQuestion: null,
         };
       }
 
@@ -106,6 +129,8 @@ export class NaturalCommandInterpreter {
         provider: this.llm.name,
         llmUsed: true,
         reason: decision.reason,
+        missingFields: li.missingFields,
+        clarificationQuestion: li.clarificationQuestion,
       };
     } catch (err) {
       // Total fallback — the user never sees a failure.
@@ -116,6 +141,8 @@ export class NaturalCommandInterpreter {
         provider: 'rule-based:llm-fallback',
         llmUsed: false,
         reason: `llm_failed:${msg}`,
+        missingFields: [],
+        clarificationQuestion: null,
       };
     }
   }

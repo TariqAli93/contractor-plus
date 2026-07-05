@@ -39,7 +39,7 @@ import type { Plan, VoicePrincipal } from './engine/voice.types.js';
 import type { NluProvider, NluResult } from './nlu/nlu.types.js';
 import { RuleBasedNluProvider } from './nlu/rule-based.provider.js';
 import { NaturalCommandInterpreter } from './nlu/natural-command-interpreter.js';
-import { NluProviderRouter } from './nlu/nlu-provider-router.js';
+import { NluProviderRouter, classifyNluResult } from './nlu/nlu-provider-router.js';
 import { createLlmClient } from './nlu/llm/llm-client.js';
 import { LlmNluProvider } from './nlu/llm/llm-nlu.provider.js';
 import { VoiceLlmStore } from './nlu/llm/voice-llm.store.js';
@@ -47,7 +47,17 @@ import { sha256 } from '../../lib/crypto.js';
 import { VoiceRepository } from './voice.repository.js';
 import type { PendingWorkflow, StoredSessionContext, VoiceActor } from './voice.types.js';
 
-const MIN_CONFIDENCE = 0.4;
+/** Outcome of resolving a turn's intent+bag. A reject carries the wire reason. */
+type ResolvedTurn =
+  | { ok: true; intent: VoiceIntent; bag: EntityBag }
+  | { ok: false; reason: 'low_confidence' | 'unknown_intent' };
+
+/** The LLM's signal for a fresh turn, forwarded from the interpreter to acceptance. */
+interface LlmSignal {
+  llmUsed: boolean;
+  missingFields: string[];
+  clarificationQuestion: string | null;
+}
 
 export interface VoiceServiceDeps {
   nlu?: NluProvider;
@@ -163,6 +173,7 @@ export class VoiceService {
     //    utterance is a bare value the RuleBased extractor handles). The output
     //    is the SAME shape the engine already consumes — nothing below changes.
     let workingNlu = nlu;
+    let llmSignal: LlmSignal | undefined;
     if (!context.pendingClarification) {
       const interpreter = await this.getInterpreter();
       const understanding = await interpreter.understand(input.transcript, context, nlu, locale);
@@ -177,15 +188,26 @@ export class VoiceService {
         );
       }
       workingNlu = understanding.single;
+      llmSignal = {
+        llmUsed: understanding.llmUsed,
+        missingFields: understanding.missingFields,
+        clarificationQuestion: understanding.clarificationQuestion,
+      };
     }
 
     // Resolve the working intent + bag, honouring an in-flight clarification:
     // a bare answer ("200", "250 ألف", "أحمد") is folded into the pending intent.
-    const resolution = this.resolveTurn(workingNlu, context, input.transcript);
-    if (!resolution) {
+    // For a fresh turn, acceptance is provider-aware (see resolveTurn): a valid
+    // LLM intent is NOT rejected merely for a sub-0.4 score, and an unrecognised
+    // command is distinguished from a low-confidence one.
+    const resolution = this.resolveTurn(workingNlu, context, input.transcript, llmSignal);
+    if (!resolution.ok) {
       return this.rejectTurn(actor, sessionId, input.transcript, workingNlu, {
-        reason: 'low_confidence',
-        message: 'لم أفهم الطلب بوضوح. ممكن تعيد الأمر بصيغة أخرى؟',
+        reason: resolution.reason,
+        message:
+          resolution.reason === 'unknown_intent'
+            ? 'ما فهمت شنو تريد تسوّي بالضبط. جرّب تحدّد الأمر أكثر — مثلاً: «سوي مشروع بيت» أو «سجّل دفعة مليون».'
+            : 'لم أفهم الطلب بوضوح. ممكن تعيد الأمر بصيغة أخرى؟',
       });
     }
     const { intent: workingIntent, bag: effectiveBag } = resolution;
@@ -307,7 +329,8 @@ export class VoiceService {
     nlu: { intent: VoiceIntent; confidence: number; entityBag: EntityBag },
     context: StoredSessionContext,
     transcript: string,
-  ): { intent: VoiceIntent; bag: EntityBag } | null {
+    llmSignal?: LlmSignal,
+  ): ResolvedTurn {
     const pending = context.pendingClarification;
 
     if (pending) {
@@ -321,18 +344,35 @@ export class VoiceService {
         if (slot?.fillFromAnswer && (current === undefined || current === null || current === '')) {
           slot.fillFromAnswer(merged, transcript);
         }
-        return { intent: pending.intent, bag: this.context.resolve(merged, context) };
+        return { ok: true, intent: pending.intent, bag: this.context.resolve(merged, context) };
       }
     }
 
-    if (
-      nlu.intent !== VoiceIntent.UNKNOWN &&
-      nlu.confidence >= MIN_CONFIDENCE &&
-      this.registry.has(nlu.intent)
-    ) {
-      return { intent: nlu.intent, bag: this.context.resolve(nlu.entityBag, context) };
+    // Fresh turn: provider-aware acceptance. The LLM's floor (0.3) is lower than
+    // RuleBased's (0.4) — a natively-classified intent isn't discarded for a
+    // modest score — and an LLM-flagged missing field routes to clarification,
+    // not rejection. VOICE_LLM_MIN_CONFIDENCE plays no part here (escalation only).
+    const acceptance = classifyNluResult({
+      intent: nlu.intent,
+      confidence: nlu.confidence,
+      known: this.registry.has(nlu.intent),
+      llmUsed: llmSignal?.llmUsed ?? false,
+      missingFields: llmSignal?.missingFields ?? [],
+      clarificationQuestion: llmSignal?.clarificationQuestion ?? null,
+    });
+
+    switch (acceptance.kind) {
+      case 'accepted':
+      case 'needs_clarification':
+        // Both proceed — when a required field is genuinely missing the handler
+        // emits the authoritative clarify (with a real awaiting-slot to fold the
+        // next bare answer into), which is richer than the LLM's own question.
+        return { ok: true, intent: nlu.intent, bag: this.context.resolve(nlu.entityBag, context) };
+      case 'unrecognized':
+        return { ok: false, reason: 'unknown_intent' };
+      case 'low_confidence':
+        return { ok: false, reason: 'low_confidence' };
     }
-    return null;
   }
 
   // ---------- Turn after a confirm: the decision ----------

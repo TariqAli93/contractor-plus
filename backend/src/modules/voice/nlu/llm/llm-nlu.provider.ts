@@ -8,12 +8,7 @@
 // dropped, so the downstream engine stays authoritative and safe.
 // ============================================================
 
-import {
-  ProjectType,
-  VoiceIntent,
-  VOICE_INTENTS,
-  type EntityBag,
-} from '@contractor-plus/shared';
+import { ProjectType, VoiceIntent, VOICE_INTENTS, type EntityBag } from '@contractor-plus/shared';
 import { normalizeArabic } from '../normalize.js';
 import type { LlmClient } from './llm-client.js';
 
@@ -89,6 +84,9 @@ export class LlmNluProvider {
     ].join('\n');
 
     const raw = await this.client.complete({ system: SYSTEM_PROMPT, user });
+    // The raw output + parsed entities can carry customer names / amounts, so
+    // they are NOT logged here; the interpreter emits a safe, redacted summary
+    // (provider / intents / confidence / missingFields) instead.
     return this.parse(raw, transcript);
   }
 
@@ -97,14 +95,12 @@ export class LlmNluProvider {
     const obj = JSON.parse(json) as Record<string, unknown>;
 
     const intents = Array.isArray(obj.intents)
-      ? (obj.intents
+      ? obj.intents
           .map((i) => normalizeIntent(String(i)))
-          .filter((i): i is VoiceIntent => i !== null))
+          .filter((i): i is VoiceIntent => i !== null)
       : [];
 
-    const entityBag = coerceEntities(
-      (obj.entities ?? {}) as Record<string, unknown>,
-    );
+    const entityBag = coerceEntities((obj.entities ?? {}) as Record<string, unknown>);
 
     const missingFields = Array.isArray(obj.missingFields)
       ? obj.missingFields.map((f) => String(f)).slice(0, 12)

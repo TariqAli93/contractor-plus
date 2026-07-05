@@ -36,3 +36,61 @@ export class NluProviderRouter {
     return { useLlm: false, reason: 'rule_sufficient' };
   }
 }
+
+// ===========================================================================
+// Acceptance of an NLU result — SEPARATE from escalation.
+//
+// The escalation threshold above (minConfidence / VOICE_LLM_MIN_CONFIDENCE) only
+// decides RuleBased→LLM. It must NEVER be used to reject a valid LLM result:
+// once the LLM has natively classified a KNOWN intent, a modest confidence is
+// enough to act on. So acceptance uses its OWN floors — and a lower one for the
+// LLM, which already did the hard classification.
+// ===========================================================================
+
+/** A valid, known LLM intent is accepted from this confidence up. */
+export const LLM_ACCEPT_CONFIDENCE = 0.3;
+/** RuleBased needs a little more certainty (it can misfire on noisy speech). */
+export const RULE_ACCEPT_CONFIDENCE = 0.4;
+
+export type NluAcceptance =
+  | { kind: 'accepted' }
+  | { kind: 'needs_clarification'; question: string }
+  | { kind: 'low_confidence' }
+  | { kind: 'unrecognized' };
+
+export interface NluResultSignal {
+  intent: VoiceIntent;
+  confidence: number;
+  /** Is `intent` a handler the registry can actually execute? */
+  known: boolean;
+  /** Did this result come from the LLM (vs RuleBased)? */
+  llmUsed: boolean;
+  /** Fields the LLM flagged as missing (empty for RuleBased). */
+  missingFields: string[];
+  /** The LLM's one-line question when something is missing, else null. */
+  clarificationQuestion: string | null;
+}
+
+/**
+ * Decide what to DO with an NLU result on a FRESH turn (no pending clarification):
+ *   1. no usable intent (UNKNOWN, or unknown to the registry) → `unrecognized`
+ *   2. the LLM understood the intent but itemised missing fields → ask, never
+ *      reject — even below the confidence floor (a understood-but-incomplete
+ *      command is a clarification, not a failure)
+ *   3. below the provider's acceptance floor → `low_confidence`
+ *   4. otherwise → `accepted`
+ *
+ * VOICE_LLM_MIN_CONFIDENCE is intentionally NOT referenced here.
+ */
+export function classifyNluResult(r: NluResultSignal): NluAcceptance {
+  if (r.intent === VoiceIntent.UNKNOWN || !r.known) return { kind: 'unrecognized' };
+
+  if (r.llmUsed && r.missingFields.length > 0 && r.clarificationQuestion) {
+    return { kind: 'needs_clarification', question: r.clarificationQuestion };
+  }
+
+  const floor = r.llmUsed ? LLM_ACCEPT_CONFIDENCE : RULE_ACCEPT_CONFIDENCE;
+  if (r.confidence < floor) return { kind: 'low_confidence' };
+
+  return { kind: 'accepted' };
+}
