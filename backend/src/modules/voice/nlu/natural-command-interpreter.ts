@@ -84,7 +84,19 @@ export class NaturalCommandInterpreter {
         hasLastCustomer: Boolean(context.lastCustomerId),
       });
 
+      console.log('========== LLM ==========');
+      console.log(JSON.stringify(li, null, 2));
+      console.log('=========================');
+
       const known = li.intents.filter((i) => this.registry.has(i));
+
+      console.log({
+        intents: li.intents,
+        known,
+        confidence: li.confidence,
+        missingFields: li.missingFields,
+        clarificationQuestion: li.clarificationQuestion,
+      });
 
       // Safe telemetry — provider + recognised intents + confidence + missing
       // fields ONLY. Never the transcript, the entity values, or the raw output
