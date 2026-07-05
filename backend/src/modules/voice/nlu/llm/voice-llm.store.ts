@@ -17,11 +17,12 @@ import { AuditService, type AuditActor } from '../../../audit/audit.service.js';
 import { decryptSecret, encryptSecret } from '../../../../lib/crypto.js';
 import { ValidationError } from '../../../../shared/errors/validation.error.js';
 import { toJsonValue } from '../../../../shared/utils/json.js';
-import { createLlmClient } from './llm-client.js';
+import { createLlmClient, LLMError } from './llm-client.js';
 import {
   isValidModelForProvider,
   loadVoiceLlmConfig,
   normalizeModel,
+  resolveBaseUrl,
   type LlmProviderName,
   type VoiceLlmConfig,
 } from './voice-llm.config.js';
@@ -58,6 +59,7 @@ export interface TestConnectionResult {
   ok: boolean;
   provider: LlmProviderName;
   model: string;
+  latencyMs?: number;
   error?: string;
 }
 
@@ -74,12 +76,16 @@ export class VoiceLlmStore {
     const env = loadVoiceLlmConfig();
     const m = await this.rawMap();
 
-    const provider: LlmProviderName = m.provider === 'openai' ? 'openai' : m.provider === 'anthropic' ? 'anthropic' : env.provider;
+    const provider: LlmProviderName =
+      m.provider === 'openai' || m.provider === 'anthropic' || m.provider === 'groq'
+        ? m.provider
+        : env.provider;
 
     return {
       enabled: typeof m.enabled === 'boolean' ? m.enabled : env.enabled,
       provider,
       model: typeof m.model === 'string' && m.model ? m.model : env.model,
+      baseUrl: resolveBaseUrl(provider),
       apiKey: this.decryptedKey(m) ?? env.apiKey,
       timeoutMs: typeof m.timeoutMs === 'number' ? m.timeoutMs : env.timeoutMs,
       maxTokens: typeof m.maxTokens === 'number' ? m.maxTokens : env.maxTokens,
@@ -182,6 +188,7 @@ export class VoiceLlmStore {
       enabled: true,
       provider,
       model,
+      baseUrl: resolveBaseUrl(provider),
       apiKey,
       timeoutMs: input.timeoutMs ?? stored.timeoutMs,
       maxTokens: 8,
@@ -189,12 +196,14 @@ export class VoiceLlmStore {
     });
     if (!client) return { ok: false, provider, model, error: 'client_unavailable' };
 
+    const startedAt = Date.now();
     try {
       await client.complete({ system: 'Return JSON only.', user: '{"ping":true}' });
-      return { ok: true, provider, model };
+      return { ok: true, provider, model, latencyMs: Date.now() - startedAt };
     } catch (err) {
-      // err messages are status codes (e.g. anthropic_http_401) — never the key.
-      return { ok: false, provider, model, error: err instanceof Error ? err.message : 'failed' };
+      // Unified, key-safe code (e.g. rate_limited / model_not_found) — never the key.
+      const code = err instanceof LLMError ? err.code : 'unknown_error';
+      return { ok: false, provider, model, latencyMs: Date.now() - startedAt, error: code };
     }
   }
 

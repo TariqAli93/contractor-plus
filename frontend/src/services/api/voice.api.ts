@@ -5,11 +5,15 @@ import type {
   VoiceTurnResponse,
 } from '@contractor-plus/shared';
 
+// Providers the assistant supports. Adding one later (OpenRouter, Ollama, …) is
+// a one-line change here + a matching backend adapter.
+export type VoiceAiProvider = 'anthropic' | 'openai' | 'groq';
+
 // UI-safe view of the LLM settings — mirrors the backend VoiceLlmSettingsView.
 // The API key is NEVER included; `apiKeySet` tells the UI a key is on file.
 export interface VoiceAiSettings {
   enabled: boolean;
-  provider: 'anthropic' | 'openai';
+  provider: VoiceAiProvider;
   model: string;
   timeoutMs: number;
   maxTokens: number;
@@ -20,7 +24,7 @@ export interface VoiceAiSettings {
 
 export interface VoiceAiSettingsUpdate {
   enabled?: boolean;
-  provider?: 'anthropic' | 'openai';
+  provider?: VoiceAiProvider;
   model?: string;
   timeoutMs?: number;
   maxTokens?: number;
@@ -34,11 +38,14 @@ export interface VoiceAiTestResult {
   ok: boolean;
   provider: string;
   model: string;
+  /** Round-trip time of the test call, in ms (present on ok and on failure). */
+  latencyMs?: number;
+  /** Unified error code on failure (rate_limited, model_not_found, …). */
   error?: string;
 }
 
 export interface VoiceAiTestInput {
-  provider?: 'anthropic' | 'openai';
+  provider?: VoiceAiProvider;
   model?: string;
   apiKey?: string;
   timeoutMs?: number;

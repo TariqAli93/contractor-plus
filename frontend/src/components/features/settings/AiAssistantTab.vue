@@ -2,14 +2,14 @@
 // Settings → المساعد الذكي. Configures the LLM behind the voice/command
 // assistant against the existing, secure backend (/voice/settings):
 //  - enable/disable (when off, the assistant still works via local rules)
-//  - provider (Anthropic / OpenAI), model
+//  - provider (Anthropic / OpenAI / Groq), model
 //  - API key — write-only: we send a new key to be encrypted server-side and
 //    only ever read back `apiKeySet` (the key itself never returns to the UI)
 //  - test connection, plus advanced timeout / max-tokens
 // Gated by settings.voice_ai.manage; the whole Settings area is OWNER/ADMIN.
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { t } from '@/i18n';
-import { voiceApi, type VoiceAiSettings } from '@/services/api/voice.api';
+import { voiceApi, type VoiceAiProvider, type VoiceAiSettings } from '@/services/api/voice.api';
 import { useToast } from '@/composables/useToast';
 import { useApiError } from '@/composables/useApiError';
 import { useAccess } from '@/composables/useAccess';
@@ -36,7 +36,7 @@ const view = ref<VoiceAiSettings | null>(null);
 
 interface FormState {
   enabled: boolean;
-  provider: 'anthropic' | 'openai';
+  provider: VoiceAiProvider;
   model: string;
   timeoutMs: number;
   maxTokens: number;
@@ -53,20 +53,36 @@ const form = reactive<FormState>({
   clearApiKey: false,
 });
 
-const testResult = ref<{ ok: boolean; reason?: string } | null>(null);
+const testResult = ref<{ ok: boolean; reason?: string; latencyMs?: number } | null>(null);
 
 // Throttle: at most one test-connection every 10s, so the settings screen can't
 // hammer the provider's rate limit.
 const TEST_COOLDOWN_MS = 10_000;
 const lastTestAt = ref(0);
 
+// Default model per provider (mirrors the backend DEFAULT_MODELS). Drives the
+// field placeholder and the auto-fill when the provider changes with an empty field.
+const DEFAULT_MODELS: Record<VoiceAiProvider, string> = {
+  anthropic: 'claude-haiku-4-5',
+  openai: 'gpt-4o-mini',
+  groq: 'llama-3.3-70b-versatile',
+};
+
 const providerOptions = computed(() => [
   { value: 'anthropic', title: t('settings.ai.providers.anthropic') },
   { value: 'openai', title: t('settings.ai.providers.openai') },
+  { value: 'groq', title: t('settings.ai.providers.groq') },
 ]);
 
-const modelPlaceholder = computed(() =>
-  form.provider === 'openai' ? 'gpt-4o-mini' : 'claude-haiku-4-5',
+const modelPlaceholder = computed(() => DEFAULT_MODELS[form.provider]);
+
+// When the user switches provider, prefill its default model — but ONLY if the
+// field is empty, so a custom model the user typed is never clobbered.
+watch(
+  () => form.provider,
+  (provider) => {
+    if (!form.model.trim()) form.model = DEFAULT_MODELS[provider];
+  },
 );
 
 // Mirror the backend rule so an invalid OpenAI model is caught inline, before
@@ -119,21 +135,31 @@ async function load() {
 }
 onMounted(load);
 
-// Turn the backend's terse test codes (e.g. anthropic_http_401) into a plain
-// "what's wrong" message — no raw provider codes leak to the user.
+// Map the backend's unified, provider-agnostic error code (invalid_api_key,
+// rate_limited, …) to a plain "what's wrong" message — no raw codes reach the user.
 function friendlyTestError(code: string | undefined): string {
-  const c = (code ?? '').toLowerCase();
-  if (c.includes('no_api_key')) return t('settings.ai.testErrors.noKey');
-  if (c.includes('invalid_api_key') || c.includes('401') || c.includes('403') || c.includes('invalid')) {
-    return t('settings.ai.testErrors.badKey');
+  switch ((code ?? '').toLowerCase()) {
+    case 'no_api_key':
+      return t('settings.ai.testErrors.noKey');
+    case 'invalid_api_key':
+      return t('settings.ai.testErrors.badKey');
+    case 'insufficient_quota':
+      return t('settings.ai.testErrors.quota');
+    case 'rate_limited':
+      return t('settings.ai.testErrors.rateLimited');
+    case 'model_not_found':
+      return t('settings.ai.testErrors.modelNotFound');
+    case 'timeout':
+      return t('settings.ai.testErrors.timeout');
+    case 'network_error':
+      return t('settings.ai.testErrors.network');
+    case 'server_error':
+      return t('settings.ai.testErrors.server');
+    case 'client_unavailable':
+      return t('settings.ai.testErrors.unavailable');
+    default:
+      return t('settings.ai.testErrors.generic');
   }
-  if (c.includes('model_not_found') || c.includes('not_available') || c.includes('404')) {
-    return t('settings.ai.testErrors.modelNotFound');
-  }
-  if (c.includes('rate_limited') || c.includes('429')) return t('settings.ai.testErrors.rateLimited');
-  if (c.includes('timeout') || c.includes('abort')) return t('settings.ai.testErrors.timeout');
-  if (c.includes('unavailable') || c.includes('client')) return t('settings.ai.testErrors.unavailable');
-  return t('settings.ai.testErrors.generic');
 }
 
 async function testConnection() {
@@ -152,7 +178,9 @@ async function testConnection() {
       apiKey: form.apiKey.trim() || undefined,
       timeoutMs: form.timeoutMs,
     });
-    testResult.value = res.ok ? { ok: true } : { ok: false, reason: friendlyTestError(res.error) };
+    testResult.value = res.ok
+      ? { ok: true, latencyMs: res.latencyMs }
+      : { ok: false, reason: friendlyTestError(res.error), latencyMs: res.latencyMs };
   } catch (e) {
     handle(e);
   } finally {
@@ -293,7 +321,12 @@ async function save() {
         density="compact"
         class="mt-3"
       >
-        {{ testResult.ok ? t('settings.ai.testOk') : testResult.reason }}
+        <div class="d-flex align-center flex-wrap ga-2">
+          <span>{{ testResult.ok ? t('settings.ai.testOk') : testResult.reason }}</span>
+          <span v-if="testResult.latencyMs != null" class="text-caption opacity-80">
+            · {{ t('settings.ai.latencyLabel') }}: {{ testResult.latencyMs }}ms
+          </span>
+        </div>
       </v-alert>
 
       <div class="flex items-center gap-2 mt-4 flex-wrap">

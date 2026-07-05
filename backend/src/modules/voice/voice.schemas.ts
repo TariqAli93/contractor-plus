@@ -18,7 +18,7 @@ export type DecisionInput = z.infer<typeof decisionSchema>;
 
 // ----- Voice AI (LLM) settings -----
 
-const providerSchema = z.enum(['anthropic', 'openai']);
+const providerSchema = z.enum(['anthropic', 'openai', 'groq']);
 
 export const updateVoiceSettingsSchema = z.object({
   enabled: z.boolean().optional(),
