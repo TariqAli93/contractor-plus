@@ -41,6 +41,7 @@ import rbacRoutes from './modules/rbac/rbac.routes.js';
 import customersRoutes from './modules/customers/customers.routes.js';
 import materialsRoutes from './modules/materials/materials.routes.js';
 import templatesRoutes from './modules/templates/templates.routes.js';
+import estimationTemplatesRoutes from './modules/estimation-templates/estimation-templates.routes.js';
 import contractsRoutes from './modules/contracts/contracts.routes.js';
 import projectsRoutes from './modules/projects/projects.routes.js';
 import { costsRoutes, projectCostsRoutes } from './modules/costs/costs.routes.js';
@@ -54,7 +55,7 @@ import {
 } from './modules/payments/payments.routes.js';
 import reportsRoutes from './modules/reports/reports.routes.js';
 import auditRoutes from './modules/audit/audit.routes.js';
-import voiceRoutes from './modules/voice/voice.routes.js';
+import aiCommandRoutes from './modules/ai-command-workflow/ai-command-workflow.routes.js';
 import tunnelRoutes from './modules/tunnel/tunnel.routes.js';
 import settingsRoutes from './modules/settings/settings.routes.js';
 import uploadsRoutes from './modules/uploads/uploads.routes.js';
@@ -224,6 +225,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(customersRoutes, { prefix: '/api/v1/customers' });
   await app.register(materialsRoutes, { prefix: '/api/v1/materials' });
   await app.register(templatesRoutes, { prefix: '/api/v1/templates' });
+  await app.register(estimationTemplatesRoutes, { prefix: '/api/v1/estimation-templates' });
   await app.register(contractsRoutes, { prefix: '/api/v1/contracts' });
   await app.register(contractChangeOrdersRoutes, { prefix: '/api/v1/contracts' });
   await app.register(projectsRoutes, { prefix: '/api/v1/projects' });
@@ -234,7 +236,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(changeOrdersRoutes, { prefix: '/api/v1/change-orders' });
   await app.register(reportsRoutes, { prefix: '/api/v1/reports' });
   await app.register(auditRoutes, { prefix: '/api/v1/audit' });
-  await app.register(voiceRoutes, { prefix: '/api/v1/voice' });
+  await app.register(aiCommandRoutes, { prefix: '/api/v1/ai-command' });
   await app.register(tunnelRoutes, { prefix: '/api/v1/tunnel' });
   await app.register(settingsRoutes, { prefix: '/api/v1/settings' });
   await app.register(uploadsRoutes, { prefix: '/api/v1/uploads' });

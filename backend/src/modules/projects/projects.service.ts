@@ -21,8 +21,8 @@ import type {
 
 const PROJECT = 'Project';
 
-/** The non-destructive status transitions the voice assistant can drive. */
-export type VoiceStatusAction = 'start' | 'pause' | 'resume' | 'complete';
+/** The non-destructive status transitions the AI command workflow can drive. */
+export type ProjectStatusAction = 'start' | 'pause' | 'resume' | 'complete';
 
 // Project lifecycle:
 //
@@ -88,36 +88,44 @@ export class ProjectsService {
   }
 
   async create(data: CreateProjectInput, actor: AuditActor): Promise<Project> {
-    return this.prisma.$transaction(async (tx) => {
-      if (data.contractId) {
-        await this.assertContractEligible(tx, data.contractId);
-        if (await this.repo.existsByContractId(data.contractId, undefined, tx)) {
-          throw new ConflictError(
-            'A project already exists for this contract',
-            'PROJECT_ALREADY_EXISTS',
-          );
-        }
+    return this.prisma.$transaction((tx) => this.createWithinTx(tx, data, actor));
+  }
+
+  /** Tx-aware create — lets the AI command workflow compose project creation with
+   *  a customer + contract in a single all-or-nothing transaction. */
+  async createWithinTx(
+    tx: Prisma.TransactionClient,
+    data: CreateProjectInput,
+    actor: AuditActor,
+  ): Promise<Project> {
+    if (data.contractId) {
+      await this.assertContractEligible(tx, data.contractId);
+      if (await this.repo.existsByContractId(data.contractId, undefined, tx)) {
+        throw new ConflictError(
+          'A project already exists for this contract',
+          'PROJECT_ALREADY_EXISTS',
+        );
       }
+    }
 
-      const created = await this.repo.create(
-        {
-          contractId: data.contractId,
-          name: data.name,
-          startDate: data.startDate,
-          deliveryDate: data.deliveryDate,
-          notes: data.notes,
-          status: ProjectStatus.PLANNED,
-        },
-        tx,
-      );
+    const created = await this.repo.create(
+      {
+        contractId: data.contractId,
+        name: data.name,
+        startDate: data.startDate,
+        deliveryDate: data.deliveryDate,
+        notes: data.notes,
+        status: ProjectStatus.PLANNED,
+      },
+      tx,
+    );
 
-      await this.audit.log(
-        actor,
-        { action: 'CREATE', entity: PROJECT, entityId: created.id, newValues: toJsonValue(created) },
-        tx,
-      );
-      return created;
-    });
+    await this.audit.log(
+      actor,
+      { action: 'CREATE', entity: PROJECT, entityId: created.id, newValues: toJsonValue(created) },
+      tx,
+    );
+    return created;
   }
 
   // ---------- Link to contract ----------
@@ -423,7 +431,7 @@ export class ProjectsService {
   // source of the transition rules — Arabic errors, since the assistant speaks
   // them. `changeStatusWithinTx` reads → validates → writes → audits in `tx`.
 
-  static transitionPatch(existing: Project, action: VoiceStatusAction): Prisma.ProjectUpdateInput {
+  static transitionPatch(existing: Project, action: ProjectStatusAction): Prisma.ProjectUpdateInput {
     switch (action) {
       case 'start':
         if (existing.status !== ProjectStatus.PLANNED) {
@@ -460,7 +468,7 @@ export class ProjectsService {
   async changeStatusWithinTx(
     tx: Prisma.TransactionClient,
     id: string,
-    action: VoiceStatusAction,
+    action: ProjectStatusAction,
     actor: AuditActor,
   ): Promise<Project> {
     const existing = await this.repo.findById(id, tx);

@@ -1,4 +1,4 @@
-import type { Customer, PrismaClient } from '@prisma/client';
+import type { Customer, Prisma, PrismaClient } from '@prisma/client';
 import { CustomersRepository } from './customers.repository.js';
 import { AuditService, type AuditActor } from '../audit/audit.service.js';
 import { NotFoundError } from '../../shared/errors/not-found.error.js';
@@ -44,20 +44,28 @@ export class CustomersService {
   }
 
   async create(data: CreateCustomerInput, actor: AuditActor): Promise<Customer> {
-    return this.prisma.$transaction(async (tx) => {
-      const created = await this.repo.create(data, tx);
-      await this.audit.log(
-        actor,
-        {
-          action: 'CREATE',
-          entity: ENTITY,
-          entityId: created.id,
-          newValues: toJsonValue(created),
-        },
-        tx,
-      );
-      return created;
-    });
+    return this.prisma.$transaction((tx) => this.createWithinTx(tx, data, actor));
+  }
+
+  /** Tx-aware create — lets the AI command workflow compose customer creation with
+   *  a contract + project in a single all-or-nothing transaction. */
+  async createWithinTx(
+    tx: Prisma.TransactionClient,
+    data: CreateCustomerInput,
+    actor: AuditActor,
+  ): Promise<Customer> {
+    const created = await this.repo.create(data, tx);
+    await this.audit.log(
+      actor,
+      {
+        action: 'CREATE',
+        entity: ENTITY,
+        entityId: created.id,
+        newValues: toJsonValue(created),
+      },
+      tx,
+    );
+    return created;
   }
 
   async update(id: string, data: UpdateCustomerInput, actor: AuditActor): Promise<Customer> {

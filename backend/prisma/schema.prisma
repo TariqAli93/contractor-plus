@@ -168,10 +168,11 @@ model User {
   role          Role           @relation(fields: [roleId], references: [id])
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]
-  voiceSessions VoiceSession[]
-  voiceCommands VoiceCommandLog[]
+  aiCommands    AiCommandLog[]
   documentTemplatesCreated DocumentTemplate[] @relation("DocumentTemplateCreator")
   documentsGenerated       GeneratedDocument[] @relation("GeneratedDocumentCreator")
+  estimationDrafts    EstimationTemplateDraft[]
+  estimationAuditLogs EstimationAuditLog[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   deletedAt     DateTime?
@@ -237,6 +238,7 @@ model Material {
   contractItems ContractItem[]
   templateItems BuildingTemplateItem[]
   projectCosts  ProjectCost[]
+  estimationTemplateItems EstimationTemplateItem[]
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
   deletedAt     DateTime?
@@ -658,77 +660,198 @@ model AuditLog {
 }
 
 // ============================================================
-// Voice Command System
+// AI Command Workflow System
 //
-// A VoiceSession is one conversational thread (the "Voice Session" context
-// that resolves pronouns like "باسمه"/"نفس المشروع"). Each utterance becomes
-// one VoiceCommandLog row — an immutable audit trail of: original transcript,
-// recognised intent, extracted entities, the plan, the outcome, and any error.
+// Every /interpret, /confirm, and /cancel turn is recorded as one immutable
+// AiCommandLog row — the raw command text, the detected intent + confidence,
+// the AI-proposed plan, the confirmation status, which actions executed, the
+// created/updated entity ids, and any failure reason. Sessions themselves are
+// short-lived and live in-memory (a pending plan awaiting confirmation); only
+// this durable audit trail is persisted.
 // ============================================================
 
-enum VoiceSessionStatus {
-  ACTIVE
-  CLOSED
-}
-
-enum VoiceCommandStatus {
-  INTERPRETED // understood, awaiting a slot or confirmation
-  CLARIFYING // asked the user for a missing slot
-  AWAITING_CONFIRMATION // plan built, waiting for yes/no
-  EXECUTED // carried out successfully
-  REJECTED // permission denied / invalid / unknown
-  CANCELLED // user declined at confirmation
-  FAILED // execution threw and rolled back
-}
-
-model VoiceSession {
-  id        String             @id @default(uuid()) @db.Uuid
-  userId    String             @db.Uuid
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  locale    String             @default("ar")
-  status    VoiceSessionStatus @default(ACTIVE)
-  // Rolling conversational memory (last entities, last created project/customer,
-  // pending plan). A JSON bag so the dialog engine can evolve its context shape
-  // without a migration.
-  context   Json?
-  commands  VoiceCommandLog[]
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
-  closedAt  DateTime?
+model AiCommandLog {
+  id                 String   @id @default(uuid()) @db.Uuid
+  userId             String?  @db.Uuid
+  user               User?    @relation(fields: [userId], references: [id])
+  sessionId          String?  @db.Uuid
+  // Raw user command text (as typed).
+  originalText       String
+  // Interpretation output.
+  detectedIntent     String?
+  confidence         Float?
+  // One of: workflow_plan | clarification | query | execution | rejected.
+  resultKind         String
+  // The full plan the AI proposed (ordered steps), for transparency/replay.
+  generatedPlan      Json?
+  // pending | confirmed | cancelled | executed | failed | not_required.
+  confirmationStatus String?
+  // Outcome details.
+  executedActions    Json?
+  createdEntityIds   Json?
+  updatedEntityIds   Json?
+  failedReason       String?
+  // Which LLM provider answered (openai / groq / anthropic), if any.
+  provider           String?
+  createdAt          DateTime @default(now())
 
   @@index([userId])
-  @@index([status])
-  @@map("voice_sessions")
-}
-
-model VoiceCommandLog {
-  id          String             @id @default(uuid()) @db.Uuid
-  sessionId   String             @db.Uuid
-  session     VoiceSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  userId      String?            @db.Uuid
-  user        User?              @relation(fields: [userId], references: [id])
-  // Raw + normalised transcript.
-  transcript  String
-  normalized  String?
-  // NLU output.
-  intent      String
-  confidence  Decimal            @default(0) @db.Decimal(4, 3)
-  entities    Json?
-  // Built plan (steps) + resolved permissions, for transparency/replay.
-  plan        Json?
-  status      VoiceCommandStatus
-  // Outcome.
-  resultMessage String?
-  createdEntities Json?
-  errorCode   String?
-  errorMessage String?
-  provider    String? // which NLU provider answered (rule-based / llm / …)
-  createdAt   DateTime           @default(now())
-
   @@index([sessionId])
-  @@index([userId])
-  @@index([intent])
-  @@index([status])
+  @@index([resultKind])
   @@index([createdAt])
-  @@map("voice_command_logs")
+  @@map("ai_command_logs")
+}
+
+// ============================================================
+// AI Smart Estimation Template Builder
+//
+// Two real domain tables (EstimationTemplate + EstimationTemplateItem) that only
+// receive rows at FINAL CONFIRM, plus one durable draft table
+// (EstimationTemplateDraft) holding the entire in-progress AI session state so a
+// draft survives a server restart and is fully auditable — unlike
+// ai-command-workflow's Session, which is deliberately in-memory/short-lived. A
+// dedicated EstimationAuditLog gives this feature its own narrative trail
+// (command → parsed intent → generated estimation → materials resolution →
+// approval → executed actions), alongside the generic AuditLog rows every
+// mutation already writes via AuditService.log().
+// ============================================================
+
+enum EstimationDraftStatus {
+  DRAFT_GENERATED        // LLM produced a first draft
+  CLARIFICATION_NEEDED   // missing required info — waiting on the user
+  MATERIALS_PENDING      // 1+ items awaiting a create/skip decision
+  READY_FOR_CONFIRMATION // every item resolved — preview can be shown
+  CONFIRMED              // final transaction succeeded
+  CANCELLED              // user explicitly cancelled
+  EXPIRED                // aged out (lazy-expiry-on-read)
+  FAILED                 // final-confirm transaction failed and rolled back
+}
+
+enum EstimationMaterialResolutionStatus {
+  MATCHED           // existing Material found and linked
+  PENDING_APPROVAL  // no match — asking "create this material?"
+  APPROVED_CREATE   // user approved — created only at final confirm
+  SKIPPED           // user declined — stays unresolved (materialId null forever)
+}
+
+// Durable, DB-backed in-progress AI session state for ONE estimation-builder
+// conversation. Persisted (unlike ai-command-workflow's in-memory Session)
+// because this workflow is multi-step / longer-running and must be auditable and
+// resumable across a server restart.
+model EstimationTemplateDraft {
+  id               String                @id @default(uuid()) @db.Uuid
+  userId           String                @db.Uuid
+  user             User                  @relation(fields: [userId], references: [id])
+  status           EstimationDraftStatus @default(DRAFT_GENERATED)
+
+  originalCommand  String                // raw NL text as typed
+  clarificationLog Json?                 // ordered [{question, answer}] pairs
+
+  projectType      String?               // free text, advisory only
+  constructionType String?
+  scopeOfWork      String?
+  areaValue        Decimal?              @db.Decimal(14, 3)
+  areaUnit         String?               // "m2" | "m" | ...
+  wastePercentage  Decimal               @default(0) @db.Decimal(5, 2)
+
+  templateName     String?               // proposed name, editable before confirm
+  confidence       Float                 @default(0) // AI confidence 0..1 for this draft
+  generatedItems   Json                  // EstimationDraftItemPayload[]
+  estimatedTotal   Decimal               @default(0) @db.Decimal(14, 2)
+
+  expiresAt        DateTime              // lazy-expiry-on-read cutoff
+  confirmedAt      DateTime?
+  cancelledAt      DateTime?
+  resultTemplateId String?               @unique @db.Uuid
+  resultTemplate   EstimationTemplate?   @relation(fields: [resultTemplateId], references: [id])
+
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  auditLogs        EstimationAuditLog[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("estimation_template_drafts")
+}
+
+// The real, confirmed template — rows only ever created inside confirmDraft()'s
+// transaction. isPreliminary is always true in v1; kept as a field so a future
+// "promote to reviewed" action has somewhere to flip it without a migration.
+model EstimationTemplate {
+  id               String                   @id @default(uuid()) @db.Uuid
+  name             String
+  projectType      String?
+  constructionType String?
+  scopeOfWork      String?
+  areaValue        Decimal?                 @db.Decimal(14, 3)
+  areaUnit         String?
+  wastePercentage  Decimal                  @default(0) @db.Decimal(5, 2)
+  estimatedTotal   Decimal                  @db.Decimal(14, 2)
+  isPreliminary    Boolean                  @default(true)
+  notes            String?
+  items            EstimationTemplateItem[]
+  sourceDraft      EstimationTemplateDraft? // inverse of the @unique resultTemplateId — truly 1:1
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  deletedAt        DateTime?
+
+  @@index([name])
+  @@index([deletedAt])
+  @@map("estimation_templates")
+}
+
+// Mirrors ProjectCost's shape (nullable materialId + category + optional
+// quantity/unit/unitPrice + required total), not BuildingTemplateItem's.
+model EstimationTemplateItem {
+  id          String             @id @default(uuid()) @db.Uuid
+  templateId  String             @db.Uuid
+  template    EstimationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  category    CostCategory
+  materialId  String?            @db.Uuid
+  material    Material?          @relation(fields: [materialId], references: [id])
+  description String
+  quantity    Decimal?           @db.Decimal(14, 3)
+  unit        String?
+  unitPrice   Decimal?           @db.Decimal(14, 2)
+  totalAmount Decimal            @db.Decimal(14, 2)
+  sortOrder   Int                @default(0)
+  notes       String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([templateId])
+  @@index([materialId])
+  @@index([category])
+  @@map("estimation_template_items")
+}
+
+// Dedicated narrative audit trail for this feature. Immutable, no deletedAt —
+// same convention as AuditLog / AiCommandLog. One row per key state transition:
+// draft_generated | materials_resolved | confirmed | cancelled | failed.
+model EstimationAuditLog {
+  id                    String                  @id @default(uuid()) @db.Uuid
+  draftId               String                  @db.Uuid
+  draft                 EstimationTemplateDraft @relation(fields: [draftId], references: [id])
+  userId                String?                 @db.Uuid
+  user                  User?                   @relation(fields: [userId], references: [id])
+  eventType             String
+  originalCommand       String
+  parsedIntent          Json?
+  generatedEstimation   Json?
+  existingMaterialsUsed Json?
+  newlyCreatedMaterials Json?
+  userApproval          Json?
+  executedActions       Json?
+  finalSavedValues      Json?
+  failedReason          String?
+  ipAddress             String?
+  userAgent             String?
+  createdAt             DateTime                @default(now())
+
+  @@index([draftId])
+  @@index([userId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("estimation_audit_logs")
 }

@@ -109,6 +109,27 @@ export const routes: RouteRecordRaw[] = [
     meta: { layout: 'app', access: { permissions: ['templates.update'], roles: WRITE_TEMPLATES } },
   },
 
+  // ----- Estimation Templates (AI Smart Estimation Template Builder) -----
+  {
+    path: '/estimation-templates',
+    name: 'estimation-templates',
+    component: () => import('@/views/estimation-templates/EstimationTemplatesListView.vue'),
+    meta: { layout: 'app', access: { permissions: ['estimation_templates.read'], roles: ALL_ROLES } },
+  },
+  {
+    // Declared before /:id so "build" is not captured as a template id.
+    path: '/estimation-templates/build',
+    name: 'estimation-template-builder',
+    component: () => import('@/views/estimation-templates/EstimationTemplateBuilderView.vue'),
+    meta: { layout: 'app', access: { permissions: ['estimation_templates.ai_generate'] } },
+  },
+  {
+    path: '/estimation-templates/:id',
+    name: 'estimation-template-detail',
+    component: () => import('@/views/estimation-templates/EstimationTemplateDetailView.vue'),
+    meta: { layout: 'app', access: { permissions: ['estimation_templates.read'], roles: ALL_ROLES } },
+  },
+
   // ----- Contracts -----
   {
     path: '/contracts',

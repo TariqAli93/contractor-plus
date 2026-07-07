@@ -21,6 +21,7 @@ export const PERMISSION_MODULES = [
   'customers',
   'materials',
   'templates',
+  'estimation_templates',
   'contracts',
   'projects',
   'costs',
@@ -33,7 +34,7 @@ export const PERMISSION_MODULES = [
   'users',
   'rbac',
   'profile',
-  'voice',
+  'ai',
 ] as const;
 export type PermissionModule = (typeof PERMISSION_MODULES)[number];
 
@@ -54,11 +55,18 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   p('materials.create', 'materials', 'create', 'إنشاء مادة'),
   p('materials.update', 'materials', 'update', 'تعديل مادة'),
   p('materials.delete', 'materials', 'delete', 'حذف مادة'),
+  p('materials.create_from_assistant', 'materials', 'create_from_assistant', 'إنشاء مادة عبر المساعد الذكي'),
 
   p('templates.read', 'templates', 'read', 'عرض القوالب'),
   p('templates.create', 'templates', 'create', 'إنشاء قالب'),
   p('templates.update', 'templates', 'update', 'تعديل قالب'),
   p('templates.delete', 'templates', 'delete', 'حذف قالب'),
+
+  p('estimation_templates.read', 'estimation_templates', 'read', 'عرض قوالب التقدير'),
+  p('estimation_templates.create', 'estimation_templates', 'create', 'إنشاء قالب تقدير'),
+  p('estimation_templates.update', 'estimation_templates', 'update', 'تعديل قالب تقدير'),
+  p('estimation_templates.delete', 'estimation_templates', 'delete', 'حذف قالب تقدير'),
+  p('estimation_templates.ai_generate', 'estimation_templates', 'ai_generate', 'توليد قالب تقدير عبر المساعد الذكي'),
 
   p('contracts.read', 'contracts', 'read', 'عرض العقود'),
   p('contracts.create', 'contracts', 'create', 'إنشاء عقد'),
@@ -108,7 +116,6 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   p('settings.company.manage', 'settings', 'company.manage', 'إدارة بيانات الشركة'),
   p('settings.currency.manage', 'settings', 'currency.manage', 'إدارة العملات'),
   p('settings.contract_templates.manage', 'settings', 'contract_templates.manage', 'إدارة قوالب العقود'),
-  p('settings.voice_ai.manage', 'settings', 'voice_ai.manage', 'إدارة إعدادات المساعد الصوتي (LLM)'),
 
   p('users.read', 'users', 'read', 'عرض المستخدمين'),
   p('users.create', 'users', 'create', 'إنشاء مستخدم'),
@@ -124,7 +131,8 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   p('profile.update', 'profile', 'update', 'تعديل الملف الشخصي'),
   p('profile.change_password', 'profile', 'change_password', 'تغيير كلمة المرور'),
 
-  p('voice.use', 'voice', 'use', 'استخدام المساعد الصوتي'),
+  p('ai.use', 'ai', 'use', 'استخدام مساعد الأوامر الذكي'),
+  p('ai.settings.manage', 'ai', 'settings.manage', 'إدارة إعدادات مساعد الأوامر الذكي (LLM)'),
 ];
 
 export const ALL_PERMISSION_KEYS: string[] = PERMISSION_CATALOG.map((d) => d.key);
@@ -144,8 +152,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
   [RoleName.ADMIN]: [
     'dashboard.read',
     'customers.read', 'customers.create', 'customers.update', 'customers.delete',
-    'materials.read', 'materials.create', 'materials.update', 'materials.delete',
+    'materials.read', 'materials.create', 'materials.update', 'materials.delete', 'materials.create_from_assistant',
     'templates.read', 'templates.create', 'templates.update', 'templates.delete',
+    'estimation_templates.read', 'estimation_templates.create', 'estimation_templates.update', 'estimation_templates.delete', 'estimation_templates.ai_generate',
     'contracts.read', 'contracts.create', 'contracts.update', 'contracts.delete', 'contracts.approve', 'contracts.cancel', 'contracts.generate_docx',
     'projects.read', 'projects.create', 'projects.update', 'projects.delete', 'projects.start', 'projects.pause', 'projects.resume', 'projects.complete', 'projects.cancel',
     'costs.read', 'costs.create', 'costs.update', 'costs.delete',
@@ -154,10 +163,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'reports.read',
     'audit.read',
     'tunnel.manage',
-    'settings.read', 'settings.manage', 'settings.company.manage', 'settings.currency.manage', 'settings.contract_templates.manage', 'settings.voice_ai.manage',
+    'settings.read', 'settings.manage', 'settings.company.manage', 'settings.currency.manage', 'settings.contract_templates.manage', 'ai.settings.manage',
     'users.read', 'users.create', 'users.update', 'users.delete', 'users.reset_password', 'users.activate',
     'rbac.read', // ADMIN can view, but NOT rbac.manage
-    'voice.use',
+    'ai.use',
     ...PROFILE,
   ],
   [RoleName.ACCOUNTANT]: [
@@ -169,21 +178,22 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'payments.read', 'payments.create', 'payments.update', 'payments.delete', 'payments.mark_paid', 'payments.cancel',
     'change_orders.read', 'change_orders.create', 'change_orders.update', 'change_orders.approve', 'change_orders.delete',
     'reports.read',
-    'voice.use',
+    'ai.use',
     ...PROFILE,
   ],
   [RoleName.ENGINEER]: [
     'dashboard.read',
     'customers.read',
-    'materials.read',
+    'materials.read', 'materials.create_from_assistant',
     'templates.read',
+    'estimation_templates.read', 'estimation_templates.create', 'estimation_templates.ai_generate',
     'contracts.read',
     'projects.read', 'projects.create', 'projects.update', 'projects.start', 'projects.pause', 'projects.resume', 'projects.complete', 'projects.cancel',
     'costs.read', 'costs.create', 'costs.update', 'costs.delete',
     'payments.read',
     'change_orders.read',
     'reports.read',
-    'voice.use',
+    'ai.use',
     ...PROFILE,
   ],
   [RoleName.VIEWER]: [
@@ -191,12 +201,13 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'customers.read',
     'materials.read',
     'templates.read',
+    'estimation_templates.read',
     'contracts.read',
     'projects.read',
     'costs.read',
     'payments.read',
     'change_orders.read',
-    'voice.use',
+    'ai.use',
     ...PROFILE,
   ],
 };

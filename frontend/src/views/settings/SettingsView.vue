@@ -6,7 +6,7 @@ import CompanyProfileTab from '@/components/features/settings/CompanyProfileTab.
 import CurrencyTab from '@/components/features/settings/CurrencyTab.vue';
 import ContractTemplatesTab from '@/components/features/settings/ContractTemplatesTab.vue';
 import AppearanceSettingsTab from '@/components/features/settings/AppearanceSettingsTab.vue';
-import AiAssistantTab from '@/components/features/settings/AiAssistantTab.vue';
+import AiCommandSettingsTab from '@/components/features/settings/AiCommandSettingsTab.vue';
 import CompanyLogo from '@/components/shared/CompanyLogo.vue';
 
 const activeTab = ref<
@@ -80,7 +80,7 @@ const activeTab = ref<
       </v-window-item>
 
       <v-window-item value="ai">
-        <AiAssistantTab />
+        <AiCommandSettingsTab />
       </v-window-item>
 
       <v-window-item value="links">
