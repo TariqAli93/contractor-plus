@@ -5,7 +5,6 @@ import SideNav from './SideNav.vue';
 import StatusBar from './StatusBar.vue';
 import CommandPalette from './CommandPalette.vue';
 import ShortcutsHelp from './ShortcutsHelp.vue';
-import AiCommandConsole from '@/components/ai-command/AiCommandConsole.vue';
 import { useUiStore } from '@/stores/ui.store';
 import { useQuickNav } from '@/composables/useQuickNav';
 
@@ -48,7 +47,6 @@ onKeyStroke(['?'], (e) => {
     <StatusBar />
     <CommandPalette />
     <ShortcutsHelp />
-    <AiCommandConsole />
   </v-app>
 </template>
 

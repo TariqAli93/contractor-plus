@@ -121,7 +121,8 @@ async function handleDelete(row: EstimationTemplateSummary) {
   <div>
     <PageHeader :title="t('estimation.title')" icon="mdi-robot-outline" :count="total || null" :hint="t('estimation.hint')">
       <RoleGate :permissions="['estimation_templates.ai_generate']" :roles="AI_ROLES">
-        <v-btn color="primary" prepend-icon="mdi-creation" to="/estimation-templates/build">
+        <!-- Generation is unified into the assistant (/ai); this just deep-links there. -->
+        <v-btn color="primary" prepend-icon="mdi-creation" to="/ai">
           {{ t('estimation.new') }}
         </v-btn>
       </RoleGate>

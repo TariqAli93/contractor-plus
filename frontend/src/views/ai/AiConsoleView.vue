@@ -30,7 +30,7 @@ function bubbleMessage(r: AssistantResult): string {
 }
 
 function bubbleClass(r: AssistantResult): string {
-  if (r.kind === 'rejected') return 'ai-assistant ai-assistant--error';
+  if (r.kind === 'rejected' || r.kind === 'error') return 'ai-assistant ai-assistant--error';
   if (r.kind === 'execution') return 'ai-assistant ai-assistant--ok';
   if (r.kind === 'preview') return 'ai-assistant ai-assistant--plan';
   return 'ai-assistant';
@@ -125,6 +125,22 @@ onMounted(() => {
               class="ai-missing"
             >
               {{ turn.result.missing.join('، ') }}
+            </div>
+
+            <!-- Capability/help examples → click to run them. -->
+            <div
+              v-if="turn.result.kind === 'answer' && turn.result.suggestions?.length"
+              class="ai-suggestions"
+            >
+              <v-chip
+                v-for="(s, k) in turn.result.suggestions"
+                :key="k"
+                size="small"
+                variant="tonal"
+                @click="onOption(s)"
+              >
+                {{ s }}
+              </v-chip>
             </div>
           </div>
         </div>
@@ -274,6 +290,12 @@ onMounted(() => {
   margin-top: 6px;
   font-size: 0.78rem;
   color: var(--cp-text-muted, #888);
+}
+.ai-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
 }
 .ai-error {
   color: rgb(var(--v-theme-error));
