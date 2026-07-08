@@ -7,6 +7,7 @@
 // ============================================================
 
 import { z } from 'zod';
+import type { JsonSchemaSpec } from '../../lib/llm/llm-client.js';
 
 // ---------- Endpoint bodies ----------
 
@@ -66,14 +67,50 @@ export const llmInterpretationSchema = z.discriminatedUnion('kind', [
   rejectedSchema,
 ]);
 
-// ---------- LLM settings endpoints ----------
+/** JSON Schema handed to OpenRouter (`json_schema` mode) to guide the model toward
+ *  the union above. A superset of all four variants: `kind` is the discriminator;
+ *  the rest are optional. `strict: false` because `steps[].data` is an open-ended,
+ *  per-action map (which strict structured-output mode forbids) — the real
+ *  contract is enforced by `llmInterpretationSchema` (Zod) after parsing. */
+export const LLM_INTERPRETATION_JSON_SCHEMA: JsonSchemaSpec = {
+  name: 'command_interpretation',
+  strict: false,
+  schema: {
+    type: 'object',
+    additionalProperties: true,
+    required: ['kind'],
+    properties: {
+      kind: { type: 'string', enum: ['workflow_plan', 'clarification', 'query', 'rejected'] },
+      intent: { type: 'string' },
+      confidence: { type: 'number', minimum: 0, maximum: 1 },
+      missingSlots: { type: 'array', items: { type: 'string' } },
+      steps: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: true,
+          required: ['action'],
+          properties: {
+            action: { type: 'string' },
+            data: { type: 'object', additionalProperties: true },
+          },
+        },
+      },
+      confirmationMessage: { type: 'string' },
+      question: { type: 'string' },
+      reason: { type: 'string' },
+    },
+  },
+};
 
-const providerSchema = z.enum(['openai', 'groq', 'anthropic', 'gemini', 'openrouter']);
+// ---------- LLM settings endpoints (OpenRouter only — no provider field) ----------
 
+// OpenRouter model ids are vendor-prefixed and case-sensitive (e.g.
+// "openai/gpt-4o-mini"), so they are only length-bounded here — validity is
+// enforced against the live model catalog.
 export const updateLlmSettingsSchema = z.object({
   enabled: z.boolean().optional(),
-  provider: providerSchema.optional(),
-  model: z.string().trim().min(1).max(120).optional(),
+  model: z.string().trim().min(1).max(160).optional(),
   timeoutMs: z.number().int().min(1000).max(60000).optional(),
   maxTokens: z.number().int().min(64).max(8000).optional(),
   apiKey: z.string().trim().min(1).max(400).optional(),
@@ -81,11 +118,27 @@ export const updateLlmSettingsSchema = z.object({
 });
 
 export const testLlmSettingsSchema = z.object({
-  provider: providerSchema.optional(),
-  model: z.string().trim().min(1).max(120).optional(),
+  model: z.string().trim().min(1).max(160).optional(),
   apiKey: z.string().trim().min(1).max(400).optional(),
   timeoutMs: z.number().int().min(1000).max(60000).optional(),
 });
 
+// ---------- Model discovery query (GET /models) ----------
+
+const boolParam = z
+  .union([z.boolean(), z.enum(['true', 'false', '1', '0'])])
+  .transform((v) => v === true || v === 'true' || v === '1');
+
+export const modelsQuerySchema = z.object({
+  input: z.string().trim().min(1).max(40).optional(),
+  output: z.string().trim().min(1).max(40).optional(),
+  tools: boolParam.optional(),
+  minContext: z.coerce.number().int().min(0).max(10_000_000).optional(),
+  maxPromptPrice: z.coerce.number().min(0).optional(),
+  free: boolParam.optional(),
+  search: z.string().trim().max(120).optional(),
+});
+
 export type UpdateLlmSettingsBody = z.infer<typeof updateLlmSettingsSchema>;
 export type TestLlmSettingsBody = z.infer<typeof testLlmSettingsSchema>;
+export type ModelsQuery = z.infer<typeof modelsQuerySchema>;

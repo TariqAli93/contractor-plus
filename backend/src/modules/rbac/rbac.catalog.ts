@@ -1,4 +1,5 @@
 import { RoleName } from '@contractor-plus/shared';
+import { TOOL_CONTRIBUTED_PERMISSIONS } from '../ai-platform/tools/tool-permissions.js';
 
 // ============================================================
 // Permission catalog — the single, code-defined source of truth.
@@ -43,7 +44,10 @@ function p(key: string, module: PermissionModule, action: string, displayName: s
   return { key, module, action, displayName };
 }
 
-export const PERMISSION_CATALOG: PermissionDef[] = [
+// Base catalog — every permission EXCEPT those owned by AI tools (estimation_*
+// and materials.create_from_assistant). Tool permissions are defined once by the
+// tools themselves and merged in below, so they can never drift out of sync.
+const BASE_PERMISSION_CATALOG: PermissionDef[] = [
   p('dashboard.read', 'dashboard', 'read', 'عرض لوحة التحكم'),
 
   p('customers.read', 'customers', 'read', 'عرض العملاء'),
@@ -55,18 +59,14 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   p('materials.create', 'materials', 'create', 'إنشاء مادة'),
   p('materials.update', 'materials', 'update', 'تعديل مادة'),
   p('materials.delete', 'materials', 'delete', 'حذف مادة'),
-  p('materials.create_from_assistant', 'materials', 'create_from_assistant', 'إنشاء مادة عبر المساعد الذكي'),
+  // materials.create_from_assistant is tool-owned → merged in from the tools.
 
   p('templates.read', 'templates', 'read', 'عرض القوالب'),
   p('templates.create', 'templates', 'create', 'إنشاء قالب'),
   p('templates.update', 'templates', 'update', 'تعديل قالب'),
   p('templates.delete', 'templates', 'delete', 'حذف قالب'),
 
-  p('estimation_templates.read', 'estimation_templates', 'read', 'عرض قوالب التقدير'),
-  p('estimation_templates.create', 'estimation_templates', 'create', 'إنشاء قالب تقدير'),
-  p('estimation_templates.update', 'estimation_templates', 'update', 'تعديل قالب تقدير'),
-  p('estimation_templates.delete', 'estimation_templates', 'delete', 'حذف قالب تقدير'),
-  p('estimation_templates.ai_generate', 'estimation_templates', 'ai_generate', 'توليد قالب تقدير عبر المساعد الذكي'),
+  // estimation_templates.* are tool-owned → merged in from the tools below.
 
   p('contracts.read', 'contracts', 'read', 'عرض العقود'),
   p('contracts.create', 'contracts', 'create', 'إنشاء عقد'),
@@ -133,6 +133,16 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
 
   p('ai.use', 'ai', 'use', 'استخدام مساعد الأوامر الذكي'),
   p('ai.settings.manage', 'ai', 'settings.manage', 'إدارة إعدادات مساعد الأوامر الذكي (LLM)'),
+  p('ai.session.use', 'ai', 'session.use', 'استخدام منصة المساعد الذكي'),
+];
+
+// The single source of truth: the base catalog PLUS every AI tool's contributed
+// permissions (deduped by key). Consuming the tools' own definitions means a tool
+// permission can never be silently absent from RBAC seeding / the OWNER super-set.
+const BASE_KEYS = new Set(BASE_PERMISSION_CATALOG.map((d) => d.key));
+export const PERMISSION_CATALOG: PermissionDef[] = [
+  ...BASE_PERMISSION_CATALOG,
+  ...TOOL_CONTRIBUTED_PERMISSIONS.filter((d) => !BASE_KEYS.has(d.key)),
 ];
 
 export const ALL_PERMISSION_KEYS: string[] = PERMISSION_CATALOG.map((d) => d.key);
@@ -166,7 +176,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'settings.read', 'settings.manage', 'settings.company.manage', 'settings.currency.manage', 'settings.contract_templates.manage', 'ai.settings.manage',
     'users.read', 'users.create', 'users.update', 'users.delete', 'users.reset_password', 'users.activate',
     'rbac.read', // ADMIN can view, but NOT rbac.manage
-    'ai.use',
+    'ai.use', 'ai.session.use',
     ...PROFILE,
   ],
   [RoleName.ACCOUNTANT]: [
@@ -178,7 +188,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'payments.read', 'payments.create', 'payments.update', 'payments.delete', 'payments.mark_paid', 'payments.cancel',
     'change_orders.read', 'change_orders.create', 'change_orders.update', 'change_orders.approve', 'change_orders.delete',
     'reports.read',
-    'ai.use',
+    'ai.use', 'ai.session.use',
     ...PROFILE,
   ],
   [RoleName.ENGINEER]: [
@@ -193,7 +203,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'payments.read',
     'change_orders.read',
     'reports.read',
-    'ai.use',
+    'ai.use', 'ai.session.use',
     ...PROFILE,
   ],
   [RoleName.VIEWER]: [
@@ -207,7 +217,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'costs.read',
     'payments.read',
     'change_orders.read',
-    'ai.use',
+    'ai.use', 'ai.session.use',
     ...PROFILE,
   ],
 };

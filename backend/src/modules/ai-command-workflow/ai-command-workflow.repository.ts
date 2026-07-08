@@ -30,7 +30,9 @@ const CONTRACT_SUMMARY_SELECT = {
 } as const;
 
 export interface AiCommandLogInput {
-  userId: string | null;
+  // Always the acting user — the column is NOT NULL (see schema); every audit
+  // path threads a real principal.userId.
+  userId: string;
   sessionId: string | null;
   originalText: string;
   detectedIntent: string | null;
@@ -96,18 +98,21 @@ export class AiCommandRepository {
     return this.prisma.project.findFirst({ where: { deletedAt: null }, orderBy: { createdAt: 'desc' } });
   }
 
-  /** Most recent cost — resolves "احذف آخر مصروف" (optionally scoped to a project). */
-  lastCost(projectId?: string): Promise<ProjectCost | null> {
+  /** Most recent cost WITHIN a project — resolves "احذف آخر مصروف". A project is
+   *  ALWAYS required: resolving the globally-latest cost would let a project-less
+   *  "delete last expense" silently hit an unrelated project's record. */
+  lastCost(projectId: string): Promise<ProjectCost | null> {
     return this.prisma.projectCost.findFirst({
-      where: { deletedAt: null, ...(projectId ? { projectId } : {}) },
+      where: { deletedAt: null, projectId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  /** Most recent payment — resolves "آخر دفعة" (optionally scoped to a project). */
-  lastPayment(projectId?: string): Promise<Payment | null> {
+  /** Most recent payment WITHIN a project — resolves "آخر دفعة". A project is
+   *  ALWAYS required (see lastCost): a global fallback is a data-loss hazard. */
+  lastPayment(projectId: string): Promise<Payment | null> {
     return this.prisma.payment.findFirst({
-      where: { deletedAt: null, ...(projectId ? { projectId } : {}) },
+      where: { deletedAt: null, projectId },
       orderBy: { createdAt: 'desc' },
     });
   }

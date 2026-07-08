@@ -7,12 +7,24 @@
   "author": "Contractor Plus",
   "main": "electron/main/main.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "//dev": "----- Vite dev servers (mode-switched) -----",
+    "dev": "cross-env VITE_TARGET=electron CONTRACTOR_APP_MODE=server vite",
+    "dev:web": "cross-env VITE_TARGET=web CONTRACTOR_APP_MODE=server vite",
+    "dev:client": "cross-env VITE_TARGET=electron CONTRACTOR_APP_MODE=client vite",
+
+    "//build": "----- Vite production builds (mode-switched) -----",
+    "build": "vue-tsc -b && cross-env VITE_TARGET=electron CONTRACTOR_APP_MODE=server vite build",
+    "build:web": "vue-tsc -b && cross-env VITE_TARGET=web CONTRACTOR_APP_MODE=server vite build",
+    "build:client": "vue-tsc -b && cross-env VITE_TARGET=electron CONTRACTOR_APP_MODE=client vite build",
+
+    "//electron": "----- Electron shell (mode-switched) -----",
+    "electron:dev": "cross-env CONTRACTOR_APP_MODE=server electron .",
+    "electron:dev:client": "cross-env CONTRACTOR_APP_MODE=client electron .",
+
+    "//misc": "----- Misc -----",
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit",
-    "icons:gen": "node scripts/gen-mdi-icons.mjs",
-    "electron:dev": "electron ."
+    "icons:gen": "node scripts/gen-mdi-icons.mjs"
   },
   "dependencies": {
     "@contractor-plus/shared": "workspace:*",
@@ -33,6 +45,7 @@
     "@types/node": "^22.9.0",
     "@vitejs/plugin-vue": "^5.1.4",
     "autoprefixer": "^10.4.20",
+    "cross-env": "^7.0.3",
     "electron": "31.7.7",
     "electron-builder": "^25.1.8",
     "postcss": "^8.4.49",

@@ -3,14 +3,18 @@ import assert from 'node:assert/strict';
 import { CostCategory, ContractStatus, PaymentStatus, Prisma } from '@prisma/client';
 import { prisma } from '../../src/lib/prisma.js';
 import { AiCommandWorkflowService } from '../../src/modules/ai-command-workflow/ai-command-workflow.service.js';
+import { AiCommandRepository } from '../../src/modules/ai-command-workflow/ai-command-workflow.repository.js';
+import { ACTIONS } from '../../src/modules/ai-command-workflow/ai-command-workflow.registry.js';
+import { SessionStore } from '../../src/modules/ai-command-workflow/ai-command-workflow.sessions.js';
 import { createLlmClient, LLMError, type LlmClient } from '../../src/lib/llm/llm-client.js';
+import { logger } from '../../src/lib/logger.js';
 import { RoleName } from '@contractor-plus/shared';
 
 // A deterministic LLM stand-in: `complete()` returns a fixed canned plan, so the
 // whole interpret → resolve → confirm → execute pipeline is exercised offline.
 function fakeLlm(json: unknown): LlmClient {
   const text = typeof json === 'string' ? json : JSON.stringify(json);
-  return { name: 'openai', model: 'test', complete: async () => text };
+  return { name: 'openrouter', model: 'test', complete: async () => text };
 }
 
 // Multi-turn stand-in: returns canned responses in order and records each user
@@ -19,7 +23,7 @@ function scriptedLlm(responses: unknown[]): { client: LlmClient; prompts: string
   const prompts: string[] = [];
   let i = 0;
   const client: LlmClient = {
-    name: 'openai',
+    name: 'openrouter',
     model: 'test',
     complete: async (req) => {
       prompts.push(req.user);
@@ -40,15 +44,22 @@ const created = {
   payments: new Set<string>(),
   costs: new Set<string>(),
   sessions: new Set<string>(),
+  roles: new Set<string>(),
+  users: new Set<string>(),
 };
 
 let userId: string;
+let ownerRoleId: string;
 let viewerUserId: string;
 
 before(async () => {
-  const users = await prisma.user.findMany({ select: { id: true, role: { select: { name: true } } } });
+  const users = await prisma.user.findMany({ select: { id: true, roleId: true, role: { select: { name: true } } } });
   assert.ok(users.length > 0, 'expected at least one seeded user');
-  userId = users[0]!.id;
+  // The live authorization check resolves each principal's role from its user
+  // row, so principals must use a userId whose DB role matches the intent.
+  const owner = users.find((u) => u.role.name === RoleName.OWNER) ?? users[0]!;
+  userId = owner.id;
+  ownerRoleId = owner.roleId;
   viewerUserId = users.find((u) => u.role.name === RoleName.VIEWER)?.id ?? userId;
 });
 
@@ -72,6 +83,10 @@ after(async () => {
     where: { OR: [{ id: { in: [...created.customers] } }, { name: { contains: RUN } }] },
   });
   await prisma.aiCommandLog.deleteMany({ where: { sessionId: { in: [...created.sessions] } } });
+  // Test users (before their custom roles, which they reference).
+  await prisma.user.deleteMany({ where: { OR: [{ id: { in: [...created.users] } }, { username: { contains: RUN } }] } });
+  // Custom test roles (RolePermission cascades on role delete).
+  await prisma.role.deleteMany({ where: { OR: [{ id: { in: [...created.roles] } }, { name: { contains: RUN } }] } });
   await prisma.$disconnect();
 });
 
@@ -356,23 +371,26 @@ test('a failing step rolls back everything created before it', async () => {
 
 // ---- Enhancement pass: providers, queries, edits, resolution, multi-turn ----
 
-// 12) The provider factory builds a client for all five providers.
-test('createLlmClient supports all five providers', () => {
-  for (const provider of ['openai', 'groq', 'anthropic', 'gemini', 'openrouter'] as const) {
-    const c = createLlmClient({ enabled: true, provider, model: 'm', baseUrl: 'http://x', apiKey: 'k', timeoutMs: 1000, maxTokens: 10 });
-    assert.equal(c?.name, provider);
-  }
-  const disabled = createLlmClient({ enabled: false, provider: 'openai', model: 'm', baseUrl: 'x', apiKey: 'k', timeoutMs: 1, maxTokens: 1 });
+// 12) The factory builds an OpenRouter client, and returns null when disabled or
+//     when no API key is configured.
+test('createLlmClient builds an OpenRouter client (and null when unconfigured)', () => {
+  const c = createLlmClient({ enabled: true, provider: 'openrouter', model: 'openai/gpt-4o-mini', baseUrl: 'http://x', apiKey: 'k', timeoutMs: 1000, maxTokens: 10 });
+  assert.equal(c?.name, 'openrouter');
+
+  const disabled = createLlmClient({ enabled: false, provider: 'openrouter', model: 'm', baseUrl: 'x', apiKey: 'k', timeoutMs: 1, maxTokens: 1 });
   assert.equal(disabled, null);
+
+  const noKey = createLlmClient({ enabled: true, provider: 'openrouter', model: 'm', baseUrl: 'x', apiKey: null, timeoutMs: 1, maxTokens: 1 });
+  assert.equal(noKey, null);
 });
 
 // 13) An LLM failure maps to a clear, code-specific Arabic message.
 test('an LLM failure maps to a clear Arabic message', async () => {
   const errClient: LlmClient = {
-    name: 'openai',
+    name: 'openrouter',
     model: 'test',
     complete: async () => {
-      throw new LLMError('openai', 429, 'rate_limited', true);
+      throw new LLMError('openrouter', 429, 'rate_limited', true);
     },
   };
   const res = await new AiCommandWorkflowService(prisma, errClient).interpret('سوي مشروع', undefined, principal());
@@ -415,6 +433,9 @@ test('customer.update changes the phone', async () => {
   track(built);
   assert.equal(built.kind, 'workflow_plan');
   if (built.kind !== 'workflow_plan') return;
+  // Confirmation shows the DB-sourced old value and the new value.
+  assert.match(built.confirmationMessage, /0770/, 'shows the old phone');
+  assert.match(built.confirmationMessage, /07711112222/, 'shows the new phone');
   const exec = await s.confirm(built.sessionId, principal());
   track(exec);
   assert.equal(exec.kind, 'execution');
@@ -489,6 +510,49 @@ test('expense.delete removes the most-recent cost', async () => {
   assert.equal(olderAfter?.deletedAt, null, 'older cost kept');
 });
 
+// 18b) expense.delete WITHOUT a project reference must ask which project — it
+//      must NOT silently fall back to the globally-latest cost (data-loss guard).
+test('expense.delete without a project asks for clarification (no global fallback)', async () => {
+  // Seed a cost so a global "last cost" exists; the command must still refuse to
+  // target it because no project was named.
+  const customer = await prisma.customer.create({ data: { name: `عميل ${RUN} بلا مشروع` } });
+  created.customers.add(customer.id);
+  const contract = await prisma.contract.create({
+    data: {
+      contractNumber: `${RUN}-NOPROJ`,
+      customerId: customer.id,
+      buildingArea: new Prisma.Decimal(100),
+      floors: 1,
+      meterPrice: new Prisma.Decimal(1000),
+      totalPrice: new Prisma.Decimal(100000),
+      status: ContractStatus.APPROVED,
+    },
+  });
+  created.contracts.add(contract.id);
+  const project = await prisma.project.create({ data: { name: `مشروع ${RUN} بلا اشارة`, contractId: contract.id } });
+  created.projects.add(project.id);
+  const cost = await prisma.projectCost.create({
+    data: { projectId: project.id, category: CostCategory.MISC, description: 'لا تحذفني', totalAmount: new Prisma.Decimal(999), date: new Date() },
+  });
+  created.costs.add(cost.id);
+
+  const plan = {
+    kind: 'workflow_plan',
+    intent: 'expense.delete',
+    confidence: 0.9,
+    steps: [{ action: 'expense.delete', data: {} }], // no projectRef
+    confirmationMessage: 'x',
+  };
+  const res = await svc(plan).interpret('احذف آخر مصروف', undefined, principal());
+  track(res);
+  assert.equal(res.kind, 'clarification', 'must clarify, not produce an executable plan');
+  if (res.kind !== 'clarification') return;
+  assert.ok(res.missingSlots.includes('projectRef'), 'asks which project');
+
+  const stillThere = await prisma.projectCost.findUnique({ where: { id: cost.id } });
+  assert.equal(stillThere?.deletedAt, null, 'the global-latest cost must be untouched');
+});
+
 // 19) A follow-up refines the parked plan (multi-turn context).
 test('a follow-up refines the parked plan', async () => {
   const projectName = `مشروع ${RUN} حوار`;
@@ -518,4 +582,187 @@ test('a follow-up refines the parked plan', async () => {
   if (t2.kind !== 'workflow_plan') return;
   assert.equal(t2.intent, 'refined', 're-planned, not discarded');
   assert.match(prompts[1] ?? '', /REFINING/);
+});
+
+// 21) Two concurrent /confirm requests must execute the parked plan exactly once
+//     (the plan is claimed synchronously before any await).
+test('two concurrent confirms execute the plan only once', async () => {
+  const name = `عميل ${RUN} تزامن`;
+  const projectName = `مشروع ${RUN} تزامن`;
+  const s = svc(newClientPlan(name, projectName));
+  const plan = await s.interpret('سوي عميل وعقد ومشروع', undefined, principal());
+  track(plan);
+  assert.equal(plan.kind, 'workflow_plan');
+  if (plan.kind !== 'workflow_plan') return;
+
+  // Fire both confirms without awaiting in between → they race into execute().
+  const [a, b] = await Promise.all([
+    s.confirm(plan.sessionId, principal()),
+    s.confirm(plan.sessionId, principal()),
+  ]);
+  track(a);
+  track(b);
+
+  const kinds = [a.kind, b.kind].sort();
+  assert.deepEqual(kinds, ['execution', 'rejected'], 'exactly one executes, the other is rejected');
+  const loser = [a, b].find((r) => r.kind === 'rejected');
+  assert.equal(loser?.reason, 'no_pending_plan', 'the losing confirm reports no pending plan');
+
+  // contract.create / project.create always insert, so a double execution would
+  // leave two projects. Exactly one proves the plan ran once.
+  const projects = await prisma.project.findMany({ where: { name: projectName } });
+  assert.equal(projects.length, 1, 'plan executed exactly once (no duplicate rows)');
+});
+
+// 21b) project.status.change requires ONLY the permission for the requested
+//      transition — not all five status permissions (unit).
+test('project.status.change resolves to only the requested status permission', () => {
+  const def = ACTIONS['project.status.change'];
+  assert.ok(def?.resolveRequiredPermissions, 'action declares a permission resolver');
+  assert.deepEqual(def!.resolveRequiredPermissions!({ status: 'ابدأ' }), ['projects.start']);
+  assert.deepEqual(def!.resolveRequiredPermissions!({ status: 'الغاء' }), ['projects.cancel']);
+  assert.deepEqual(def!.resolveRequiredPermissions!({ status: 'complete' }), ['projects.complete']);
+  // Unknown status → fail-closed to the full union.
+  assert.deepEqual(
+    [...def!.resolveRequiredPermissions!({ status: 'nonsense' })].sort(),
+    ['projects.cancel', 'projects.complete', 'projects.pause', 'projects.resume', 'projects.start'],
+  );
+});
+
+// 21c) A role that may ONLY start projects can start one via the assistant, but
+//      cannot cancel one — the gate no longer demands all five permissions.
+test('a start-only role can start a project but not cancel it', async () => {
+  const customer = await prisma.customer.create({ data: { name: `عميل ${RUN} حالة` } });
+  created.customers.add(customer.id);
+  const contract = await prisma.contract.create({
+    data: {
+      contractNumber: `${RUN}-STAT`,
+      customerId: customer.id,
+      buildingArea: new Prisma.Decimal(100),
+      floors: 1,
+      meterPrice: new Prisma.Decimal(1000),
+      totalPrice: new Prisma.Decimal(100000),
+      status: ContractStatus.APPROVED,
+    },
+  });
+  created.contracts.add(contract.id);
+  const projectName = `مشروع ${RUN} حالة`;
+  const project = await prisma.project.create({ data: { name: projectName, contractId: contract.id } });
+  created.projects.add(project.id);
+
+  // A custom role holding ONLY projects.start, and a user assigned to it (the
+  // live authorization check resolves the role from the user row).
+  const startPerm = await prisma.permission.findUnique({ where: { key: 'projects.start' } });
+  assert.ok(startPerm, 'projects.start permission is seeded');
+  const roleName = `STARTER-${RUN}`;
+  const role = await prisma.role.create({
+    data: { name: roleName, isSystem: false, permissions: { create: { permissionId: startPerm!.id } } },
+  });
+  created.roles.add(role.id);
+  const starter = await prisma.user.create({
+    data: { username: `starter-${RUN}`, passwordHash: 'x', fullName: 'Starter', roleId: role.id, isActive: true },
+  });
+  created.users.add(starter.id);
+
+  const statusPlan = (status: string) => ({
+    kind: 'workflow_plan',
+    intent: 'project.status.change',
+    confidence: 0.9,
+    steps: [{ action: 'project.status.change', data: { projectRef: projectName, status } }],
+    confirmationMessage: 'x',
+  });
+
+  // start → permitted (only projects.start needed).
+  const start = await svc(statusPlan('ابدأ')).interpret('ابدأ المشروع', undefined, principal(roleName, starter.id));
+  track(start);
+  assert.equal(start.kind, 'workflow_plan', 'start-only role may start a project');
+
+  // cancel → rejected (needs projects.cancel, which this role lacks).
+  const cancel = await svc(statusPlan('الغاء')).interpret('الغِ المشروع', undefined, principal(roleName, starter.id));
+  track(cancel);
+  assert.equal(cancel.kind, 'rejected');
+  if (cancel.kind !== 'rejected') return;
+  assert.equal(cancel.reason, 'insufficient_permission');
+  assert.match(cancel.message, /projects\.cancel/);
+});
+
+// 21d) A DEACTIVATED user is refused live — the (still-valid) access token's
+//      active status is not trusted for AI authorization.
+test('a deactivated user is rejected by the live authorization check', async () => {
+  // Fresh inactive user (never cached as active), assigned the OWNER role so the
+  // ONLY thing failing the check is the inactive flag.
+  const dead = await prisma.user.create({
+    data: { username: `inactive-${RUN}`, passwordHash: 'x', fullName: 'Inactive', roleId: ownerRoleId, isActive: false },
+  });
+  created.users.add(dead.id);
+
+  const plan = {
+    kind: 'workflow_plan',
+    intent: 'project.create_internal',
+    confidence: 0.9,
+    steps: [{ action: 'project.create', data: { name: `مشروع ${RUN} معطل` } }],
+    confirmationMessage: 'x',
+  };
+  await assert.rejects(
+    () => svc(plan).interpret('سوي مشروع', undefined, principal(RoleName.OWNER, dead.id)),
+    (err: unknown) => err instanceof Error && /معطّل|USER_INACTIVE|Unauthorized/.test(`${(err as { code?: string }).code ?? ''} ${err.message}`),
+    'deactivated user is refused',
+  );
+});
+
+// 21e) The SessionStore reclaims expired sessions on its OWN timer, with no
+//      access call to trigger the on-access sweep.
+test('the session store sweeps expired sessions on an independent timer', async () => {
+  const store = new SessionStore(30); // sweep every 30ms
+  try {
+    const s = store.create('u-sweep', 'text');
+    s.expiresAt = Date.now() - 1; // already expired
+    assert.equal(store.size(), 1, 'session present before the sweep');
+    await new Promise((r) => setTimeout(r, 90)); // let the timer fire
+    assert.equal(store.size(), 0, 'the background timer reclaimed it (no access sweep)');
+  } finally {
+    store.stop();
+  }
+});
+
+// 22) A failed audit write must NOT roll back or fail the already-committed
+//     operation, but it must be logged (never silently swallowed).
+test('a failed audit write keeps the executed operation but is logged', async () => {
+  const name = `عميل ${RUN} تدقيق`;
+  const projectName = `مشروع ${RUN} تدقيق`;
+  const s = svc(newClientPlan(name, projectName));
+  const built = await s.interpret('سوي عميل وعقد ومشروع', undefined, principal());
+  track(built);
+  assert.equal(built.kind, 'workflow_plan');
+  if (built.kind !== 'workflow_plan') return;
+
+  // Force every audit write to fail, and capture that the failure is logged.
+  const originalLog = AiCommandRepository.prototype.log;
+  const spied = logger as unknown as { error: (...a: unknown[]) => void };
+  const originalError = spied.error;
+  const errorCalls: unknown[][] = [];
+  AiCommandRepository.prototype.log = async () => {
+    throw new Error('audit DB unavailable');
+  };
+  spied.error = (...args: unknown[]) => {
+    errorCalls.push(args);
+  };
+  let exec;
+  try {
+    exec = await s.confirm(built.sessionId, principal());
+  } finally {
+    AiCommandRepository.prototype.log = originalLog;
+    spied.error = originalError;
+  }
+  track(exec);
+
+  // The committed operation still succeeds ...
+  assert.equal(exec.kind, 'execution', 'operation succeeds despite the audit failure');
+  const project = await prisma.project.findFirst({ where: { name: projectName } });
+  assert.ok(project, 'project really persisted');
+  // ... and the audit failure was surfaced, not silently swallowed.
+  assert.ok(
+    errorCalls.some((a) => typeof a[1] === 'string' && /audit/i.test(a[1] as string)),
+    'the audit failure was logged',
+  );
 });

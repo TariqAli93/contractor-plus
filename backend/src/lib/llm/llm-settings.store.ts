@@ -18,13 +18,15 @@ import { decryptSecret, encryptSecret } from '../crypto.js';
 import { ValidationError } from '../../shared/errors/validation.error.js';
 import { toJsonValue } from '../../shared/utils/json.js';
 import { createLlmClient, LLMError } from './llm-client.js';
+import { OpenRouterModelsService } from './openrouter-models.service.js';
 import {
-  isValidModelForProvider,
   loadLlmConfig,
   normalizeModel,
   resolveBaseUrl,
+  OPENROUTER_PROVIDER,
   type LlmConfig,
   type LlmProviderName,
+  type StructuredOutputMode,
 } from './llm.config.js';
 
 const PREFIX = 'ai.';
@@ -45,7 +47,7 @@ export interface LlmSettingsView {
 
 export interface LlmSettingsUpdate {
   enabled?: boolean;
-  provider?: LlmProviderName;
+  /** OpenRouter model id (e.g. "openai/gpt-4o-mini"). */
   model?: string;
   timeoutMs?: number;
   maxTokens?: number;
@@ -65,31 +67,45 @@ export interface TestConnectionResult {
 
 export class LlmSettingsStore {
   private readonly audit: AuditService;
+  private readonly models: OpenRouterModelsService;
   constructor(private readonly prisma: PrismaClient) {
     this.audit = new AuditService(prisma);
+    this.models = new OpenRouterModelsService(prisma);
   }
 
   // ---------- engine-facing ----------
 
-  /** Effective config for the engine (DB over env), with the key decrypted. */
+  /** Effective config for the engine (DB over env), with the key decrypted.
+   *  Provider is fixed to OpenRouter; siteUrl/appName are env-only (app config,
+   *  not per-user secrets). */
   async resolve(): Promise<LlmConfig> {
     const env = loadLlmConfig();
     const m = await this.rawMap();
-
-    const provider: LlmProviderName =
-      m.provider === 'openai' || m.provider === 'anthropic' || m.provider === 'groq'
-        ? m.provider
-        : env.provider;
+    const model = typeof m.model === 'string' && m.model ? m.model : env.model;
 
     return {
       enabled: typeof m.enabled === 'boolean' ? m.enabled : env.enabled,
-      provider,
-      model: typeof m.model === 'string' && m.model ? m.model : env.model,
-      baseUrl: resolveBaseUrl(provider),
+      provider: OPENROUTER_PROVIDER,
+      model,
+      baseUrl: resolveBaseUrl(),
       apiKey: this.decryptedKey(m) ?? env.apiKey,
       timeoutMs: typeof m.timeoutMs === 'number' ? m.timeoutMs : env.timeoutMs,
       maxTokens: typeof m.maxTokens === 'number' ? m.maxTokens : env.maxTokens,
+      siteUrl: env.siteUrl,
+      appName: env.appName,
+      structuredOutputMode: await this.resolveStructuredOutputMode(model),
     };
+  }
+
+  /** Best-effort per-model structured-output capability from the cached catalog.
+   *  Any failure (or a cold/absent catalog) degrades to `auto` — the client then
+   *  detects the right mode via its response_format fallback chain. */
+  private async resolveStructuredOutputMode(model: string): Promise<StructuredOutputMode> {
+    try {
+      return (await this.models.peekStructuredOutputMode(model)) ?? 'auto';
+    } catch {
+      return 'auto';
+    }
   }
 
   // ---------- UI-facing ----------
@@ -110,19 +126,14 @@ export class LlmSettingsStore {
   async update(input: LlmSettingsUpdate, actor: AuditActor): Promise<LlmSettingsView> {
     const before = await this.view();
 
-    // Normalize + validate the model against the EFFECTIVE provider (the one
-    // being set in this call, else the current one) BEFORE persisting. OpenAI
-    // ids are trimmed + lowercased ("GPT-5.5" → "gpt-5.5") and rejected if not a
-    // plausible OpenAI model; Anthropic ids are only trimmed (case-sensitive).
-    const provider = input.provider ?? before.provider;
+    // OpenRouter model ids are vendor-prefixed and case-sensitive, so only trim.
+    // A genuinely wrong id is caught at call time (404 model_not_found) and, in
+    // the UI, prevented by choosing from the live model dropdown.
     let normalizedModel: string | undefined;
     if (input.model !== undefined) {
-      normalizedModel = normalizeModel(provider, input.model);
-      if (!isValidModelForProvider(provider, normalizedModel)) {
-        throw new ValidationError(
-          'اسم موديل OpenAI غير صالح — يجب أن يكون بأحرف صغيرة ويبدأ بـ gpt- أو o أو chatgpt- (مثل gpt-4o-mini).',
-          { model: ['invalid_openai_model'] },
-        );
+      normalizedModel = normalizeModel(input.model);
+      if (!normalizedModel) {
+        throw new ValidationError('اسم النموذج مطلوب.', { model: ['required'] });
       }
     }
 
@@ -135,7 +146,6 @@ export class LlmSettingsStore {
         });
 
       if (input.enabled !== undefined) await set('enabled', input.enabled);
-      if (input.provider !== undefined) await set('provider', input.provider);
       if (input.model !== undefined) await set('model', normalizedModel);
       if (input.timeoutMs !== undefined) await set('timeoutMs', input.timeoutMs);
       if (input.maxTokens !== undefined) await set('maxTokens', input.maxTokens);
@@ -166,15 +176,13 @@ export class LlmSettingsStore {
 
   /** Test connectivity with the draft (or stored) config. Never reveals the key. */
   async testConnection(input: {
-    provider?: LlmProviderName;
     model?: string;
     apiKey?: string;
     timeoutMs?: number;
   }): Promise<TestConnectionResult> {
     const stored = await this.resolve();
-    const provider = input.provider ?? stored.provider;
-    // Same normalization as the save path, so a draft "GPT-5.5" tests as "gpt-5.5".
-    const model = normalizeModel(provider, input.model ?? stored.model);
+    const provider = OPENROUTER_PROVIDER;
+    const model = normalizeModel(input.model ?? stored.model);
     const apiKey = input.apiKey && input.apiKey.trim() ? input.apiKey.trim() : stored.apiKey;
 
     if (!apiKey) {
@@ -185,10 +193,15 @@ export class LlmSettingsStore {
       enabled: true,
       provider,
       model,
-      baseUrl: resolveBaseUrl(provider),
+      baseUrl: resolveBaseUrl(),
       apiKey,
       timeoutMs: input.timeoutMs ?? stored.timeoutMs,
       maxTokens: 8,
+      siteUrl: stored.siteUrl,
+      appName: stored.appName,
+      // Draft model may differ from the stored one — resolve its capability too so
+      // the ping uses the right response_format (falls back gracefully regardless).
+      structuredOutputMode: await this.resolveStructuredOutputMode(model),
     });
     if (!client) return { ok: false, provider, model, error: 'client_unavailable' };
 

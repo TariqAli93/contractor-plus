@@ -101,7 +101,8 @@ export interface AiSessionRequest {
 
 // ---------- LLM settings (settings tab) ----------
 
-export type AiLlmProvider = 'openai' | 'groq' | 'anthropic' | 'gemini' | 'openrouter';
+// OpenRouter is the app's single AI gateway — provider is fixed.
+export type AiLlmProvider = 'openrouter';
 
 export interface AiLlmSettingsView {
   enabled: boolean;
@@ -119,6 +120,61 @@ export interface AiLlmTestConnectionResult {
   model: string;
   latencyMs?: number;
   error?: string;
+}
+
+// ---------- OpenRouter model discovery (safe, frontend-facing DTO) ----------
+
+/** A single OpenRouter model, projected to only the fields the UI needs. The
+ *  backend fetches these from OpenRouter's GET /models and caches them; the
+ *  frontend never talks to OpenRouter directly. */
+export interface OpenRouterModel {
+  /** Vendor-prefixed id used as the `model` value, e.g. "openai/gpt-4o-mini". */
+  id: string;
+  name: string;
+  description?: string;
+  /** Max context window in tokens, when known. */
+  contextLength: number | null;
+  /** Per-token USD prices as strings (OpenRouter reports strings). */
+  pricing: {
+    prompt: string | null;
+    completion: string | null;
+    request: string | null;
+    image: string | null;
+  } | null;
+  /** e.g. ["text","image"]. */
+  inputModalities: string[];
+  /** e.g. ["text"]. */
+  outputModalities: string[];
+  /** OpenAI-style parameter names the model supports, e.g. ["tools","temperature"]. */
+  supportedParameters: string[];
+  /** True when prompt+completion pricing are both zero. */
+  isFree: boolean;
+}
+
+/** Capability filters accepted by GET /ai-command/models (all optional). */
+export interface OpenRouterModelFilter {
+  /** Require this input modality (e.g. "image" for vision models). */
+  input?: string;
+  /** Require this output modality (e.g. "text"). */
+  output?: string;
+  /** Require support for tool/function calling. */
+  tools?: boolean;
+  /** Minimum context window in tokens. */
+  minContext?: number;
+  /** Only models whose prompt price ≤ this (USD per token). */
+  maxPromptPrice?: number;
+  /** Only free models (zero prompt+completion price). */
+  free?: boolean;
+  /** Case-insensitive substring match on id/name. */
+  search?: string;
+}
+
+export interface OpenRouterModelsResult {
+  models: OpenRouterModel[];
+  /** True when served from cache because a live fetch failed. */
+  stale: boolean;
+  /** ISO timestamp of the data's origin fetch, when known. */
+  fetchedAt: string | null;
 }
 
 // ---------- proactive insights (shown when the console opens) ----------

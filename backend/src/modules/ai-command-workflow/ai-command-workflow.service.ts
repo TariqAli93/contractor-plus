@@ -15,12 +15,14 @@ import { SessionStore } from './ai-command-workflow.sessions.js';
 import { buildActionDeps, getAction, isRegisteredAction, type ActionDeps } from './ai-command-workflow.registry.js';
 import { executePlan } from './ai-command-workflow.executor.js';
 import { buildRefineUserPrompt, buildSystemPrompt, buildUserPrompt } from './ai-command-workflow.prompts.js';
-import { llmInterpretationSchema } from './ai-command-workflow.schemas.js';
+import { llmInterpretationSchema, LLM_INTERPRETATION_JSON_SCHEMA } from './ai-command-workflow.schemas.js';
 import { AiCommandRepository } from './ai-command-workflow.repository.js';
 import { AccessService } from '../rbac/access.service.js';
 import { LlmSettingsStore } from '../../lib/llm/llm-settings.store.js';
 import { createLlmClient, LLMError, type LlmClient } from '../../lib/llm/llm-client.js';
+import { llmErrorMessageAr } from '../../lib/llm/llm-error-messages.js';
 import type { LlmProviderName } from '../../lib/llm/llm.config.js';
+import { logger } from '../../lib/logger.js';
 import { AppError } from '../../shared/errors/app-error.js';
 import type { AiInsights } from '@contractor-plus/shared';
 import type {
@@ -178,10 +180,11 @@ export class AiCommandWorkflowService {
         user: refineFrom
           ? buildRefineUserPrompt(refineFrom.originalText, refineFrom.steps, text)
           : buildUserPrompt(combined, session.collectedSlots, session.pendingIntent),
+        schema: LLM_INTERPRETATION_JSON_SCHEMA,
       });
     } catch (err) {
       const code = err instanceof LLMError ? err.code : 'llm_error';
-      return this.rejected(session, code, llmErrorMessage(code), text, llm.provider);
+      return this.rejected(session, code, llmErrorMessageAr(code), text, llm.provider);
     }
 
     const parsed = parseInterpretation(raw);
@@ -400,10 +403,24 @@ export class AiCommandWorkflowService {
   }
 
   private async execute(session: Session, ctx: ExecContext): Promise<ConfirmResult> {
-    const plan = session.pendingPlan!;
+    // Claim the plan SYNCHRONOUSLY — before the first await — so two concurrent
+    // /confirm requests cannot both execute it. The first caller to reach here in
+    // this event-loop tick captures the plan and clears it; a second, racing
+    // caller then sees no pending plan and is rejected instead of re-executing.
+    const plan = session.pendingPlan;
+    if (!plan) {
+      return {
+        kind: 'rejected',
+        sessionId: session.sessionId,
+        intent: null,
+        reason: 'no_pending_plan',
+        message: 'لا توجد خطة معلّقة للتأكيد. اكتب الأمر من جديد.',
+      };
+    }
+    this.sessions.clearPending(session);
+
     try {
       const output = await executePlan(this.prisma, this.deps, plan, ctx);
-      this.sessions.clearPending(session);
       await this.audit(session, 'execution', plan.intent, plan.confidence, 'executed', null, {
         steps: plan.steps,
         executedActions: output.executedActions,
@@ -422,7 +439,6 @@ export class AiCommandWorkflowService {
     } catch (err) {
       const message = err instanceof AppError ? err.message : 'فشل تنفيذ الأمر وتم التراجع عن كل التغييرات.';
       const reason = err instanceof AppError ? err.code : 'execution_failed';
-      this.sessions.clearPending(session);
       await this.audit(session, 'execution', plan.intent, plan.confidence, 'failed', null, {
         steps: plan.steps,
         failedReason: message,
@@ -559,13 +575,21 @@ export class AiCommandWorkflowService {
     }
 
     // 5) Delete/mark targets — the most-recent cost/payment ("آخر مصروف/دفعة"),
-    //    scoped to the resolved project when one was given.
+    //    ALWAYS scoped to a resolved project. Without project context we must NOT
+    //    fall back to the globally-latest record (that could delete/alter an
+    //    unrelated project's data) — ask which project instead.
     if (creates('expense.delete')) {
+      if (!refs.projectId) {
+        return { refs, clarify: { message: 'أي مشروع؟ حدّد المشروع لحذف آخر مصروف فيه.', missingSlots: ['projectRef'] } };
+      }
       const cost = await this.repo.lastCost(refs.projectId);
       if (!cost) return { refs, clarify: { message: 'لا يوجد مصروف للحذف.', missingSlots: ['expense'] } };
       refs.costId = cost.id;
     }
     if (creates('payment.mark_paid') || creates('payment.cancel')) {
+      if (!refs.projectId) {
+        return { refs, clarify: { message: 'أي مشروع؟ حدّد المشروع للتعامل مع آخر دفعة فيه.', missingSlots: ['projectRef'] } };
+      }
       const payment = await this.repo.lastPayment(refs.projectId);
       if (!payment) return { refs, clarify: { message: 'لا توجد دفعة مطابقة.', missingSlots: ['payment'] } };
       refs.paymentId = payment.id;
@@ -601,7 +625,10 @@ export class AiCommandWorkflowService {
     for (const step of steps) {
       const def = getAction(step.action);
       if (!def) continue;
-      for (const perm of def.requiredPermissions) {
+      // Data-dependent actions (e.g. project.status.change) narrow to only the
+      // permission the requested data actually needs.
+      const required = def.resolveRequiredPermissions?.(step.data) ?? def.requiredPermissions;
+      for (const perm of required) {
         if (!ctx.permissions.has(perm)) missing.add(perm);
       }
     }
@@ -646,6 +673,31 @@ export class AiCommandWorkflowService {
       }
     }
 
+    // customer.update → show DB-sourced old→new for each changed field.
+    const custStep = steps.find((s) => s.action === 'customer.update');
+    if (custStep && refs.clientId) {
+      try {
+        const customer = await this.deps.prisma.customer.findUnique({ where: { id: refs.clientId } });
+        if (customer) {
+          const changes: string[] = [];
+          const fields: Array<[string, string, string | null]> = [
+            ['الاسم', str(custStep.data.name) ?? '', customer.name],
+            ['الهاتف', str(custStep.data.phone) ?? '', customer.phone],
+            ['البريد', str(custStep.data.email) ?? '', customer.email],
+            ['العنوان', str(custStep.data.address) ?? '', customer.address],
+          ];
+          for (const [label, next, current] of fields) {
+            if (next) changes.push(`${label} من "${current ?? '—'}" إلى "${next}"`);
+          }
+          if (changes.length > 0) {
+            return `راح أعدّل بيانات العميل "${customer.name}": ${changes.join('، ')}. هل تؤكد؟`;
+          }
+        }
+      } catch {
+        /* fall through to default */
+      }
+    }
+
     // expense.delete → name the exact cost being removed.
     const delStep = steps.find((s) => s.action === 'expense.delete');
     if (delStep && refs.costId) {
@@ -670,8 +722,12 @@ export class AiCommandWorkflowService {
   // ===================== plumbing =====================
 
   private async buildContext(principal: Principal): Promise<ExecContext> {
-    const keys = await this.access.permissionsForRole(principal.role);
-    return { userId: principal.userId, role: principal.role, actor: principal.actor, permissions: new Set(keys) };
+    // Live re-check (active + CURRENT role from DB) — do not trust the token's
+    // role/active status for these mutating AI authorizations. Throws for a
+    // deactivated/deleted user; a demoted user immediately loses elevated access.
+    const role = await this.access.liveUserRole(principal.userId);
+    const keys = await this.access.permissionsForRole(role);
+    return { userId: principal.userId, role, actor: principal.actor, permissions: new Set(keys) };
   }
 
   private async resolveClient(): Promise<{ client: LlmClient | null; provider: LlmProviderName | null }> {
@@ -724,8 +780,16 @@ export class AiCommandWorkflowService {
         createdEntityIds: extra.createdEntityIds,
         updatedEntityIds: extra.updatedEntityIds,
       });
-    } catch {
-      /* audit is best-effort — never fail the request because logging failed */
+    } catch (err) {
+      // A post-commit audit failure must NOT roll back or fail the user's
+      // operation (the mutation already committed in the executor's own
+      // transaction), but it must NEVER be silent: an executed action with no
+      // audit row is a compliance hole. Log loudly with enough context to
+      // reconstruct the trail by hand.
+      logger.error(
+        { err, userId: session.userId, sessionId: session.sessionId, resultKind, confirmationStatus },
+        '[ai-command] audit write failed — operation NOT rolled back; audit trail incomplete',
+      );
     }
   }
 }
@@ -775,20 +839,6 @@ function buildExecutionMessage(actions: ExecutedActionInfo[]): string {
   if (byOp.update.size) parts.push(`تم تحديث: ${[...byOp.update].join('، ')}`);
   if (byOp.delete.size) parts.push(`تم حذف: ${[...byOp.delete].join('، ')}`);
   return parts.length ? `تم التنفيذ بنجاح. ${parts.join('. ')}.` : 'تم التنفيذ بنجاح.';
-}
-
-// LLM failure code → a clear, distinct Arabic message (stability requirement).
-const LLM_ERROR_AR: Record<string, string> = {
-  invalid_api_key: 'مفتاح API غير صالح — راجع إعدادات المساعد الذكي.',
-  insufficient_quota: 'انتهى رصيد مزوّد الذكاء الاصطناعي.',
-  rate_limited: 'المزوّد مشغول حالياً، حاول بعد لحظات.',
-  model_not_found: 'الموديل غير موجود — تحقّق من اسم الموديل في الإعدادات.',
-  timeout: 'انتهت مهلة الاتصال بالمزوّد، حاول مرة أخرى.',
-  network_error: 'تعذّر الوصول إلى المزوّد — تحقّق من اتصال الإنترنت.',
-  server_error: 'خطأ مؤقت من المزوّد، حاول مرة أخرى.',
-};
-function llmErrorMessage(code: string): string {
-  return LLM_ERROR_AR[code] ?? 'تعذّر الاتصال بمزوّد الذكاء الاصطناعي، حاول مرة أخرى.';
 }
 
 function buildQueryMessage(intent: string): string {

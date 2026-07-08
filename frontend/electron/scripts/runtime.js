@@ -147,22 +147,36 @@ export function runtimeDatabaseName() {
 }
 
 /**
- * Setup completeness — "has the wizard been run?" — is PRESENCE-based: a
- * provisioned service.json exists. Validity is a separate concern surfaced by
- * {@link diagnoseServiceConfig}, so an existing-but-corrupt config is reported as
- * a fatal config error rather than silently sent back through the wizard to be
- * regenerated. Never throws.
+ * Setup completeness — "has the wizard produced a USABLE runtime config?". This
+ * is NOT mere presence: a service.json that exists but carries no valid database
+ * configuration is NOT complete (it yields no DATABASE_URL, so the backend can
+ * never start from it). Requiring a valid database here keeps this decision in
+ * lock-step with {@link runtimeDatabaseUrl} and the backend-start gate, so the
+ * app can no longer report `setupComplete=true` and then refuse to start with
+ * SETUP_NOT_COMPLETE. Equivalent to `Boolean(cfg && cfg.db && cfg.db.url)`.
+ * Never throws.
  *
  * @returns {boolean}
  */
 export function isSetupComplete() {
   try {
     const presence = cfg.serviceConfigPresence(configFile());
+
+    // Genuinely absent (ENOENT) or unusable I/O error → setup has not run.
+    if (presence === 'missing' || presence === 'unreadable') return false;
+
     // 'locked' = the file EXISTS but the packaged config dir is ACL-locked to
-    // SYSTEM+Administrators and this client is non-elevated (EPERM/EACCES) — setup
-    // DID run. fs.existsSync would wrongly report false here. Only 'missing'
-    // (ENOENT) means setup has not run.
-    return presence === 'present' || presence === 'locked';
+    // SYSTEM+Administrators and this non-elevated client gets EPERM/EACCES. Only
+    // a PACKAGED build may trust a config it cannot read — the SYSTEM service
+    // owns it and validates service.json (incl. the database) on boot. In DEV
+    // there is no such service and the dev child cannot read a locked file, so a
+    // locked config is not usable → not complete (send to setup / reset).
+    if (presence === 'locked') return isPackaged();
+
+    // 'present' (readable): presence ALONE is not completion. Require a VALID
+    // database configuration — a config with no usable db produces no
+    // DATABASE_URL, which is exactly the "runtime config has no database" state.
+    return runtimeDatabaseUrl() != null;
   } catch {
     return false;
   }

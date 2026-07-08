@@ -17,7 +17,7 @@ import type { EstimationDraftItemPayload } from '../../src/modules/estimation-te
 // whole generate → resolve → confirm pipeline runs offline.
 function fakeLlm(json: unknown): LlmClient {
   const text = typeof json === 'string' ? json : JSON.stringify(json);
-  return { name: 'openai', model: 'test', complete: async () => text };
+  return { name: 'openrouter', model: 'test', complete: async () => text };
 }
 
 // Multi-turn stand-in: canned responses in order + records each user prompt.
@@ -25,7 +25,7 @@ function scriptedLlm(responses: unknown[]): { client: LlmClient; prompts: string
   const prompts: string[] = [];
   let i = 0;
   const client: LlmClient = {
-    name: 'openai',
+    name: 'openrouter',
     model: 'test',
     complete: async (req) => {
       prompts.push(req.user);
@@ -376,10 +376,10 @@ test('expiry: a stale draft flips to EXPIRED on next access', async () => {
 // ── 10) LLM error maps to a clean rejection ──────────────────────────────────
 test('LLM error surfaces as a rejected result', async () => {
   const throwing: LlmClient = {
-    name: 'openai',
+    name: 'openrouter',
     model: 'test',
     complete: async () => {
-      throw new LLMError('openai', 429, 'rate_limited', true);
+      throw new LLMError('openrouter', 429, 'rate_limited', true);
     },
   };
   const service = new EstimationTemplatesService(prisma, throwing);

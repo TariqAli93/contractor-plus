@@ -11,9 +11,31 @@ import { randomUUID } from 'node:crypto';
 import type { Session } from './ai-command-workflow.types.js';
 
 const TTL_MS = 10 * 60 * 1000; // 10 minutes
+const SWEEP_INTERVAL_MS = 60 * 1000; // reclaim idle sessions every minute
 
 export class SessionStore {
   private readonly sessions = new Map<string, Session>();
+  private readonly sweepTimer: ReturnType<typeof setInterval>;
+
+  /** An independent sweep reclaims expired sessions even when NO request arrives
+   *  to trigger the on-access sweep (otherwise an abandoned session lingers in
+   *  memory until the next unrelated request). `unref()` so the timer never keeps
+   *  the process alive. */
+  constructor(sweepIntervalMs: number = SWEEP_INTERVAL_MS) {
+    this.sweepTimer = setInterval(() => this.sweep(), sweepIntervalMs);
+    if (typeof this.sweepTimer.unref === 'function') this.sweepTimer.unref();
+  }
+
+  /** Stop the background sweep (for tests / graceful teardown). */
+  stop(): void {
+    clearInterval(this.sweepTimer);
+  }
+
+  /** Current live-session count WITHOUT triggering an on-access sweep — lets a
+   *  test observe what the background timer reclaimed on its own. */
+  size(): number {
+    return this.sessions.size;
+  }
 
   /** Fetch a live session for this user, or create a fresh one. A sessionId that
    *  is unknown, expired, or owned by another user yields a brand-new session. */

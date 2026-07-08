@@ -14,6 +14,9 @@ export interface AppConfig {
   PORT: number;
   DATABASE_URL: string;
   JWT_ACCESS_SECRET: string;
+  /** Dedicated key for at-rest secret encryption (lib/crypto). Optional; when
+   *  absent the app falls back to JWT_ACCESS_SECRET and warns at startup. */
+  SECRET_ENCRYPTION_KEY?: string;
   JWT_ACCESS_TTL: string;
   REFRESH_TOKEN_TTL_DAYS: number;
   BCRYPT_ROUNDS: number;

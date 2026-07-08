@@ -99,7 +99,7 @@ test('resolveProgramDataHome derives the desktop install home', () => {
   assert.equal(adapter.getServiceConfigPath(home), path.join(home, 'config', 'service.json'));
 });
 
-test('serviceConfigPresence + isSetupComplete decision (success/"not complete" contradiction fix)', () => {
+test('serviceConfigPresence + isSetupComplete decision (present requires a valid database)', () => {
   const home = makeHome(
     JSON.stringify({
       version: 1,
@@ -108,15 +108,41 @@ test('serviceConfigPresence + isSetupComplete decision (success/"not complete" c
       jwtSecret: 'a'.repeat(40),
     }),
   );
-  // Mirror of runtime.js isSetupComplete: a 'locked' (ACL-locked, exists) config
-  // must count as complete — the bug treated it as not-complete via existsSync.
-  const isComplete = (p) => p === 'present' || p === 'locked';
+  // Mirror of runtime.js isSetupComplete. Presence alone is NOT completion: a
+  // readable ('present') config counts only when it yields a valid database
+  // (tryLoadServiceConfig !== null). 'locked' defers to a packaged SYSTEM
+  // service (packaged=true) but is not usable in dev (packaged=false). 'missing'
+  // is never complete.
+  // Mirrors runtime.js runtimeDatabaseUrl, which always resolves via { home }.
+  const isComplete = (presence, h, packaged) => {
+    if (presence === 'missing' || presence === 'unreadable') return false;
+    if (presence === 'locked') return packaged;
+    return adapter.tryLoadServiceConfig({ home: h }) != null;
+  };
+  const cfgPath = adapter.getServiceConfigPath(home);
   try {
-    assert.equal(adapter.serviceConfigPresence(adapter.getServiceConfigPath(home)), 'present');
+    assert.equal(adapter.serviceConfigPresence(cfgPath), 'present');
     assert.equal(adapter.serviceConfigPresence(path.join(home, 'config', 'nope.json')), 'missing');
-    assert.equal(isComplete('present'), true);
-    assert.equal(isComplete('locked'), true);
-    assert.equal(isComplete('missing'), false);
+    // present + valid db → complete
+    assert.equal(isComplete('present', home, false), true);
+    // locked → complete only in a packaged build (SYSTEM service owns/validates it)
+    assert.equal(isComplete('locked', home, true), true);
+    assert.equal(isComplete('locked', home, false), false);
+    assert.equal(isComplete('missing', home, false), false);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('isSetupComplete decision: present config WITHOUT a database is not complete', () => {
+  // Schema-valid-looking JSON but no db block → yields no DATABASE_URL. This is the
+  // "runtime config has no database" state that must NOT count as setup-complete.
+  const home = makeHome(JSON.stringify({ version: 1, port: 31734, jwtSecret: 'a'.repeat(40) }));
+  const cfgPath = adapter.getServiceConfigPath(home);
+  try {
+    assert.equal(adapter.serviceConfigPresence(cfgPath), 'present');
+    // Resolves via { home } (as the real code does) → ConfigError → null → not complete.
+    assert.equal(adapter.tryLoadServiceConfig({ home }), null);
   } finally {
     rmSync(home, { recursive: true, force: true });
   }

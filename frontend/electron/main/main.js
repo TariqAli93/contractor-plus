@@ -263,7 +263,11 @@ async function boot() {
   logger.info(`[main] setupComplete=${setupComplete} configFile=${rt.configFile?.()}`);
 
   if (!setupComplete) {
-    logger.info('[main] setup incomplete — opening wizard only (backend stays down)');
+    // The runtime config is absent or carries no valid database — do NOT enter
+    // the app phase, call ensureBackendReady, or try to start the backend. Open
+    // the setup wizard instead (backend stays down).
+    logger.info('[main] setup incomplete — database config missing');
+    logger.info('[main] opening setup');
     await loadWizard();
     return;
   }

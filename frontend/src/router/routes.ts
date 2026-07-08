@@ -130,6 +130,14 @@ export const routes: RouteRecordRaw[] = [
     meta: { layout: 'app', access: { permissions: ['estimation_templates.read'], roles: ALL_ROLES } },
   },
 
+  // ----- AI Operating Platform (generic, tool-agnostic console) -----
+  {
+    path: '/ai',
+    name: 'ai-console',
+    component: () => import('@/views/ai/AiConsoleView.vue'),
+    meta: { layout: 'app', access: { permissions: ['ai.session.use'], roles: ALL_ROLES } },
+  },
+
   // ----- Contracts -----
   {
     path: '/contracts',

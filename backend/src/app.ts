@@ -14,6 +14,7 @@ import { PROTOCOL_VERSION } from '@contractor-plus/shared';
 import { env } from './config/env.js';
 import { prisma } from './lib/prisma.js';
 import { getStorage } from './lib/storage/storage.service.js';
+import { checkEncryptionKeyConfig } from './lib/crypto.js';
 
 /** Backend package version, read once from package.json next to dist/. */
 const APP_VERSION: string = (() => {
@@ -56,6 +57,7 @@ import {
 import reportsRoutes from './modules/reports/reports.routes.js';
 import auditRoutes from './modules/audit/audit.routes.js';
 import aiCommandRoutes from './modules/ai-command-workflow/ai-command-workflow.routes.js';
+import aiPlatformRoutes from './modules/ai-platform/ai-platform.routes.js';
 import tunnelRoutes from './modules/tunnel/tunnel.routes.js';
 import settingsRoutes from './modules/settings/settings.routes.js';
 import uploadsRoutes from './modules/uploads/uploads.routes.js';
@@ -76,6 +78,10 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
     trustProxy: true,
   });
+
+  // Surface an at-rest-encryption misconfiguration at boot (prod: error-level;
+  // dev: info) — see lib/crypto. Non-fatal: the app falls back to the JWT secret.
+  checkEncryptionKeyConfig();
 
   // Helmet — relax cross-origin resource policy so the SPA on a different
   // origin (vite dev: localhost:5173) can <img src="/uploads/..."> the
@@ -237,6 +243,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(reportsRoutes, { prefix: '/api/v1/reports' });
   await app.register(auditRoutes, { prefix: '/api/v1/audit' });
   await app.register(aiCommandRoutes, { prefix: '/api/v1/ai-command' });
+  await app.register(aiPlatformRoutes, { prefix: '/api/v1/ai' });
   await app.register(tunnelRoutes, { prefix: '/api/v1/tunnel' });
   await app.register(settingsRoutes, { prefix: '/api/v1/settings' });
   await app.register(uploadsRoutes, { prefix: '/api/v1/uploads' });

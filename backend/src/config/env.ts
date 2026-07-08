@@ -60,6 +60,13 @@ const DevEnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string().url(),
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 chars'),
+  // Optional dedicated secret-encryption key. When absent, lib/crypto falls back
+  // to JWT_ACCESS_SECRET and warns at startup (kept optional so existing dev
+  // `.env` files without it keep booting).
+  SECRET_ENCRYPTION_KEY: z
+    .string()
+    .min(32, 'SECRET_ENCRYPTION_KEY must be at least 32 chars')
+    .optional(),
   JWT_ACCESS_TTL: z.string().default('15m'),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(12),
@@ -85,6 +92,7 @@ function buildDevConfig(): AppConfig {
     PORT: e.PORT,
     DATABASE_URL: e.DATABASE_URL,
     JWT_ACCESS_SECRET: e.JWT_ACCESS_SECRET,
+    SECRET_ENCRYPTION_KEY: e.SECRET_ENCRYPTION_KEY,
     JWT_ACCESS_TTL: e.JWT_ACCESS_TTL,
     REFRESH_TOKEN_TTL_DAYS: e.REFRESH_TOKEN_TTL_DAYS,
     BCRYPT_ROUNDS: e.BCRYPT_ROUNDS,

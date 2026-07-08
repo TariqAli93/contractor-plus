@@ -1,21 +1,25 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { AiCommandWorkflowService, type Principal } from './ai-command-workflow.service.js';
 import type { LlmSettingsStore } from '../../lib/llm/llm-settings.store.js';
+import type { OpenRouterModelsService } from '../../lib/llm/openrouter-models.service.js';
 import {
   cancelBodySchema,
   confirmBodySchema,
   interpretBodySchema,
+  modelsQuerySchema,
   sessionParamSchema,
   testLlmSettingsSchema,
   updateLlmSettingsSchema,
 } from './ai-command-workflow.schemas.js';
 import { UnauthorizedError } from '../../shared/errors/unauthorized.error.js';
 import { NotFoundError } from '../../shared/errors/not-found.error.js';
+import { ValidationError } from '../../shared/errors/validation.error.js';
 
 export class AiCommandWorkflowController {
   constructor(
     private readonly service: AiCommandWorkflowService,
     private readonly settings: LlmSettingsStore,
+    private readonly models: OpenRouterModelsService,
   ) {}
 
   // ---------- command turns ----------
@@ -68,6 +72,19 @@ export class AiCommandWorkflowController {
 
   updateSettings = async (request: FastifyRequest, reply: FastifyReply) => {
     const body = updateLlmSettingsSchema.parse(request.body);
+    // Guard against saving a display name (or a typo) instead of a real
+    // OpenRouter model id. Only enforced when the catalog is actually available,
+    // so configuration is never blocked while OpenRouter is unreachable.
+    if (body.model) {
+      const cfg = await this.settings.resolve();
+      const { models } = await this.models.list({}, cfg.apiKey);
+      if (models.length > 0 && !models.some((m) => m.id === body.model)) {
+        throw new ValidationError(
+          'النموذج المحدد غير موجود ضمن نماذج OpenRouter المتاحة — اختر نموذجاً من القائمة (مثل openai/gpt-4o-mini).',
+          { model: ['not_in_openrouter_catalog'] },
+        );
+      }
+    }
     const view = await this.settings.update(body, this.actor(request));
     return reply.code(200).send(view);
   };
@@ -75,6 +92,23 @@ export class AiCommandWorkflowController {
   testSettings = async (request: FastifyRequest, reply: FastifyReply) => {
     const body = testLlmSettingsSchema.parse(request.body);
     return reply.code(200).send(await this.settings.testConnection(body));
+  };
+
+  // ---------- OpenRouter model discovery ----------
+
+  getModels = async (request: FastifyRequest, reply: FastifyReply) => {
+    const filter = modelsQuerySchema.parse(request.query);
+    // The stored key (if any) lifts OpenRouter's per-IP rate limit; it is used
+    // server-side only and never returned to the client.
+    const cfg = await this.settings.resolve();
+    try {
+      const result = await this.models.list(filter, cfg.apiKey);
+      return reply.code(200).send(result);
+    } catch {
+      // No cache and OpenRouter unreachable — degrade gracefully so the UI can
+      // show an "unavailable" state instead of erroring the whole settings page.
+      return reply.code(200).send({ models: [], stale: true, fetchedAt: null });
+    }
   };
 
   // ---------- helpers ----------

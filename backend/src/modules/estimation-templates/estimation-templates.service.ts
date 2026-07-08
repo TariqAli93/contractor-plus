@@ -26,6 +26,7 @@ import {
 import { llmEstimationOutputSchema } from './estimation-templates.schemas.js';
 import { LlmSettingsStore } from '../../lib/llm/llm-settings.store.js';
 import { createLlmClient, LLMError, type LlmClient } from '../../lib/llm/llm-client.js';
+import { llmErrorMessageAr } from '../../lib/llm/llm-error-messages.js';
 import type { LlmProviderName } from '../../lib/llm/llm.config.js';
 import { toMoneyString, toMoneyStringOrNull } from '../../lib/money.js';
 import { toJsonValue } from '../../shared/utils/json.js';
@@ -58,6 +59,7 @@ import type {
   ListEstimationTemplatesQuery,
   UpdateEstimationTemplateBody,
 } from './estimation-templates.schemas.js';
+import { LLM_ESTIMATION_JSON_SCHEMA } from './estimation-templates.schemas.js';
 
 /** Mandatory reviewer warning — server-supplied so the copy can never drift. */
 export const REVIEW_WARNING =
@@ -646,10 +648,10 @@ export class EstimationTemplatesService {
   ): Promise<{ ok: true; value: LlmEstimationOutput } | { ok: false; reason: string; message: string }> {
     let raw: string;
     try {
-      raw = await client.complete({ system: buildEstimationSystemPrompt(), user });
+      raw = await client.complete({ system: buildEstimationSystemPrompt(), user, schema: LLM_ESTIMATION_JSON_SCHEMA });
     } catch (err) {
       const code = err instanceof LLMError ? err.code : 'llm_error';
-      return { ok: false, reason: code, message: llmErrorMessage(code) };
+      return { ok: false, reason: code, message: llmErrorMessageAr(code) };
     }
     const parsed = parseOutput(raw);
     if (!parsed) {
@@ -870,16 +872,3 @@ function parseOutput(raw: string): LlmEstimationOutput | null {
   return result.success ? (result.data as LlmEstimationOutput) : null;
 }
 
-const LLM_ERROR_AR: Record<string, string> = {
-  invalid_api_key: 'مفتاح API غير صالح لمزوّد الذكاء الاصطناعي.',
-  insufficient_quota: 'انتهت حصة مزوّد الذكاء الاصطناعي.',
-  rate_limited: 'الخدمة مزدحمة حالياً، حاول بعد قليل.',
-  model_not_found: 'النموذج المحدد غير متاح.',
-  timeout: 'انتهت مهلة الاتصال بمزوّد الذكاء الاصطناعي.',
-  network_error: 'تعذّر الاتصال بمزوّد الذكاء الاصطناعي.',
-  server_error: 'خطأ من مزوّد الذكاء الاصطناعي، حاول مرة أخرى.',
-};
-
-function llmErrorMessage(code: string): string {
-  return LLM_ERROR_AR[code] ?? 'تعذّر الاتصال بمزوّد الذكاء الاصطناعي، حاول مرة أخرى.';
-}

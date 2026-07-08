@@ -173,6 +173,8 @@ model User {
   documentsGenerated       GeneratedDocument[] @relation("GeneratedDocumentCreator")
   estimationDrafts    EstimationTemplateDraft[]
   estimationAuditLogs EstimationAuditLog[]
+  aiSessions          AiSession[]
+  aiExecutions        AiExecution[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   deletedAt     DateTime?
@@ -672,8 +674,10 @@ model AuditLog {
 
 model AiCommandLog {
   id                 String   @id @default(uuid()) @db.Uuid
-  userId             String?  @db.Uuid
-  user               User?    @relation(fields: [userId], references: [id])
+  // Acting user — required: every audit path threads a real principal. Users are
+  // soft-deleted (deletedAt), so a required FK never blocks a real deletion.
+  userId             String   @db.Uuid
+  user               User     @relation(fields: [userId], references: [id])
   sessionId          String?  @db.Uuid
   // Raw user command text (as typed).
   originalText       String
@@ -691,7 +695,8 @@ model AiCommandLog {
   createdEntityIds   Json?
   updatedEntityIds   Json?
   failedReason       String?
-  // Which LLM provider answered (openai / groq / anthropic), if any.
+  // AI gateway that answered — always "openrouter" now (kept as a string for
+  // historical rows written under the former multi-provider system).
   provider           String?
   createdAt          DateTime @default(now())
 
@@ -854,4 +859,111 @@ model EstimationAuditLog {
   @@index([eventType])
   @@index([createdAt])
   @@map("estimation_audit_logs")
+}
+
+// ============================================================
+// AI Operating Platform
+//
+// The shared spine every AI capability flows through. AiSession is the durable,
+// resumable, multi-session conversation state (generalizes both the in-memory
+// ai-command SessionStore and the durable EstimationTemplateDraft). AiMessage is
+// the conversation-memory turn log. AiExecution is the unified narrative audit
+// trail (folds forward AiCommandLog + EstimationAuditLog). Tool working state
+// lives in AiSession.workingState (tool-namespaced JSON); the real domain rows a
+// tool creates still live in that domain's own tables.
+// ============================================================
+
+enum AiSessionStatus {
+  ACTIVE                 // open; accepting messages
+  AWAITING_CONFIRMATION  // a resolved plan is parked, waiting on the user
+  COMPLETED              // a plan executed successfully
+  CANCELLED              // user cancelled the parked plan / session
+  EXPIRED                // aged out (lazy-expiry-on-read)
+  FAILED                 // execution failed and rolled back
+}
+
+enum AiMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+/// Durable, DB-backed platform session. Multiple concurrent sessions per user;
+/// resumable across a server restart (unlike the ai-command in-memory store).
+model AiSession {
+  id           String          @id @default(uuid()) @db.Uuid
+  userId       String          @db.Uuid
+  user         User            @relation(fields: [userId], references: [id])
+  title        String?
+  status       AiSessionStatus @default(ACTIVE)
+  activeTool   String?                            // tool that owns workingState
+  workingState Json?                              // tool-scoped draft (e.g. EstimationDraftItemPayload[])
+  pendingPlan  Json?                              // resolved Plan awaiting confirm
+  contextRefs  Json?                              // resolved existing-record ids (generalizes PlanRefs)
+  lastIntent   String?
+  confidence   Float           @default(0)
+  expiresAt    DateTime                           // lazy-expiry-on-read cutoff
+  confirmedAt  DateTime?
+  cancelledAt  DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  deletedAt    DateTime?
+  messages     AiMessage[]
+  executions   AiExecution[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([activeTool])
+  @@map("ai_sessions")
+}
+
+/// Conversation memory: every turn in a session. Cascades with the session.
+model AiMessage {
+  id         String        @id @default(uuid()) @db.Uuid
+  sessionId  String        @db.Uuid
+  session    AiSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role       AiMessageRole
+  kind       String        // command|clarification|plan|preview|query|execution|rejected
+  content    String
+  toolName   String?
+  intent     Json?
+  plan       Json?
+  confidence Float?
+  createdAt  DateTime      @default(now())
+
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("ai_messages")
+}
+
+/// Unified platform audit trail — one row per plan execution attempt. Immutable
+/// (no deletedAt), matching AuditLog / AiCommandLog / EstimationAuditLog.
+model AiExecution {
+  id                String     @id @default(uuid()) @db.Uuid
+  sessionId         String?    @db.Uuid
+  session           AiSession? @relation(fields: [sessionId], references: [id])
+  // Acting user — required (see AiCommandLog.userId).
+  userId            String     @db.Uuid
+  user              User       @relation(fields: [userId], references: [id])
+  toolName          String?
+  originalRequest   String
+  parsedIntent      Json?
+  plannerOutput     Json?      // ordered steps
+  selectedTools     Json?      // tool/action names
+  userApproval      Json?
+  executedActions   Json?
+  finalData         Json?
+  transactionResult String     // executed|failed|cancelled|not_required
+  confidence        Float?
+  provider          String?
+  failedReason      String?
+  createdAt         DateTime   @default(now())
+
+  @@index([sessionId])
+  @@index([userId])
+  @@index([toolName])
+  @@index([transactionResult])
+  @@index([createdAt])
+  @@map("ai_executions")
 }

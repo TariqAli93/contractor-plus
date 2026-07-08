@@ -118,6 +118,11 @@ export interface ActionDef {
   kind: 'mutation' | 'query';
   description: string;
   requiredPermissions: string[];
+  /** When an action's real permission depends on its DATA (e.g. project status
+   *  change → only `projects.<status>`), this narrows `requiredPermissions` to
+   *  exactly what THIS request needs. Falls back to `requiredPermissions` when
+   *  absent or when the data can't be resolved (fail-closed). */
+  resolveRequiredPermissions?: (data: StepData) => string[];
   requiredSlots: string[];
   optionalSlots: string[];
   requiresConfirmation: boolean;
@@ -587,6 +592,10 @@ export const ACTIONS: Record<string, ActionDef> = {
     action: 'project.status.change',
     kind: 'mutation',
     description: 'Change a resolved project status: start | pause | resume | complete | cancel. Slots: projectRef, status.',
+    // Union of every status permission (used for catalog docs + fail-closed
+    // fallback). The ACTUAL gate narrows this to just the requested transition
+    // via resolveRequiredPermissions — a user who may `start` shouldn't also need
+    // `cancel` to start a project.
     requiredPermissions: [
       'projects.start',
       'projects.pause',
@@ -594,6 +603,18 @@ export const ACTIONS: Record<string, ActionDef> = {
       'projects.complete',
       'projects.cancel',
     ],
+    resolveRequiredPermissions: (data) => {
+      const change = mapProjectStatusAction(data.status);
+      // Unknown status → require the full union (fail-closed); the runner rejects
+      // the unknown status anyway with a validation error.
+      return change ? [`projects.${change}`] : [
+        'projects.start',
+        'projects.pause',
+        'projects.resume',
+        'projects.complete',
+        'projects.cancel',
+      ];
+    },
     requiredSlots: ['projectRef', 'status'],
     optionalSlots: [],
     requiresConfirmation: true,

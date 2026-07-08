@@ -10,6 +10,7 @@
 
 import { z } from 'zod';
 import { CostCategory } from '@prisma/client';
+import type { JsonSchemaSpec } from '../../lib/llm/llm-client.js';
 import { paginationQuerySchema } from '../../shared/validation/common.schemas.js';
 
 // ---------- endpoint bodies ----------
@@ -154,6 +155,46 @@ export const llmEstimationOutputSchema = z.discriminatedUnion('kind', [
   llmDraftSchema,
   llmClarificationSchema,
 ]);
+
+/** JSON Schema handed to OpenRouter (`json_schema` mode) to guide the model toward
+ *  the draft|clarification union above. Item objects are closed
+ *  (`additionalProperties: false`) so a smuggled `quantity`/`totalAmount` is
+ *  discouraged; `strict: false` overall because `intent` is an open map. The Zod
+ *  `llmEstimationOutputSchema` remains the enforced contract after parsing. */
+export const LLM_ESTIMATION_JSON_SCHEMA: JsonSchemaSpec = {
+  name: 'estimation_output',
+  strict: false,
+  schema: {
+    type: 'object',
+    additionalProperties: true,
+    required: ['kind'],
+    properties: {
+      kind: { type: 'string', enum: ['draft', 'clarification'] },
+      intent: { type: 'object', additionalProperties: true },
+      wastePercentage: { type: 'number', minimum: 0, maximum: 100 },
+      confidence: { type: 'number', minimum: 0, maximum: 1 },
+      items: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['description', 'category'],
+          properties: {
+            description: { type: 'string' },
+            category: { type: 'string', enum: Object.values(CostCategory) },
+            materialNameGuess: { type: ['string', 'null'] },
+            ratioPerAreaUnit: { type: ['number', 'null'] },
+            unitPrice: { type: ['number', 'null'] },
+            unit: { type: ['string', 'null'] },
+            notes: { type: ['string', 'null'] },
+          },
+        },
+      },
+      question: { type: 'string' },
+      missingFields: { type: 'array', items: { type: 'string' } },
+    },
+  },
+};
 
 export type GenerateDraftBody = z.infer<typeof generateDraftBodySchema>;
 export type ResolveMaterialsBody = z.infer<typeof resolveMaterialsBodySchema>;

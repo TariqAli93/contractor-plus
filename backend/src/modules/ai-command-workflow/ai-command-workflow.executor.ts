@@ -63,7 +63,11 @@ export function assertPermitted(steps: WorkflowStep[], ctx: ExecContext): void {
   for (const step of steps) {
     const def = getAction(step.action);
     if (!def) continue;
-    const missing = def.requiredPermissions.filter((p) => !ctx.permissions.has(p));
+    // Data-dependent actions narrow to only the permission the request needs
+    // (must match the service's interpret-time gate exactly, so a plan that
+    // passed interpret also passes execute).
+    const required = def.resolveRequiredPermissions?.(step.data) ?? def.requiredPermissions;
+    const missing = required.filter((p) => !ctx.permissions.has(p));
     if (missing.length > 0) {
       throw new ForbiddenError(
         `لا تملك صلاحية تنفيذ "${step.action}" (${missing.join(', ')})`,

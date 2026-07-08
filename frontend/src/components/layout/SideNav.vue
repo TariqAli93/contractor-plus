@@ -47,6 +47,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/contracts', i18nKey: 'nav.contracts', icon: 'mdi-file-sign', access: { permissions: ['contracts.read'], roles: ALL } },
       { to: '/templates', i18nKey: 'nav.templates', icon: 'mdi-file-document-multiple-outline', access: { permissions: ['templates.read'], roles: ALL } },
       { to: '/estimation-templates', i18nKey: 'nav.estimationTemplates', icon: 'mdi-robot-outline', access: { permissions: ['estimation_templates.read'], roles: ALL } },
+      { to: '/ai', i18nKey: 'nav.aiConsole', icon: 'mdi-robot-happy-outline', access: { permissions: ['ai.session.use'], roles: ALL } },
     ],
   },
   {

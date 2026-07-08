@@ -4,14 +4,15 @@ import type {
   AiConfirmResult,
   AiInsights,
   AiInterpretResult,
-  AiLlmProvider,
   AiLlmSettingsView,
   AiLlmTestConnectionResult,
+  OpenRouterModelFilter,
+  OpenRouterModelsResult,
 } from '@contractor-plus/shared';
 
+// OpenRouter is the single provider — settings carry no provider field anymore.
 export interface AiLlmSettingsUpdate {
   enabled?: boolean;
-  provider?: AiLlmProvider;
   model?: string;
   timeoutMs?: number;
   maxTokens?: number;
@@ -20,10 +21,18 @@ export interface AiLlmSettingsUpdate {
 }
 
 export interface AiLlmTestInput {
-  provider?: AiLlmProvider;
   model?: string;
   apiKey?: string;
   timeoutMs?: number;
+}
+
+function toQuery(filter: OpenRouterModelFilter): string {
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries(filter)) {
+    if (v !== undefined && v !== null && v !== '') p.set(k, String(v));
+  }
+  const s = p.toString();
+  return s ? `?${s}` : '';
 }
 
 export const aiCommandApi = {
@@ -41,4 +50,7 @@ export const aiCommandApi = {
     apiPatch('/ai-command/settings', input),
   testConnection: (input: AiLlmTestInput): Promise<AiLlmTestConnectionResult> =>
     apiPost('/ai-command/settings/test', input),
+
+  listModels: (filter: OpenRouterModelFilter = {}): Promise<OpenRouterModelsResult> =>
+    apiGet(`/ai-command/models${toQuery(filter)}`),
 };
