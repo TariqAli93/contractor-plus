@@ -13,7 +13,7 @@ import { useConfirm } from '@/composables/useConfirm';
 import { resolveRenderer } from '@/components/ai/preview/toolRenderers';
 
 const store = useAiSessionStore();
-const { turns, pending, clarification, processing, error } = storeToRefs(store);
+const { turns, pending, clarification, processing, error, sessions, sessionId } = storeToRefs(store);
 const { confirm: askConfirm } = useConfirm();
 
 const input = ref('');
@@ -90,6 +90,22 @@ watch(
 onMounted(() => {
   void store.loadSessions();
 });
+
+// ----- Session switcher -----
+const sessionItems = computed(() =>
+  sessions.value.map((s) => ({ value: s.id, title: s.title || t('ai.untitledSession') })),
+);
+function onSelectSession(id: string | null) {
+  if (id) void store.selectSession(id);
+}
+function onNewSession() {
+  store.newSession();
+}
+// A brand-new session (created on the first message) is not yet in the list —
+// refresh the switcher when the active id becomes one we don't know.
+watch(sessionId, (id) => {
+  if (id && !sessions.value.some((s) => s.id === id)) void store.loadSessions();
+});
 </script>
 
 <template>
@@ -101,6 +117,25 @@ onMounted(() => {
     />
 
     <v-card class="ai-console__card">
+      <div class="ai-console__bar">
+        <v-select
+          :model-value="sessionId"
+          :items="sessionItems"
+          density="compact"
+          hide-details
+          variant="solo-filled"
+          flat
+          :placeholder="t('ai.sessionsPlaceholder')"
+          :disabled="processing"
+          class="ai-console__sessions"
+          @update:model-value="onSelectSession"
+        />
+        <v-spacer />
+        <v-btn size="small" variant="tonal" prepend-icon="mdi-plus" :disabled="processing" @click="onNewSession">
+          {{ t('ai.newSession') }}
+        </v-btn>
+      </div>
+      <v-divider />
       <div ref="scrollEl" class="ai-console__stream">
         <div v-if="!turns.length" class="ai-console__empty">
           {{ t('ai.emptyState') }}
@@ -230,6 +265,15 @@ onMounted(() => {
   height: calc(100vh - 160px);
   min-height: 420px;
   overflow: hidden;
+}
+.ai-console__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+}
+.ai-console__sessions {
+  max-width: 280px;
 }
 .ai-console__stream {
   flex: 1;
