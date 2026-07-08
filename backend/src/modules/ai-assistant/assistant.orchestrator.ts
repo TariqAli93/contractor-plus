@@ -30,7 +30,7 @@ import type { PlatformContext, SessionHandle, Tool } from '../ai-platform/regist
 import type { Plan, Principal, ToolTurnResult } from '../ai-platform/ai-platform.types.js';
 import { CommandTool } from './command/command.tool.js';
 import { IntentRouter } from './intent-router.js';
-import { UsageGovernor } from './usage-governor.js';
+import { UsageGovernor, type QuotaConfig } from './usage-governor.js';
 import { preRoute } from './pre-router.js';
 import {
   CAPABILITY_INTRO,
@@ -53,6 +53,14 @@ import type {
   PlatformMessageResult,
 } from '@contractor-plus/shared';
 
+// Reason codes that mean "the request was understood but the AI provider could
+// not serve it" — surfaced as a clean `error` (retryable), never a `rejected`
+// (a valid "no"). A tool may either THROW an LLMError (CommandTool) or CATCH it
+// and return a rejected turn carrying the code (EstimationTool) — both land here.
+const LLM_ERROR_REASONS = new Set([
+  'timeout', 'rate_limited', 'network_error', 'server_error', 'malformed_response', 'llm_unavailable', 'llm_error',
+]);
+
 export class AssistantOrchestrator {
   private readonly sessions: SessionManager;
   private readonly registry: ToolRegistry;
@@ -72,6 +80,8 @@ export class AssistantOrchestrator {
     private readonly prisma: PrismaClient,
     /** Injected LLM client for tests; threaded to every tool that owns a model call. */
     injectedClient?: LlmClient,
+    /** Test/config seam — override the per-user usage quota. */
+    options?: { quota?: Partial<QuotaConfig> },
   ) {
     this.sessions = new SessionManager(prisma);
     this.registry = buildRegistry(); // EstimationTool
@@ -85,7 +95,7 @@ export class AssistantOrchestrator {
     this.confidence = new ConfidenceEngine();
     this.audit = new PlatformAudit(prisma);
     this.access = new AccessService(prisma);
-    this.governor = new UsageGovernor(prisma);
+    this.governor = new UsageGovernor(prisma, options?.quota);
     this.toolDeps = buildToolDeps(prisma, injectedClient);
   }
 
@@ -207,11 +217,16 @@ export class AssistantOrchestrator {
     try {
       turn = await tool.interpret(ctx, handle, text);
     } catch (err) {
-      return this.toolError(session, tool.name, err, text, principal.userId, routed.confidence);
+      return this.toolError(session, tool.name, err, text, principal.userId);
     }
 
     if (turn.kind === 'rejected') {
-      await this.recordAudit({ session, userId: principal.userId, toolName: tool.name, originalRequest: text, transactionResult: 'not_required', failedReason: turn.reason });
+      await this.recordAudit({ session, userId: principal.userId, toolName: tool.name, originalRequest: text, transactionResult: turn.reason === undefined ? 'not_required' : LLM_ERROR_REASONS.has(turn.reason) ? 'failed' : 'not_required', failedReason: turn.reason });
+      // A tool that CAUGHT an LLM failure reports it as a rejected turn with the
+      // provider code — surface that as a clean `error`, not a plain rejection.
+      if (LLM_ERROR_REASONS.has(turn.reason)) {
+        return this.errorResult(session, tool.name, turn.reason, turn.message);
+      }
       return this.rejected(session, turn.reason, turn.message);
     }
     if (turn.kind === 'clarification') {
@@ -336,30 +351,34 @@ export class AssistantOrchestrator {
     };
   }
 
-  /** Map an interpret() failure to a clean, user-facing result + an audit row.
-   *  An LLM timeout/failure becomes a friendly `error` (never a raw exception). */
+  /** Map an interpret() THROW to a clean result + an audit row. An LLMError
+   *  becomes a friendly `error`; anything else is a coded `rejected`. */
   private async toolError(
     session: AiSession,
     toolName: string,
     err: unknown,
     text: string,
     userId: string,
-    _confidence: number,
   ): Promise<PlatformMessageResult> {
     const reason = err instanceof LLMError || err instanceof AppError ? err.code : 'tool_error';
     await this.recordAudit({ session, userId, toolName, originalRequest: text, transactionResult: 'failed', failedReason: reason });
-
     if (err instanceof LLMError) {
-      const message =
-        reason === 'timeout'
-          ? toolName === 'estimation'
-            ? 'استغرق إنشاء التقدير وقتاً أطول من المتوقع. جرّب تختصر الطلب أو أعد المحاولة.'
-            : 'استغرق تنفيذ الطلب وقتاً أطول من المتوقع. جرّب تختصر الطلب أو أعد المحاولة.'
-          : 'تعذّر تنفيذ الطلب عبر مزوّد الذكاء الاصطناعي، حاول مرة أخرى.';
-      await this.sessions.appendMessage(session, { role: 'ASSISTANT', kind: 'error', content: message, toolName }).catch(() => {});
-      return { kind: 'error', sessionId: session.id, reason, message };
+      return this.errorResult(session, toolName, reason, 'تعذّر تنفيذ الطلب عبر مزوّد الذكاء الاصطناعي، حاول مرة أخرى.');
     }
     return this.rejected(session, reason, 'تعذّر تنفيذ الطلب، حاول مرة أخرى.');
+  }
+
+  /** A clean, retryable `error` result with the right Arabic copy — the
+   *  estimation-specific timeout wording, otherwise the provided fallback. */
+  private async errorResult(session: AiSession, toolName: string, reason: string, fallback: string): Promise<PlatformMessageResult> {
+    const message =
+      reason === 'timeout'
+        ? toolName === 'estimation'
+          ? 'استغرق إنشاء التقدير وقتاً أطول من المتوقع. جرّب تختصر الطلب أو أعد المحاولة.'
+          : 'استغرق تنفيذ الطلب وقتاً أطول من المتوقع. جرّب تختصر الطلب أو أعد المحاولة.'
+        : fallback;
+    await this.sessions.appendMessage(session, { role: 'ASSISTANT', kind: 'error', content: message, toolName }).catch(() => {});
+    return { kind: 'error', sessionId: session.id, reason, message };
   }
 
   private async answer(session: AiSession, message: string, suggestions?: string[]): Promise<PlatformMessageResult> {
