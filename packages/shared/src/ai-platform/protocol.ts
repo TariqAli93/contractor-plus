@@ -24,12 +24,14 @@ export type AiMessageRole = 'USER' | 'ASSISTANT' | 'SYSTEM';
 
 export type AiMessageKind =
   | 'command'
+  | 'answer'
   | 'clarification'
   | 'plan'
   | 'preview'
   | 'query'
   | 'execution'
-  | 'rejected';
+  | 'rejected'
+  | 'error';
 
 // ---------- session / message read models ----------
 
@@ -117,7 +119,7 @@ export interface PlatformExecutionResult {
   result: unknown;
 }
 
-/** Out of scope, not understood, LLM failure, or permission denied. */
+/** Out of scope, not understood, or permission denied — a valid, understood "no". */
 export interface PlatformRejectedResult {
   kind: 'rejected';
   sessionId: string | null;
@@ -125,14 +127,37 @@ export interface PlatformRejectedResult {
   message: string;
 }
 
+/** A deterministic reply produced WITHOUT the LLM by the pre-router — a
+ *  capability/help listing, a greeting, or a status restatement. Consumes no
+ *  usage quota and writes no execution-audit row. */
+export interface PlatformAnswerResult {
+  kind: 'answer';
+  sessionId: string;
+  message: string;
+  /** Example commands the UI may render as quick chips. */
+  suggestions?: string[];
+}
+
+/** A clean infrastructure failure — LLM timeout, usage quota exceeded, or the AI
+ *  provider being unavailable. Distinct from `rejected`: the request was
+ *  understood but could not be served right now. `message` is user-facing Arabic. */
+export interface PlatformErrorResult {
+  kind: 'error';
+  sessionId: string | null;
+  reason: string;
+  message: string;
+}
+
 export type PlatformMessageResult =
+  | PlatformAnswerResult
   | PlatformClarificationResult
   | PlatformPreviewResult
   | PlatformQueryResult
   | PlatformExecutionResult
-  | PlatformRejectedResult;
+  | PlatformRejectedResult
+  | PlatformErrorResult;
 
-export type PlatformConfirmResult = PlatformExecutionResult | PlatformRejectedResult;
+export type PlatformConfirmResult = PlatformExecutionResult | PlatformRejectedResult | PlatformErrorResult;
 
 export interface PlatformCancelResult {
   kind: 'cancelled';
@@ -155,6 +180,40 @@ export interface AiToolInfo {
   renderKind: string;
   permissionModule: string;
   actions: AiToolActionInfo[];
+}
+
+// ---------- unified audit trail (GET /ai/audit) ----------
+
+/** One AiExecution row, projected for the audit panel. */
+export interface AiExecutionView {
+  id: string;
+  sessionId: string | null;
+  userId: string;
+  userName: string | null;
+  toolName: string | null;
+  originalRequest: string;
+  transactionResult: string;
+  confidence: number | null;
+  failedReason: string | null;
+  executedActions: unknown;
+  createdAt: string;
+}
+
+export interface AiExecutionListResult {
+  items: AiExecutionView[];
+  total: number;
+}
+
+/** Filters accepted by GET /ai/audit (all optional). */
+export interface AiExecutionQuery {
+  userId?: string;
+  toolName?: string;
+  transactionResult?: string;
+  /** ISO date-time bounds. */
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
 }
 
 // ---------- request bodies ----------
