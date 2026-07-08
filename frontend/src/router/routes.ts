@@ -133,6 +133,13 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/views/ai/AiConsoleView.vue'),
     meta: { layout: 'app', access: { permissions: ['ai.session.use'], roles: ALL_ROLES } },
   },
+  {
+    // Unified AI audit trail (all tools/categories) — admin view.
+    path: '/ai-audit',
+    name: 'ai-audit',
+    component: () => import('@/views/ai/AiAuditView.vue'),
+    meta: { layout: 'app', access: { permissions: ['audit.read'], roles: AUDIT_ROLES } },
+  },
 
   // ----- Contracts -----
   {
