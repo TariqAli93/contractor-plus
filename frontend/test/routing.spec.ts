@@ -38,4 +38,17 @@ describe('unified AI assistant — single entry point', () => {
       existsSync(fileURLToPath(new URL('../src/components/ai-command/AiCommandConsole.vue', import.meta.url))),
     ).toBe(false);
   });
+
+  it('gates the estimation "generate" CTA on BOTH generation AND assistant access', () => {
+    const src = readFileSync(
+      fileURLToPath(new URL('../src/views/estimation-templates/EstimationTemplatesListView.vue', import.meta.url)),
+      'utf8',
+    );
+    // The CTA deep-links to /ai, so it must require ai.session.use (what /ai needs)
+    // in addition to estimation_templates.ai_generate — combined with AND — so it
+    // can never appear while /ai is inaccessible.
+    expect(src).toContain('estimation_templates.ai_generate');
+    expect(src).toContain('ai.session.use');
+    expect(src).toMatch(/match="all"/);
+  });
 });

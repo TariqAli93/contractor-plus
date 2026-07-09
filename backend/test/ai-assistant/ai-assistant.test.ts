@@ -222,3 +222,15 @@ test('the unified audit query returns entries across command and estimation', as
   assert.ok(est.items.some((i) => created.sessions.has(i.sessionId ?? '')), 'an estimation execution is in the trail');
   assert.ok(cmd.items.every((i) => i.toolName === 'command'), 'the toolName filter is honoured');
 });
+
+// ── 13) A help word BEFORE a real command routes to the command, not a canned
+//        answer (end-to-end proof of the pre-router false-positive fix). ───────
+test('a help word before a real command routes to the command, not a canned answer', async () => {
+  const name = `AITEST ${RUN} HelpCmd`;
+  const orch = new AssistantOrchestrator(prisma, makeLlm(clientPlan(name)));
+  const id = await open(orch, 'helpcmd');
+  const msg = await orch.message(id, `ساعدني أضيف عميل باسم ${name}`, principal());
+  assert.notEqual(msg.kind, 'answer', 'must not be a canned help answer');
+  assert.equal(msg.kind, 'preview', 'routes to the command tool');
+  if (msg.kind === 'preview') assert.equal(msg.toolName, 'command');
+});
