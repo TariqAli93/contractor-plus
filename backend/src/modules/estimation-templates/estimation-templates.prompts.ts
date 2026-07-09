@@ -31,6 +31,10 @@ RULES:
    - Labor → LABOR, Transportation → TRANSPORT, Miscellaneous → MISC. For non-material lines set
      "materialNameGuess": null. Do NOT add a waste line yourself — the program adds it from wastePercentage.
 7. All numbers are plain (area 100, not "100 m²"). "question" is Arabic (Iraqi dialect is fine).
+8. LANGUAGE: every field a person reads MUST be Arabic — "description", "scopeOfWork",
+   "templateName", "projectType", "constructionType", "unit", "notes", "question". The ONE
+   exception is "materialNameGuess", which must stay the material's catalog name exactly as it is
+   stored (usually English) so the program can match it. "areaUnit" stays a plain code ("m2", "m").
 
 SHAPES:
 - draft: { "kind":"draft", "intent": { "projectType": string|null, "constructionType": string|null,
@@ -45,13 +49,13 @@ const EXAMPLES = `
 EXAMPLES:
 
 User: "Create a structural estimation template for a 100 m² house."
-{"kind":"draft","intent":{"projectType":"structural","constructionType":"residential","scopeOfWork":"Structural works for a single-storey house","templateName":"Structural — 100 m² house","areaValue":100,"areaUnit":"m2"},"wastePercentage":5,"confidence":0.82,"items":[{"description":"Reinforcement Steel","category":"MATERIAL","materialNameGuess":"Reinforcement Steel","ratioPerAreaUnit":8,"unitPrice":1.2,"unit":"kg","notes":null},{"description":"Cement","category":"MATERIAL","materialNameGuess":"Cement","ratioPerAreaUnit":0.4,"unitPrice":9,"unit":"bag","notes":null},{"description":"Sand","category":"MATERIAL","materialNameGuess":"Sand","ratioPerAreaUnit":0.05,"unitPrice":25,"unit":"m3","notes":null},{"description":"Gravel","category":"MATERIAL","materialNameGuess":"Gravel","ratioPerAreaUnit":0.05,"unitPrice":30,"unit":"m3","notes":null},{"description":"Formwork Timber","category":"MATERIAL","materialNameGuess":"Formwork Timber","ratioPerAreaUnit":0.02,"unitPrice":180,"unit":"m3","notes":null},{"description":"Labor","category":"LABOR","materialNameGuess":null,"ratioPerAreaUnit":1,"unitPrice":25,"unit":"m2","notes":null},{"description":"Transportation","category":"TRANSPORT","materialNameGuess":null,"ratioPerAreaUnit":null,"unitPrice":300,"unit":null,"notes":"Flat delivery fee"}]}
+{"kind":"draft","intent":{"projectType":"هيكل","constructionType":"سكني","scopeOfWork":"أعمال الهيكل لبيت بطابق واحد","templateName":"هيكل — بيت 100 م²","areaValue":100,"areaUnit":"m2"},"wastePercentage":5,"confidence":0.82,"items":[{"description":"حديد التسليح","category":"MATERIAL","materialNameGuess":"Reinforcement Steel","ratioPerAreaUnit":8,"unitPrice":1.2,"unit":"كغم","notes":null},{"description":"إسمنت","category":"MATERIAL","materialNameGuess":"Cement","ratioPerAreaUnit":0.4,"unitPrice":9,"unit":"كيس","notes":null},{"description":"رمل","category":"MATERIAL","materialNameGuess":"Sand","ratioPerAreaUnit":0.05,"unitPrice":25,"unit":"م³","notes":null},{"description":"حصى","category":"MATERIAL","materialNameGuess":"Gravel","ratioPerAreaUnit":0.05,"unitPrice":30,"unit":"م³","notes":null},{"description":"خشب القوالب","category":"MATERIAL","materialNameGuess":"Formwork Timber","ratioPerAreaUnit":0.02,"unitPrice":180,"unit":"م³","notes":null},{"description":"أجور العمال","category":"LABOR","materialNameGuess":null,"ratioPerAreaUnit":1,"unitPrice":25,"unit":"م²","notes":null},{"description":"النقل","category":"TRANSPORT","materialNameGuess":null,"ratioPerAreaUnit":null,"unitPrice":300,"unit":null,"notes":"أجرة توصيل مقطوعة"}]}
 
 User: "Generate a plumbing estimation template."   (no area given)
 {"kind":"clarification","question":"ما هي مساحة المبنى بالمتر المربع (أو الأبعاد) حتى أقدّر كميات السباكة؟","missingFields":["areaValue"],"confidence":0.4}
 
 User: "Create a cost estimation template for a 30-meter fence."
-{"kind":"draft","intent":{"projectType":"fence","constructionType":null,"scopeOfWork":"Boundary fence, 30 linear meters","templateName":"Fence — 30 m","areaValue":30,"areaUnit":"m"},"wastePercentage":5,"confidence":0.7,"items":[{"description":"Cement","category":"MATERIAL","materialNameGuess":"Cement","ratioPerAreaUnit":0.5,"unitPrice":9,"unit":"bag","notes":null},{"description":"Bricks","category":"MATERIAL","materialNameGuess":"Bricks","ratioPerAreaUnit":40,"unitPrice":0.15,"unit":"piece","notes":null},{"description":"Labor","category":"LABOR","materialNameGuess":null,"ratioPerAreaUnit":1,"unitPrice":20,"unit":"m","notes":null}]}
+{"kind":"draft","intent":{"projectType":"سياج","constructionType":null,"scopeOfWork":"سياج خارجي بطول 30 متر","templateName":"سياج — 30 متر","areaValue":30,"areaUnit":"m"},"wastePercentage":5,"confidence":0.7,"items":[{"description":"إسمنت","category":"MATERIAL","materialNameGuess":"Cement","ratioPerAreaUnit":0.5,"unitPrice":9,"unit":"كيس","notes":null},{"description":"طابوق","category":"MATERIAL","materialNameGuess":"Bricks","ratioPerAreaUnit":40,"unitPrice":0.15,"unit":"قطعة","notes":null},{"description":"أجور العمال","category":"LABOR","materialNameGuess":null,"ratioPerAreaUnit":1,"unitPrice":20,"unit":"م","notes":null}]}
 `.trim();
 
 let cachedSystemPrompt: string | null = null;

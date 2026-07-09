@@ -203,12 +203,12 @@ async function handleDelete(user: User) {
             <template v-if="canManage(item)">
               <v-tooltip v-if="canUpdate" :text="t('common.edit')" location="top">
                 <template #activator="{ props }">
-                  <v-btn v-bind="props" icon="mdi-pencil" size="small" variant="text" @click="openEdit(item)" />
+                  <v-btn v-bind="props" icon="mdi-pencil" size="small" variant="text" :aria-label="t('common.edit')" @click="openEdit(item)" />
                 </template>
               </v-tooltip>
               <v-tooltip v-if="canResetPassword" :text="t('users.actions.resetPassword')" location="top">
                 <template #activator="{ props }">
-                  <v-btn v-bind="props" icon="mdi-lock-reset" size="small" variant="text" @click="openReset(item)" />
+                  <v-btn v-bind="props" icon="mdi-lock-reset" size="small" variant="text" :aria-label="t('users.actions.resetPassword')" @click="openReset(item)" />
                 </template>
               </v-tooltip>
               <v-tooltip

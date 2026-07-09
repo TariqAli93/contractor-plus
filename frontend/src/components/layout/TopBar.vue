@@ -189,7 +189,7 @@ const createItems = computed(() =>
 .cp-search-kbd {
   margin-inline-start: 8px;
   padding: 1px 5px;
-  border-radius: 3px;
+  border-radius: var(--cp-radius-sm);
   border: 1px solid rgba(var(--v-theme-on-surface), 0.2);
   background: rgba(var(--v-theme-on-surface), 0.06);
   font-size: 0.68rem;

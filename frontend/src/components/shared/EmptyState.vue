@@ -47,7 +47,7 @@ defineProps<{
   justify-content: center;
   width: 64px;
   height: 64px;
-  border-radius: 999px;
+  border-radius: var(--cp-radius-pill);
   background: var(--cp-bg-soft);
   color: var(--cp-text-muted);
   margin-bottom: 4px;

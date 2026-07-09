@@ -35,25 +35,112 @@ function hasSlot(data: Record<string, unknown>, slot: string): boolean {
   return v !== undefined && v !== null && String(v).trim() !== '';
 }
 
+// Every slot the user can be asked about, in the words they'd use. Internal slot
+// keys must never reach the screen, so a key with no entry here is dropped
+// rather than printed (see `slotQuestion`).
 const SLOT_LABELS_AR: Record<string, string> = {
   name: 'الاسم',
   area: 'المساحة (م²)',
   amount: 'المبلغ',
   status: 'الحالة',
   projectRef: 'المشروع',
+  projectId: 'المشروع',
   clientRef: 'العميل',
+  clientId: 'العميل',
+  customerRef: 'العميل',
   contractRef: 'العقد',
   materialRef: 'المادة',
+  materialId: 'المادة',
+  expense: 'المصروف',
+  payment: 'الدفعة',
   description: 'الوصف',
   username: 'اسم المستخدم',
   password: 'كلمة المرور',
+  fullName: 'الاسم الكامل',
+  displayName: 'الاسم المعروض',
   roleName: 'الدور',
+  roleId: 'الدور',
+  userId: 'المستخدم',
+  permissions: 'الصلاحيات',
+  currencyId: 'العملة',
   dueDate: 'تاريخ الاستحقاق',
 };
 
+/** The user-facing name of a slot, or null when it has none (never leak the key). */
+export function slotLabel(slot: string): string | null {
+  return SLOT_LABELS_AR[slot] ?? null;
+}
+
+/** The user-facing names of these slots, with unlabelled internals dropped. */
+export function slotLabels(slots: string[]): string[] {
+  return slots.map(slotLabel).filter((label): label is string => label !== null);
+}
+
 export function slotQuestion(missing: string[]): string {
-  const labels = missing.map((s) => SLOT_LABELS_AR[s] ?? s);
-  return `أحتاج معلومات إضافية: ${labels.join('، ')}؟`;
+  const labels = slotLabels(missing);
+  return labels.length
+    ? `أحتاج معلومات إضافية: ${labels.join('، ')}؟`
+    : 'أحتاج تفاصيل أكثر حتى أكمل الطلب. ممكن توضّح أكثر؟';
+}
+
+// The Arabic name of every registered action. The registry's own `action` keys
+// and `description` strings are internal (English, slot-annotated, written for
+// the model) — this is what a person is allowed to see.
+const ACTION_LABELS_AR: Record<string, string> = {
+  'client.find_or_create': 'ربط أو إنشاء عميل',
+  'client.create': 'إنشاء عميل',
+  'client.search': 'بحث عن عملاء',
+  'customer.update': 'تعديل بيانات عميل',
+  'contract.create': 'إنشاء عقد',
+  'contract.search': 'بحث عن عقود',
+  'contract.update': 'تعديل عقد',
+  'contract.print': 'طباعة عقد',
+  'project.create': 'إنشاء مشروع',
+  'project.update': 'تعديل مشروع',
+  'project.search': 'بحث عن مشاريع',
+  'project.summary': 'ملخّص مشروع',
+  'project.status.change': 'تغيير حالة مشروع',
+  'payment.create': 'تسجيل دفعة',
+  'payment.search': 'بحث عن دفعات',
+  'payment.summary': 'ملخّص الدفعات',
+  'payment.mark_paid': 'تأكيد دفع دفعة',
+  'payment.cancel': 'إلغاء دفعة',
+  'expense.create': 'تسجيل مصروف',
+  'expense.search': 'بحث عن مصاريف',
+  'expense.summary': 'ملخّص المصاريف',
+  'expense.delete': 'حذف مصروف',
+  'material.create': 'إضافة مادة',
+  'material.search': 'بحث عن مواد',
+  'material.assign_to_project': 'تخصيص مادة لمشروع',
+  'report.generate': 'إنشاء تقرير',
+  'report.dashboard': 'لوحة المؤشرات',
+  'report.overdue_payments': 'تقرير الدفعات المتأخرة',
+  'report.delayed_projects': 'تقرير المشاريع المتأخرة',
+  'report.cash_flow': 'تقرير التدفق النقدي',
+  'report.profitability': 'تقرير الربحية',
+  'report.health': 'تقرير الحالة العامة',
+  'user.create': 'إنشاء مستخدم',
+  'user.disable': 'تعطيل مستخدم',
+  'user.update': 'تعديل مستخدم',
+  'role.create': 'إنشاء دور',
+  'role.update': 'تعديل دور',
+  'role.assign_permissions': 'تعديل صلاحيات دور',
+  'settings.currency.update': 'تعديل إعدادات العملة',
+  'settings.company.update': 'تعديل بيانات الشركة',
+  'settings.contract_printing.update': 'تعديل إعدادات طباعة العقود',
+};
+
+export function actionLabel(action: string): string {
+  return ACTION_LABELS_AR[action] ?? 'إجراء على البيانات';
+}
+
+/** A plan's steps as readable Arabic lines — the only step view a user may see. */
+export function describeSteps(steps: WorkflowStep[]): string[] {
+  return steps.map((step) => {
+    const label = actionLabel(step.action);
+    const detail = str(step.data.name) ?? str(step.data.description) ?? str(step.data.amount);
+    return detail ? `${label}: ${detail}` : label;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -334,8 +421,7 @@ export async function buildConfirmationMessage(
   }
 
   if (aiMessage && aiMessage.trim()) return aiMessage.trim();
-  const labels = steps.map((s) => s.action).join('، ');
-  return `راح أنفّذ: ${labels}. هل تؤكد؟`;
+  return `راح أنفّذ: ${steps.map((s) => actionLabel(s.action)).join('، ')}. هل تؤكد؟`;
 }
 
 // ---------------------------------------------------------------------------

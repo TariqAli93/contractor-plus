@@ -173,9 +173,9 @@ async function handleDelete(row: EstimationTemplateSummary) {
         </template>
         <template #[`item.actions`]="{ item }">
           <div class="flex justify-end gap-1" @click.stop>
-            <v-btn icon="mdi-eye-outline" size="small" variant="text" @click="openDetail(item)" />
+            <v-btn icon="mdi-eye-outline" size="small" variant="text" :aria-label="t('estimation.view')" @click="openDetail(item)" />
             <RoleGate :permissions="['estimation_templates.delete']" :roles="DELETE_ROLES">
-              <v-btn icon="mdi-delete-outline" size="small" variant="text" color="error" @click="handleDelete(item)" />
+              <v-btn icon="mdi-delete-outline" size="small" variant="text" color="error" :aria-label="t('common.delete')" @click="handleDelete(item)" />
             </RoleGate>
           </div>
         </template>

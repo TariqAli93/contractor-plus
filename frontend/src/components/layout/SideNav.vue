@@ -47,7 +47,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/contracts', i18nKey: 'nav.contracts', icon: 'mdi-file-sign', access: { permissions: ['contracts.read'], roles: ALL } },
       { to: '/templates', i18nKey: 'nav.templates', icon: 'mdi-file-document-multiple-outline', access: { permissions: ['templates.read'], roles: ALL } },
       { to: '/estimation-templates', i18nKey: 'nav.estimationTemplates', icon: 'mdi-file-document-outline', access: { permissions: ['estimation_templates.read'], roles: ALL } },
-      { to: '/ai', i18nKey: 'nav.aiConsole', icon: 'mdi-robot-happy-outline', access: { permissions: ['ai.session.use'], roles: ALL } },
+      { to: '/ai', i18nKey: 'nav.aiConsole', icon: 'mdi-robot-outline', access: { permissions: ['ai.session.use'], roles: ALL } },
     ],
   },
   {
@@ -71,7 +71,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/users', i18nKey: 'nav.users', icon: 'mdi-account-cog-outline', access: { permissions: ['users.read'], roles: OA } },
       { to: '/rbac', i18nKey: 'nav.rbac', icon: 'mdi-shield-key-outline', access: { permissions: ['rbac.manage'], roles: [RoleName.OWNER] } },
       { to: '/audit', i18nKey: 'nav.audit', icon: 'mdi-history', access: { permissions: ['audit.read'], roles: OA } },
-      { to: '/ai-audit', i18nKey: 'nav.aiAudit', icon: 'mdi-robot-outline', access: { permissions: ['audit.read'], roles: OA } },
+      { to: '/ai-audit', i18nKey: 'nav.aiAudit', icon: 'mdi-history', access: { permissions: ['audit.read'], roles: OA } },
       { to: '/tunnel', i18nKey: 'nav.tunnel', icon: 'mdi-tunnel', access: { permissions: ['tunnel.manage'], roles: OA } },
       { to: '/settings', i18nKey: 'nav.settings', icon: 'mdi-cog-outline', access: { permissions: ['settings.read'], roles: OA } },
     ],

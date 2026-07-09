@@ -19,8 +19,8 @@ export type AiTurn =
   | { role: 'user'; text: string }
   | { role: 'assistant'; result: PlatformMessageResult | PlatformCancelResult };
 
-// Plain-Arabic fallback for a caught exception (mirrors aiCommand.store). The
-// interceptor already normalizes API errors to `ApiError` with a `.message`.
+// Plain-Arabic fallback for a caught exception. The interceptor already
+// normalizes API errors to `ApiError` with a `.message`.
 function errMsg(e: unknown): string {
   if (e && typeof e === 'object' && 'message' in e) {
     return String((e as { message: unknown }).message);

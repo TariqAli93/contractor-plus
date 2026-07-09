@@ -101,7 +101,7 @@ function retry(): void {
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: var(--cp-radius-xl);
   background: rgba(148, 163, 184, 0.06);
   border: 1px solid transparent;
   transition: all 0.25s ease;

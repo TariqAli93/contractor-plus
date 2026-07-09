@@ -95,7 +95,7 @@ withDefaults(
   color: var(--cp-text-muted);
   background: var(--cp-surface);
   border: 1px solid var(--cp-border);
-  border-radius: 999px;
+  border-radius: var(--cp-radius-pill);
   padding: 1px 8px;
 }
 .cp-page-header-sub {

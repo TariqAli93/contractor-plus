@@ -52,7 +52,7 @@ function describe(err: unknown): { message: string; reqId?: string } {
   justify-content: center;
   width: 56px;
   height: 56px;
-  border-radius: 999px;
+  border-radius: var(--cp-radius-pill);
   background: var(--cp-error-soft);
   color: var(--cp-error);
   margin-bottom: 6px;

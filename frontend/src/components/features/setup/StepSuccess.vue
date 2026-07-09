@@ -136,7 +136,7 @@ async function goToLogin(): Promise<void> {
 .creds {
   background: rgba(148, 163, 184, 0.08);
   border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 14px;
+  border-radius: var(--cp-radius-xl);
   padding: 4px 18px;
   text-align: start;
 }
@@ -151,7 +151,7 @@ async function goToLogin(): Promise<void> {
   font-size: 0.9rem;
 }
 .cred-value {
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-family: var(--cp-font-mono);
   font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: 1px;

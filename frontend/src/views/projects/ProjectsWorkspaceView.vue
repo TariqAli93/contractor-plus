@@ -199,9 +199,20 @@ onMounted(fetch);
 .cp-master-item:hover {
   background: rgba(var(--v-theme-on-surface), 0.03);
 }
+/* Active-item rail, drawn the way .cp-nav draws it: an overlaid pseudo-element
+   rather than a border that only exists when selected (which shifted the row
+   3px on click). Logical inset keeps it on the correct edge under RTL. */
 .cp-master-item.is-active {
+  position: relative;
   background: rgba(var(--v-theme-primary), 0.1);
-  border-inline-start: 3px solid rgb(var(--v-theme-primary));
+}
+.cp-master-item.is-active::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 3px;
+  background: rgb(var(--v-theme-primary));
 }
 .cp-master-name {
   font-weight: 600;

@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
-import { fileURLToPath, URL } from 'node:url';
+import { resolve } from 'node:path';
 import { routes } from '@/router/routes';
+
+// These specs read source files off disk. `import.meta.url` cannot anchor them:
+// under `environment: 'jsdom'` it is an http:// URL, and `fileURLToPath` rejects
+// any non-file scheme. Vitest runs with cwd set to the config root (frontend/),
+// so resolve from there instead.
+const fromFrontend = (relative: string) => resolve(process.cwd(), relative);
 
 // Proves the three AI surfaces collapsed into ONE entry point — the crux of the
 // unification. Pure route-config + source assertions (no component runtime).
@@ -29,19 +35,14 @@ describe('unified AI assistant — single entry point', () => {
   });
 
   it('removes the duplicate global command FAB', () => {
-    const appLayout = readFileSync(
-      fileURLToPath(new URL('../src/components/layout/AppLayout.vue', import.meta.url)),
-      'utf8',
-    );
+    const appLayout = readFileSync(fromFrontend('src/components/layout/AppLayout.vue'), 'utf8');
     expect(appLayout).not.toContain('AiCommandConsole');
-    expect(
-      existsSync(fileURLToPath(new URL('../src/components/ai-command/AiCommandConsole.vue', import.meta.url))),
-    ).toBe(false);
+    expect(existsSync(fromFrontend('src/components/ai-command/AiCommandConsole.vue'))).toBe(false);
   });
 
   it('gates the estimation "generate" CTA on BOTH generation AND assistant access', () => {
     const src = readFileSync(
-      fileURLToPath(new URL('../src/views/estimation-templates/EstimationTemplatesListView.vue', import.meta.url)),
+      fromFrontend('src/views/estimation-templates/EstimationTemplatesListView.vue'),
       'utf8',
     );
     // The CTA deep-links to /ai, so it must require ai.session.use (what /ai needs)

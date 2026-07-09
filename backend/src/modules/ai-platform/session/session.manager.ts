@@ -113,6 +113,13 @@ export class SessionManager {
     );
   }
 
+  /** Drop the working state and its owner — used when a guided conversation ends
+   *  and a tool takes over (Prisma treats `undefined` as "leave alone", so a
+   *  clear needs the explicit JsonNull). */
+  clearWorkingState(session: AiSession): Promise<AiSession> {
+    return this.repo.updateSession(session.id, { activeTool: null, workingState: Prisma.JsonNull });
+  }
+
   parkPlan(session: AiSession, plan: Plan, activeTool?: string | null): Promise<AiSession> {
     return this.repo.updateSession(session.id, {
       pendingPlan: plan as unknown as Prisma.InputJsonValue,

@@ -118,8 +118,8 @@ async function remove() {
       <td class="text-end"><MoneyDisplay :amount="item.estimatedPrice" /></td>
       <td>{{ item.notes ?? '—' }}</td>
       <td class="text-end">
-        <v-btn icon="mdi-pencil" size="small" variant="text" @click="startEdit" />
-        <v-btn icon="mdi-delete-outline" size="small" variant="text" color="error" @click="remove" />
+        <v-btn icon="mdi-pencil" size="small" variant="text" :aria-label="t('common.edit')" @click="startEdit" />
+        <v-btn icon="mdi-delete-outline" size="small" variant="text" color="error" :aria-label="t('common.delete')" @click="remove" />
       </td>
     </template>
 
@@ -178,8 +178,8 @@ async function remove() {
         />
       </td>
       <td class="text-end whitespace-nowrap">
-        <v-btn icon="mdi-check" size="small" variant="text" color="success" :loading="submitting" @click="save" />
-        <v-btn icon="mdi-close" size="small" variant="text" @click="cancelEdit" />
+        <v-btn icon="mdi-check" size="small" variant="text" color="success" :loading="submitting" :aria-label="t('common.save')" @click="save" />
+        <v-btn icon="mdi-close" size="small" variant="text" :aria-label="t('common.cancel')" @click="cancelEdit" />
       </td>
     </template>
   </tr>

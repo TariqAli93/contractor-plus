@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 import type { ApexOptions } from 'apexcharts';
 import { t } from '@/i18n';
@@ -14,6 +14,49 @@ const props = defineProps<{
 
 const { format } = useCurrencyFormat();
 const theme = useThemeStore();
+
+// ApexCharts paints SVG presentation attributes, which do not resolve CSS
+// custom properties — so the palette has to be read out of the cascade as
+// concrete values. Reading it from our own element (rather than :root) picks up
+// `.v-theme--contractorPlusDark`, which is what re-themes the `--cp-*` scale.
+const rootEl = ref<HTMLElement | null>(null);
+// Bumped after the theme class has actually landed in the DOM, so the reads
+// below never happen a frame early and latch the outgoing palette.
+const paletteEpoch = ref(0);
+
+function token(name: string, fallback: string): string {
+  void paletteEpoch.value;
+  const host = rootEl.value;
+  if (!host) return fallback;
+  return getComputedStyle(host).getPropertyValue(name).trim() || fallback;
+}
+
+watch(
+  () => theme.isDark,
+  async () => {
+    await nextTick();
+    paletteEpoch.value++;
+  },
+);
+
+// Motion here is JS-driven inside Apex's SVG, so the global CSS
+// `prefers-reduced-motion` guard in main.css cannot reach it.
+const reduceMotion = ref(false);
+let motionQuery: MediaQueryList | undefined;
+const onMotionChange = (e: MediaQueryListEvent) => {
+  reduceMotion.value = e.matches;
+};
+
+onMounted(() => {
+  paletteEpoch.value++;
+  motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  reduceMotion.value = motionQuery.matches;
+  motionQuery.addEventListener('change', onMotionChange);
+});
+
+onUnmounted(() => {
+  motionQuery?.removeEventListener('change', onMotionChange);
+});
 
 // Money fields arrive as fixed-precision strings (see lib/money.ts). Coerce to
 // number only here, at the charting boundary.
@@ -38,11 +81,13 @@ const series = computed(() => [
 // Profit turns red when negative; the rest keep their semantic brand colors
 // (revenue=info, costs=warning, collected=primary, pending=accent).
 const colors = computed(() => [
-  '#0284C7',
-  '#F59E0B',
-  num(props.summary?.monthlyProfit) < 0 ? '#DC2626' : '#16A34A',
-  '#1E5F8C',
-  '#D97706',
+  token('--cp-info', '#0284c7'),
+  token('--cp-warning', '#f59e0b'),
+  num(props.summary?.monthlyProfit) < 0
+    ? token('--cp-error', '#dc2626')
+    : token('--cp-success', '#16a34a'),
+  token('--cp-primary', '#1e5f8c'),
+  token('--cp-accent', '#d97706'),
 ]);
 
 const options = computed<ApexOptions>(() => ({
@@ -51,17 +96,18 @@ const options = computed<ApexOptions>(() => ({
     fontFamily: 'inherit',
     background: 'transparent',
     toolbar: { show: false },
-    animations: { speed: 400 },
+    animations: { enabled: !reduceMotion.value, speed: 400 },
   },
   theme: { mode: theme.isDark ? 'dark' : 'light' },
   colors: colors.value,
   plotOptions: {
-    bar: { distributed: true, borderRadius: 6, columnWidth: '55%' },
+    // 3px == --cp-radius-sm; the crisp low radius the rest of the app uses.
+    bar: { distributed: true, borderRadius: 3, columnWidth: '55%' },
   },
   dataLabels: { enabled: false },
   legend: { show: false },
   grid: {
-    borderColor: theme.isDark ? '#334155' : '#e3e8ef',
+    borderColor: token('--cp-border', '#e3e8ef'),
     strokeDashArray: 4,
   },
   xaxis: {
@@ -96,8 +142,12 @@ const options = computed<ApexOptions>(() => ({
     </v-card-title>
     <v-divider />
     <v-card-text>
-      <v-skeleton-loader v-if="loading" type="image" class="cp-chart-skeleton" />
-      <VueApexCharts v-else type="bar" height="300" :options="options" :series="series" />
+      <!-- A real DOM node, so the palette can be read out of the themed
+           cascade. It wraps both branches so it exists before the chart does. -->
+      <div ref="rootEl">
+        <v-skeleton-loader v-if="loading" type="image" class="cp-chart-skeleton" />
+        <VueApexCharts v-else type="bar" height="300" :options="options" :series="series" />
+      </div>
     </v-card-text>
   </v-card>
 </template>

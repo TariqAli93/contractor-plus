@@ -63,7 +63,7 @@ const points = [
   gap: 12px;
   background: rgba(148, 163, 184, 0.08);
   border: 1px solid rgba(148, 163, 184, 0.12);
-  border-radius: 12px;
+  border-radius: var(--cp-radius-xl);
   padding: 12px 14px;
   font-size: 0.92rem;
   color: rgba(226, 232, 240, 0.9);

@@ -102,6 +102,7 @@ test('a bare confirm word with no pending plan returns exactly the no-plan messa
   assert.equal(msg.kind, 'answer');
   if (msg.kind !== 'answer') return;
   assert.equal(msg.message, NO_PENDING_MESSAGE);
+  assert.doesNotMatch(msg.message, /خطة/, 'the user is told about their request, not about a "plan"');
 });
 
 // ── 4) A normal command query routes to command and runs immediately ─────────
@@ -133,22 +134,23 @@ test('a client command previews then confirms, creating the customer + audit', a
   assert.equal(exec?.toolName, 'command', 'unified audit row tagged to the command tool');
 });
 
-// ── 6) An estimation-template command routes to the estimation tool ──────────
-test('an estimation-template command routes to the estimation tool', async () => {
+// ── 6) A fully-specified estimation request needs no questions ───────────────
+test('an estimation request that states everything goes straight to a preview', async () => {
   await prisma.material.create({ data: { name: `Steel ${RUN}`, unit: 'kg', defaultPrice: 1.5, isActive: true } });
   const orch = new AssistantOrchestrator(prisma, makeLlm(draftLlm(200, `Steel ${RUN}`)));
   const id = await open(orch, 'est');
-  const msg = await orch.message(id, 'أنشئ قالب تقدير لبناء بيت 200 متر', principal());
+  const msg = await orch.message(id, 'أنشئ قالب تقدير لبناء بيت 200 متر طابقين هيكل فقط', principal());
   assert.equal(msg.kind, 'preview');
   if (msg.kind !== 'preview') return;
   assert.equal(msg.renderKind, 'estimation', 'user did not need to know which system answered');
+  assert.doesNotMatch(msg.summary, /estimation|template|draft/i, 'the summary is Arabic, never internal vocabulary');
 });
 
 // ── 7) An estimation timeout surfaces a friendly Arabic error, not a raw throw ─
 test('an estimation timeout returns a friendly Arabic error result', async () => {
   const orch = new AssistantOrchestrator(prisma, timeoutLlm());
   const id = await open(orch, 'timeout');
-  const msg = await orch.message(id, 'أنشئ قالب تقدير لبيت كبير', principal());
+  const msg = await orch.message(id, 'أنشئ قالب تقدير لبيت كبير 100 متر طابق واحد هيكل فقط', principal());
   assert.equal(msg.kind, 'error');
   if (msg.kind !== 'error') return;
   assert.equal(msg.reason, 'timeout');
@@ -213,7 +215,7 @@ test('the unified audit query returns entries across command and estimation', as
 
   const estOrch = new AssistantOrchestrator(prisma, timeoutLlm());
   const es = await open(estOrch, 'auditest');
-  await estOrch.message(es, `قالب تقدير ${RUN}`, principal());
+  await estOrch.message(es, `قالب تقدير ${RUN} 50 متر طابق واحد هيكل فقط`, principal());
 
   const audit = new AuditQueryService(prisma);
   const cmd = await audit.list({ toolName: 'command', limit: 100 });
@@ -233,4 +235,72 @@ test('a help word before a real command routes to the command, not a canned answ
   assert.notEqual(msg.kind, 'answer', 'must not be a canned help answer');
   assert.equal(msg.kind, 'preview', 'routes to the command tool');
   if (msg.kind === 'preview') assert.equal(msg.toolName, 'command');
+});
+
+// ── 14) A guided workflow is a conversation, not a command ───────────────────
+test('a guided template conversation gathers facts before it ever previews', async () => {
+  await prisma.material.create({ data: { name: `Cement ${RUN}`, unit: 'bag', defaultPrice: 9, isActive: true } });
+  const sink: LlmCompletionRequest[] = [];
+  const orch = new AssistantOrchestrator(prisma, makeLlm(draftLlm(250, `Cement ${RUN}`), sink));
+  const id = await open(orch, 'guided');
+
+  const opening = await orch.message(id, 'سوّيلي قالب بيت', principal());
+  assert.equal(opening.kind, 'clarification', 'an opening request asks, it does not draft');
+  if (opening.kind === 'clarification') assert.match(opening.question, /المساحة/);
+
+  assert.equal((await orch.message(id, '250 متر', principal())).kind, 'clarification');
+  assert.equal((await orch.message(id, 'طابقين', principal())).kind, 'clarification');
+
+  assert.equal(sink.length, 0, 'gathering never calls the model');
+  const mid = await prisma.aiSession.findUnique({ where: { id } });
+  assert.notEqual(mid?.status, 'AWAITING_CONFIRMATION', 'nothing awaits confirmation mid-conversation');
+  assert.equal(await prisma.aiExecution.count({ where: { sessionId: id } }), 0, 'and it consumes no quota');
+
+  const done = await orch.message(id, 'هيكل فقط', principal());
+  assert.equal(done.kind, 'preview', 'only now, with enough information, is there something to review');
+  if (done.kind === 'preview') assert.equal(done.renderKind, 'estimation');
+  assert.equal(sink.length, 1, 'exactly one model call, once the brief was complete');
+  assert.match(sink[0]!.user, /سوّيلي قالب بيت/, 'the original wording reached the model');
+  assert.match(sink[0]!.user, /250/, 'together with everything gathered since');
+  assert.match(sink[0]!.user, /الطوابق: 2/);
+});
+
+// ── 15) A question is read-only, whatever the model proposes ─────────────────
+test('a question is answered, never turned into a pending change', async () => {
+  const name = `AITEST ${RUN} Ghost`;
+  const orch = new AssistantOrchestrator(prisma, makeLlm(clientPlan(name)));
+  const id = await open(orch, 'readonly');
+  const msg = await orch.message(id, 'كم عدد العملاء؟', principal());
+
+  assert.equal(msg.kind, 'rejected', 'the model read a question as a mutation — the program refuses');
+  if (msg.kind === 'rejected') assert.equal(msg.reason, 'read_only_question');
+  assert.notEqual((await prisma.aiSession.findUnique({ where: { id } }))?.status, 'AWAITING_CONFIRMATION');
+  assert.equal(await prisma.customer.count({ where: { name } }), 0, 'and nothing was created');
+});
+
+// ── 16) General conversation never reaches a tool ────────────────────────────
+test('smalltalk gets a human reply and never invokes a tool', async () => {
+  const orch = new AssistantOrchestrator(prisma, throwingLlm());
+  const id = await open(orch, 'smalltalk');
+  for (const text of ['شلونك', 'شكرا', 'منو انت']) {
+    const msg = await orch.message(id, text, principal());
+    assert.equal(msg.kind, 'answer', text);
+    if (msg.kind === 'answer') assert.ok(msg.message.trim().length > 0);
+  }
+  assert.equal(await prisma.aiExecution.count({ where: { sessionId: id } }), 0);
+});
+
+// ── 17) A preview shows sentences, never the plan behind it ──────────────────
+test('a command preview carries Arabic lines, never internal names', async () => {
+  const name = `AITEST ${RUN} Lines`;
+  const orch = new AssistantOrchestrator(prisma, makeLlm(clientPlan(name)));
+  const id = await open(orch, 'lines');
+  const msg = await orch.message(id, `أضف عميل باسم ${name}`, principal());
+  assert.equal(msg.kind, 'preview');
+  if (msg.kind !== 'preview') return;
+
+  const payload = msg.payload as { lines?: string[] };
+  assert.deepEqual(Object.keys(payload), ['lines'], 'the plan itself stays server-side');
+  assert.match(payload.lines?.[0] ?? '', /^إنشاء عميل/);
+  assert.doesNotMatch(JSON.stringify(payload), /client\.create/, 'no registry names on the wire');
 });

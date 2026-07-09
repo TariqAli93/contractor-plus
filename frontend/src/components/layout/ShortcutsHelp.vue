@@ -66,7 +66,7 @@ const groups = computed<Group[]>(() => [
         <v-icon class="me-2">mdi-keyboard-outline</v-icon>
         <span>{{ t('shortcuts.title') }}</span>
         <v-spacer />
-        <v-btn icon="mdi-close" variant="text" size="small" @click="open = false" />
+        <v-btn icon="mdi-close" variant="text" size="small" :aria-label="t('common.close')" @click="open = false" />
       </v-card-title>
       <v-divider />
       <v-card-text>

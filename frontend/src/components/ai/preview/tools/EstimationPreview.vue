@@ -4,9 +4,13 @@
 // grid, the waste %, the estimated total, and the mandatory engineer-review
 // warning. Money/quantity are backend-supplied strings — nothing is computed
 // here. Column style mirrors EstimationTemplateDetailView (read-only).
+//
+// The panel chrome (header, summary, warnings, confirm/cancel) belongs to
+// AiPreviewPanel; only the estimation body lives here.
 import { computed } from 'vue';
 import { t } from '@/i18n';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
+import AiPreviewPanel from '../AiPreviewPanel.vue';
 import type { EstimationDraftItem, PlatformPreviewResult } from '@contractor-plus/shared';
 
 // The estimation payload shape carried by a `preview` result with
@@ -34,7 +38,9 @@ const areaLabel = computed(() =>
     ? `${payload.value.areaValue} ${payload.value.areaUnit ?? ''}`.trim()
     : '—',
 );
-const warning = computed(() => payload.value.warning || t('ai.warning'));
+// The engineer-review warning is mandatory: fall back to the generic copy rather
+// than let a payload without one render an unwarned estimate.
+const warnings = computed<string[]>(() => [payload.value.warning || t('ai.warning')]);
 
 const headers = computed(() => [
   { title: t('estimation.columns.description'), key: 'description' },
@@ -58,18 +64,16 @@ function onCancel() {
 </script>
 
 <template>
-  <v-card variant="tonal" class="ai-est">
-    <div class="ai-est__head">
-      <v-icon size="18" class="me-1">mdi-file-chart-outline</v-icon>
-      <span class="font-medium">{{ payload.templateName || t('ai.preview.title') }}</span>
-    </div>
-
-    <p v-if="preview.summary" class="ai-est__summary">{{ preview.summary }}</p>
-
-    <v-alert type="warning" variant="tonal" density="compact" class="mb-3">
-      {{ warning }}
-    </v-alert>
-
+  <AiPreviewPanel
+    :title="payload.templateName || t('ai.preview.title')"
+    icon="mdi-file-chart-outline"
+    :summary="preview.summary"
+    :warnings="warnings"
+    :busy="busy"
+    confirm-icon="mdi-content-save-check-outline"
+    @confirm="onConfirm"
+    @cancel="onCancel"
+  >
     <div class="ai-est__facts">
       <div class="ai-est__fact">
         <span class="ai-est__fact-label">{{ t('estimation.listColumns.projectType') }}</span>
@@ -81,7 +85,7 @@ function onCancel() {
       </div>
       <div class="ai-est__fact">
         <span class="ai-est__fact-label">{{ t('estimation.waste') }}</span>
-        <span>{{ payload.wastePercentage }}%</span>
+        <span class="ai-est__fact-value">{{ payload.wastePercentage }}%</span>
       </div>
     </div>
 
@@ -92,7 +96,6 @@ function onCancel() {
       :items-per-page="-1"
       hide-default-footer
       density="compact"
-      class="ai-est__table"
     >
       <template #[`item.category`]="{ item }">{{ categoryLabel(item.category) }}</template>
       <template #[`item.quantity`]="{ item }">{{ item.quantity ?? '—' }}</template>
@@ -107,50 +110,17 @@ function onCancel() {
     </v-data-table>
 
     <div class="ai-est__total">
-      <span class="font-medium">{{ t('estimation.total') }}</span>
-      <span class="font-medium text-h6">
-        <MoneyDisplay :amount="payload.estimatedTotal" />
-      </span>
+      <span class="ai-est__total-label">{{ t('estimation.total') }}</span>
+      <span class="ai-est__total-amount"><MoneyDisplay :amount="payload.estimatedTotal" /></span>
     </div>
-
-    <div class="ai-est__actions">
-      <v-btn
-        color="primary"
-        variant="flat"
-        size="small"
-        prepend-icon="mdi-content-save-check-outline"
-        :loading="busy"
-        :disabled="busy"
-        @click="onConfirm"
-      >
-        {{ t('ai.confirm') }}
-      </v-btn>
-      <v-btn variant="text" size="small" :disabled="busy" @click="onCancel">
-        {{ t('ai.cancel') }}
-      </v-btn>
-    </div>
-  </v-card>
+  </AiPreviewPanel>
 </template>
 
 <style scoped>
-.ai-est {
-  padding: 12px;
-}
-.ai-est__head {
-  display: flex;
-  align-items: center;
-  margin-bottom: 6px;
-}
-.ai-est__summary {
-  font-size: 0.9rem;
-  line-height: 1.6;
-  margin-bottom: 10px;
-}
 .ai-est__facts {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 20px;
-  margin-bottom: 10px;
   font-size: 0.85rem;
 }
 .ai-est__fact {
@@ -158,24 +128,28 @@ function onCancel() {
   flex-direction: column;
   gap: 1px;
 }
+/* Muted ink clears AA only because AiPreviewPanel is untinted (4.76:1). */
 .ai-est__fact-label {
   font-size: 0.72rem;
-  color: var(--cp-text-muted, #888);
+  color: var(--cp-text-muted);
 }
-.ai-est__table {
-  margin-bottom: 10px;
+/* A figure, so it aligns and doesn't jitter — The Tabular Numerals Rule. */
+.ai-est__fact-value {
+  font-variant-numeric: tabular-nums;
 }
 .ai-est__total {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: flex-end;
   gap: 12px;
-  margin-bottom: 10px;
   padding-inline-end: 4px;
 }
-.ai-est__actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+.ai-est__total-label {
+  font-weight: 500;
+}
+.ai-est__total-amount {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 </style>

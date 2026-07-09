@@ -26,6 +26,12 @@ test('a whole-message status question is classified as status', () => {
   assert.equal(preRoute('وين وصلنا', false).kind, 'status');
 });
 
+test('smalltalk is recognized with its topic', () => {
+  assert.deepEqual(preRoute('شكرا', false), { kind: 'smalltalk', topic: 'thanks' });
+  assert.deepEqual(preRoute('منو انت', false), { kind: 'smalltalk', topic: 'identity' });
+  assert.deepEqual(preRoute('باي', false), { kind: 'smalltalk', topic: 'farewell' });
+});
+
 // The blocker: a help/greeting word FOLLOWED BY an actionable command must route
 // as a real command (passthrough), NOT a canned answer.
 test('a help word before a real command routes as a command (passthrough)', () => {

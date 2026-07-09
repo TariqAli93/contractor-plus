@@ -1,13 +1,20 @@
 // ============================================================
 // Assistant Orchestrator — the ONE turn owner for every AI capability.
 //
-// It runs the unified pipeline on top of the ai-platform engine parts (session
-// manager, tool registry, executor, audit, confidence, context, memory) and adds
-// the policy layer the unification needs:
-//   deterministic pre-router (help/greeting/status/confirm/cancel, no LLM) →
-//   usage quota (only on real turns) → wired conversation memory →
-//   intent routing (estimation vs command) → tool.interpret → confidence gate →
-//   park → atomic-claim confirm → unified AiExecution audit.
+// Every turn is first classified into a conversation mode, and the mode decides
+// everything downstream. Nothing below re-derives how the mode was chosen:
+//
+//   GENERAL   → a canned Arabic reply. No LLM, no quota, no tool, no plan.
+//   QUESTION  → routed to a tool, answered immediately, and hard-gated so a
+//               read-only question can never park a mutation.
+//   WORKFLOW  → a guided conversation. The assistant gathers what it needs
+//               (deterministically, no model call) and only hands off to the
+//               tool once it has enough; the tool then owns its own draft.
+//   COMMAND   → tool.interpret → confidence gate → park → confirm → execute.
+//
+// On top of that sit the platform engine parts (session manager, tool registry,
+// executor, audit, confidence, context, memory), usage quota on real turns only,
+// the wired conversation memory, and one unified AiExecution audit row.
 //
 // The AI only proposes; THIS layer decides, gates, confirms, and executes. It
 // supersedes the (now-unused) PlatformOrchestrator; the two share the same public
@@ -31,12 +38,25 @@ import type { Plan, Principal, ToolTurnResult } from '../ai-platform/ai-platform
 import { CommandTool } from './command/command.tool.js';
 import { IntentRouter } from './intent-router.js';
 import { UsageGovernor, type QuotaConfig } from './usage-governor.js';
-import { preRoute } from './pre-router.js';
+import { classifyTurn, type ConversationMode, type ConversationTurn } from './conversation-mode.js';
 import {
+  applyAnswer,
+  composeRequest,
+  gapQuestion,
+  newBrief,
+  nextGap,
+  readBrief,
+  WORKFLOW_TOOL,
+  type EstimationBrief,
+} from './workflow.js';
+import {
+  CANCELLED_MESSAGE,
   CAPABILITY_INTRO,
   CAPABILITY_SUGGESTIONS,
   GREETING_MESSAGE,
   NO_PENDING_MESSAGE,
+  READ_ONLY_QUESTION_MESSAGE,
+  SMALLTALK_MESSAGES,
   STATUS_IDLE_MESSAGE,
   statusPendingMessage,
 } from './capabilities.js';
@@ -151,36 +171,131 @@ export class AssistantOrchestrator {
   // ===================== the turn =====================
 
   async message(sessionId: string, text: string, principal: Principal): Promise<PlatformMessageResult> {
-    let session = await this.sessions.load(sessionId, principal.userId, true);
+    const session = await this.sessions.load(sessionId, principal.userId, true);
     await this.sessions.appendMessage(session, { role: 'USER', kind: 'command', content: text });
 
     const hasPending = session.status === 'AWAITING_CONFIRMATION' && session.pendingPlan != null;
+    // A guided conversation is open either because the assistant is still
+    // gathering facts, or because a tool is refining a draft it owns.
+    const brief = session.activeTool === WORKFLOW_TOOL ? readBrief(session.workingState) : null;
+    const toolDraft =
+      session.activeTool != null && session.activeTool !== WORKFLOW_TOOL && session.workingState != null;
 
-    // ---- Deterministic pre-router: no LLM, no quota ----
-    const pre = preRoute(text, hasPending);
-    if (pre.kind === 'confirm') return this.confirm(sessionId, principal);
-    if (pre.kind === 'cancel') {
-      await this.cancel(sessionId, principal);
-      return this.answer(session, 'تم الإلغاء. لم يُنفّذ أي تغيير.');
-    }
-    if (pre.kind === 'help') {
-      return this.answer(session, CAPABILITY_INTRO, CAPABILITY_SUGGESTIONS);
-    }
-    if (pre.kind === 'greeting') {
-      return this.answer(session, GREETING_MESSAGE, CAPABILITY_SUGGESTIONS);
-    }
-    if (pre.kind === 'status') {
-      const summary = hasPending ? (session.pendingPlan as unknown as Plan).summary ?? null : null;
-      return this.answer(session, hasPending ? statusPendingMessage(summary) : STATUS_IDLE_MESSAGE);
-    }
-    if (pre.kind === 'no_pending') {
-      return this.answer(session, NO_PENDING_MESSAGE);
+    const turn = classifyTurn(text, {
+      hasPendingPlan: hasPending,
+      workflow: brief ? 'brief' : toolDraft ? 'tool' : null,
+    });
+
+    if (turn.kind === 'control') {
+      if (turn.action === 'confirm') return this.confirm(sessionId, principal);
+      // A parked mutation is cancelled outright; abandoning a guided conversation
+      // only drops what was gathered — the session stays open.
+      if (hasPending) {
+        await this.cancel(sessionId, principal);
+        return this.answer(session, CANCELLED_MESSAGE);
+      }
+      return this.abandonWorkflow(session, principal);
     }
 
-    // ---- passthrough = real AI work ----
+    // ---- GENERAL: a real conversation, never a command. No LLM, no quota. ----
+    if (turn.mode === 'GENERAL') return this.general(session, turn, hasPending);
+
+    // ---- WORKFLOW: gather first; hand off only once we know enough. ----
+    if (turn.mode === 'WORKFLOW' && !toolDraft) return this.gather(session, text, brief, principal);
+
+    return this.runTool(session, text, turn.mode, principal);
+  }
+
+  /** The canned side of the assistant's voice. Costs nothing, touches nothing. */
+  private general(
+    session: AiSession,
+    turn: Extract<ConversationTurn, { mode: 'GENERAL' }>,
+    hasPending: boolean,
+  ): Promise<PlatformMessageResult> {
+    switch (turn.reply) {
+      case 'help':
+        return this.answer(session, CAPABILITY_INTRO, CAPABILITY_SUGGESTIONS);
+      case 'greeting':
+        return this.answer(session, GREETING_MESSAGE, CAPABILITY_SUGGESTIONS);
+      case 'smalltalk':
+        return this.answer(session, SMALLTALK_MESSAGES[turn.topic]);
+      case 'no_pending':
+        return this.answer(session, NO_PENDING_MESSAGE);
+      case 'status': {
+        const summary = hasPending ? (session.pendingPlan as unknown as Plan).summary ?? null : null;
+        return this.answer(session, hasPending ? statusPendingMessage(summary) : STATUS_IDLE_MESSAGE);
+      }
+    }
+  }
+
+  /** One turn of a guided conversation. Asks for the next missing fact — no
+   *  model call, no quota, no plan, no confirmation — and only when the brief is
+   *  complete does it compose the whole request and hand it to the tool. */
+  private async gather(
+    session: AiSession,
+    text: string,
+    existing: EstimationBrief | null,
+    principal: Principal,
+  ): Promise<PlatformMessageResult> {
+    let current = session;
+    const opening = existing === null;
+    const brief = applyAnswer(existing ?? newBrief(text), text);
+
+    const gap = nextGap(brief);
+    if (gap) {
+      // Starting a new conversation supersedes anything left parked.
+      if (current.status === 'AWAITING_CONFIRMATION') current = await this.sessions.clearPlan(current);
+      current = await this.sessions.saveWorkingState(current, WORKFLOW_TOOL, { ...brief, awaiting: gap });
+
+      const nothingKnown = brief.area === null && brief.floors === null && brief.scope === null;
+      const question = gapQuestion(gap, { opening: opening && nothingKnown });
+      await this.sessions.appendMessage(current, {
+        role: 'ASSISTANT',
+        kind: 'clarification',
+        content: question.question,
+      });
+      return {
+        kind: 'clarification',
+        sessionId: current.id,
+        question: question.question,
+        missing: question.missing,
+        options: question.options,
+        confidence: 0.9,
+      };
+    }
+
+    // Enough information — the tool takes over, and owns the draft from here.
+    current = await this.sessions.clearWorkingState(current);
+    return this.runTool(current, composeRequest(brief), 'WORKFLOW', principal);
+  }
+
+  /** Drop a guided conversation without killing the session. A tool that owns a
+   *  live draft gets to clean it up first. */
+  private async abandonWorkflow(session: AiSession, principal: Principal): Promise<PlatformMessageResult> {
+    const toolName = session.activeTool;
+    if (toolName && toolName !== WORKFLOW_TOOL) {
+      const tool = this.registry.get(toolName);
+      if (tool?.onCancel) {
+        const ctx = await this.buildContext(principal);
+        await tool.onCancel(ctx, this.makeHandle(session, toolName)).catch(() => {});
+      }
+    }
+    const cleared = await this.sessions.clearWorkingState(session);
+    return this.answer(cleared, CANCELLED_MESSAGE);
+  }
+
+  /** The real AI turn: quota → memory → tool.interpret → gates → park. */
+  private async runTool(
+    input: AiSession,
+    text: string,
+    mode: ConversationMode,
+    principal: Principal,
+  ): Promise<PlatformMessageResult> {
+    let session = input;
     const ctxBase = await this.buildContext(principal);
 
-    // Usage quota — only real turns count (canned answers above are free).
+    // Usage quota — only real turns count (canned answers and the gathering
+    // questions above are free).
     const verdict = await this.governor.check(principal.userId);
     if (!verdict.allowed) {
       return { kind: 'error', sessionId: session.id, reason: verdict.reason ?? 'quota_exceeded', message: verdict.message ?? 'تم تجاوز حد الاستخدام.' };
@@ -194,13 +309,13 @@ export class AssistantOrchestrator {
     const preamble = await this.memory.buildPreamble(session);
     const ctx: PlatformContext = { ...ctxBase, conversation: { preamble } };
 
-    const routed = this.intent.route(session, text);
+    const routed = this.intent.route(session, mode);
     const tool = routed.targetTool ? this.registry.get(routed.targetTool) : undefined;
     if (!tool || !tool.interpret) {
-      return this.rejected(session, 'no_tool', 'ما في أداة تقدر تنفّذ هذا الطلب.');
+      return this.rejected(session, 'no_tool', 'ما أكدر أنفّذ هذا الطلب حالياً.');
     }
     if (!this.canUseTool(tool, ctx)) {
-      return this.rejected(session, 'insufficient_permission', 'ما عندك صلاحية لاستخدام هذه الأداة.');
+      return this.rejected(session, 'insufficient_permission', 'ما عندك صلاحية لهذا الطلب.');
     }
 
     await this.context.resolve(session, {
@@ -237,6 +352,16 @@ export class AssistantOrchestrator {
       await this.sessions.appendMessage(session, { role: 'ASSISTANT', kind: 'query', content: turn.message, toolName: tool.name });
       await this.recordAudit({ session, userId: principal.userId, toolName: tool.name, originalRequest: text, transactionResult: 'not_required' });
       return { kind: 'query', sessionId: session.id, toolName: tool.name, message: turn.message, data: turn.data };
+    }
+
+    // A question is read-only, full stop. If the model read a question as a data
+    // change, the change dies here — it is never parked, let alone executed.
+    if (mode === 'QUESTION' && turn.requiresConfirmation) {
+      await this.recordAudit({
+        session, userId: principal.userId, toolName: tool.name, originalRequest: text,
+        transactionResult: 'not_required', failedReason: 'read_only_question',
+      });
+      return this.rejected(session, 'read_only_question', READ_ONLY_QUESTION_MESSAGE);
     }
 
     // preview — confidence gate (the program, not the AI).

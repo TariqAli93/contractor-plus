@@ -25,10 +25,12 @@ import { parseInterpretation } from '../../ai-command-workflow/ai-command-workfl
 import {
   buildConfirmationMessage,
   buildQueryMessage,
+  describeSteps,
   missingPermissions,
   missingSlots,
   resolveReferences,
   runQueries,
+  slotLabels,
   slotQuestion,
 } from '../../ai-command-workflow/ai-command-workflow.program.js';
 import { getAction, isRegisteredAction } from '../../ai-command-workflow/ai-command-workflow.registry.js';
@@ -55,7 +57,7 @@ async function mapInterpretation(
     return { kind: 'rejected', reason: 'not_understood', message: parsed.reason };
   }
   if (parsed.kind === 'clarification') {
-    return { kind: 'clarification', question: parsed.question, missing: parsed.missingSlots ?? [], confidence: parsed.confidence ?? 0.8 };
+    return { kind: 'clarification', question: parsed.question, missing: slotLabels(parsed.missingSlots ?? []), confidence: parsed.confidence ?? 0.8 };
   }
 
   // workflow_plan | query — both carry steps.
@@ -74,13 +76,13 @@ async function mapInterpretation(
   const resolved = await resolveReferences(repo, steps);
   if (resolved.reject) return { kind: 'rejected', reason: resolved.reject.reason, message: resolved.reject.message };
   if (resolved.clarify) {
-    return { kind: 'clarification', question: resolved.clarify.message, missing: resolved.clarify.missingSlots, options: resolved.clarify.options, confidence };
+    return { kind: 'clarification', question: resolved.clarify.message, missing: slotLabels(resolved.clarify.missingSlots), options: resolved.clarify.options, confidence };
   }
   const refs = resolved.refs;
 
   const missing = missingSlots(steps, refs);
   if (missing.length > 0) {
-    return { kind: 'clarification', question: slotQuestion(missing), missing, confidence };
+    return { kind: 'clarification', question: slotQuestion(missing), missing: slotLabels(missing), confidence };
   }
 
   const lacking = missingPermissions(steps, ctx.permissions);
@@ -103,7 +105,10 @@ async function mapInterpretation(
     summary: confirmationMessage,
     warnings: [],
     renderKind: 'command',
-    payload: { intent, confirmationMessage, steps, refs },
+    // Display-only, and deliberately narrow: the plan itself (intent, steps,
+    // resolved ids) stays server-side on the parked `confirmStep`. The screen
+    // gets Arabic sentences, never the plan.
+    payload: { lines: describeSteps(steps) },
     requiresConfirmation: true,
     // Trust the validated confidence so the platform's post-interpret gate does
     // not spuriously turn an accepted plan back into a clarification.

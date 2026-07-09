@@ -38,5 +38,21 @@
       "PowerShell(Test-NetConnection *)",
       "PowerShell($body = $null; try { $r = Invoke-WebRequest -Uri \"http://localhost:5173/api/v1/materials?pageSize=1000&isActive=true&sortBy=name&sortDir=asc\" -UseBasicParsing -TimeoutSec 10; Write-Output \"STATUS via vite proxy: $\\($r.StatusCode\\)\" } catch { Write-Output \"vite proxy err: $\\($_.Exception.Message\\)\" })"
     ]
-  }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"C:\\\\Users\\\\dev\\\\.claude\\\\skills\\\\impeccable\\\\scripts\\\\hook.mjs\"",
+            "timeout": 5,
+            "statusMessage": "Checking UI changes"
+          }
+        ]
+      }
+    ]
+  },
+  "description": "Impeccable design detector: runs after Edit/Write/MultiEdit on UI files and surfaces findings as system reminders."
 }

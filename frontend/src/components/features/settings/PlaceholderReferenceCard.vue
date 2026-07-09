@@ -105,9 +105,9 @@ async function copy(token: string) {
 
 <style scoped>
 .cp-placeholder-ref {
-  border: 1px solid var(--cp-border, #e3e8ef);
-  background: var(--cp-surface, #fff);
-  border-radius: var(--cp-radius-md, 12px);
+  border: 1px solid var(--cp-border);
+  background: var(--cp-surface);
+  border-radius: var(--cp-radius-md);
   padding: 18px 20px;
 }
 .cp-placeholder-ref__head {
@@ -126,7 +126,7 @@ async function copy(token: string) {
 .cp-placeholder-ref__group {
   background: var(--cp-surface-2, #fafbfd);
   border: 1px solid var(--cp-border, #e3e8ef);
-  border-radius: 10px;
+  border-radius: var(--cp-radius-xl);
   padding: 10px 12px;
 }
 .cp-placeholder-ref__tokens {
@@ -142,28 +142,30 @@ async function copy(token: string) {
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--cp-radius-md);
   background: transparent;
   border: 1px solid transparent;
   font-size: 0.78rem;
-  color: var(--cp-text, #0f172a);
+  color: var(--cp-text);
   cursor: pointer;
   transition:
-    background-color 0.15s,
-    border-color 0.15s;
+    background-color var(--cp-dur-base) var(--cp-ease),
+    border-color var(--cp-dur-base) var(--cp-ease);
   width: 100%;
   justify-content: space-between;
   text-align: start;
 }
 .cp-placeholder-ref__chip:hover {
-  background: var(--cp-primary-soft, #e6f0f9);
-  border-color: var(--cp-primary, #1e5f8c);
+  background: var(--cp-primary-soft);
+  border-color: var(--cp-primary);
 }
 .cp-placeholder-ref__chip--copied {
-  background: var(--cp-success-soft, #dcfce7);
-  border-color: var(--cp-success, #16a34a);
+  background: var(--cp-success-soft);
+  border-color: var(--cp-success);
 }
+/* The one sanctioned non-UI face: these are literal template placeholders the
+   user copies into a DOCX, so they are code, not label text. */
 .cp-placeholder-ref__chip code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--cp-font-mono);
 }
 </style>

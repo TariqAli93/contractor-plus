@@ -32,6 +32,31 @@ function readState(session: SessionHandle): EstimationWorkingState | null {
   return (session.workingState as EstimationWorkingState | null) ?? null;
 }
 
+// --- user-facing summary ------------------------------------------------------
+// The preview's headline is read by a contractor, not by a developer: it restates
+// the request in Arabic. Machine vocabulary (unit codes, English project types
+// from older drafts) is translated on the way out, never shown raw.
+const UNIT_LABELS_AR: Record<string, string> = { m2: 'متر مربع', 'm²': 'متر مربع', m: 'متر', ml: 'متر طولي' };
+const PROJECT_TYPE_AR: Record<string, string> = {
+  structural: 'هيكل',
+  finishing: 'تشطيب',
+  residential: 'سكني',
+  commercial: 'تجاري',
+  plumbing: 'سباكة',
+  electrical: 'كهرباء',
+  fence: 'سياج',
+};
+
+function summarize(projectType: string | null, areaValue: string | null, areaUnit: string | null): string {
+  const lines = ['تم التعرف على الطلب: إنشاء قالب تقدير.'];
+  if (projectType) lines.push(`نوع المشروع: ${PROJECT_TYPE_AR[projectType.toLowerCase()] ?? projectType}`);
+  if (areaValue) {
+    const unit = areaUnit ? UNIT_LABELS_AR[areaUnit.toLowerCase()] ?? areaUnit : '';
+    lines.push(`المساحة: ${areaValue} ${unit}`.trim());
+  }
+  return lines.join('\n');
+}
+
 // --- deterministic rules (re-homed calc.ts), registered into the rule engine.
 // RuleFn is (unknown)->unknown by contract; each rule narrows its own input. ---
 const estimationRules: RuleFn[] = [
@@ -99,7 +124,7 @@ async function interpret(ctx: PlatformContext, session: SessionHandle, text: str
 
   return {
     kind: 'preview',
-    summary: `تقدير: ${res.templateName}`,
+    summary: summarize(res.projectType, res.areaValue, res.areaUnit),
     warnings: [REVIEW_WARNING],
     renderKind: 'estimation',
     payload: {

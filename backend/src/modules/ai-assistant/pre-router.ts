@@ -1,8 +1,11 @@
 // ============================================================
-// Deterministic pre-router — runs BEFORE any LLM call. It short-circuits the
-// turns that must never cost a paid model round-trip or be misread as a project
-// query: help/capability questions, greetings, status questions, and the
-// confirm/cancel vocabulary. Everything else is `passthrough` (a real command).
+// Deterministic pre-router — runs BEFORE any LLM call. It recognizes the turns
+// that must never cost a paid model round-trip or be misread as a project query:
+// help/capability questions, greetings, smalltalk, status questions, and the
+// confirm/cancel vocabulary. Everything else is `passthrough`.
+//
+// This is the *detector* only. The conversation-mode classifier
+// (`conversation-mode.ts`) owns the routing decision built on top of it.
 //
 // Matching is DELIBERATELY strict to avoid false positives: a help/greeting is
 // only recognized when the WHOLE message is (essentially) that phrase AND it
@@ -10,16 +13,19 @@
 // "هلا سوّي مشروع باسم الزهراء" route as real commands, not canned replies.
 //
 // It reuses ai-command's normalizeArabic + classifyReply (one source of truth
-// with the legacy route), so the "ما في خطة بانتظار التأكيد" semantics can't drift.
+// with the legacy route), so the confirm/cancel semantics can't drift.
 // ============================================================
 
 import { CANCEL_WORDS, CONFIRM_WORDS, classifyReply, normalizeArabic } from '../ai-command-workflow/ai-command-workflow.arabic.js';
+
+export type SmalltalkTopic = 'thanks' | 'farewell' | 'identity';
 
 export type PreRoute =
   | { kind: 'confirm' }
   | { kind: 'cancel' }
   | { kind: 'help' }
   | { kind: 'greeting' }
+  | { kind: 'smalltalk'; topic: SmalltalkTopic }
   | { kind: 'status' }
   | { kind: 'no_pending' } // an explicit confirm/cancel word, but nothing is parked
   | { kind: 'passthrough' };
@@ -47,6 +53,20 @@ const STATUS_PHRASES = new Set(
     'وين وصلنا', 'وين وصلت', 'شنو الوضع', 'شنو وضعنا', 'شكو عندي معلق', 'شنو المعلق', 'شنو معلق',
     'حالة الجلسه', 'شنو الحالة',
   ].map(normalizeArabic),
+);
+
+// Ordinary human chatter that deserves a human reply, not a command pass. Same
+// whole-message + no-action-word discipline as the help/greeting sets.
+const SMALLTALK_PHRASES = new Map<string, SmalltalkTopic>(
+  (
+    [
+      ['شكرا', 'thanks'], ['شكرا الك', 'thanks'], ['شكرا جزيلا', 'thanks'], ['مشكور', 'thanks'],
+      ['تسلم', 'thanks'], ['يعطيك العافيه', 'thanks'], ['ممنون', 'thanks'], ['thanks', 'thanks'], ['thank you', 'thanks'],
+      ['باي', 'farewell'], ['مع السلامه', 'farewell'], ['الى اللقاء', 'farewell'], ['تصبح على خير', 'farewell'], ['bye', 'farewell'],
+      ['منو انت', 'identity'], ['من انت', 'identity'], ['شنو انت', 'identity'], ['شنو اسمك', 'identity'],
+      ['منو تكون', 'identity'], ['عرفني بنفسك', 'identity'],
+    ] as Array<[string, SmalltalkTopic]>
+  ).map(([phrase, topic]) => [normalizeArabic(phrase), topic]),
 );
 
 // Actionable command words. If ANY appears as a WHOLE TOKEN, the message is a
@@ -102,12 +122,14 @@ export function preRoute(text: string, hasPendingPlan: boolean): PreRoute {
   //    words ("وين"/"شكو"), so they are matched by exact phrase, before the guard.
   if (STATUS_PHRASES.has(phrase)) return { kind: 'status' };
 
-  // 3) Help / greeting — ONLY when the whole message IS the phrase AND it carries
-  //    no actionable command word. This is the guard that keeps
+  // 3) Help / greeting / smalltalk — ONLY when the whole message IS the phrase AND
+  //    it carries no actionable command word. This is the guard that keeps
   //    "ساعدني أضيف عميل" / "هلا سوّي مشروع" as real commands (passthrough).
   if (!containsActionWord(norm)) {
     if (HELP_PHRASES.has(phrase)) return { kind: 'help' };
     if (GREETING_PHRASES.has(phrase)) return { kind: 'greeting' };
+    const topic = SMALLTALK_PHRASES.get(phrase);
+    if (topic) return { kind: 'smalltalk', topic };
   }
 
   // 4) A bare confirm/cancel token with nothing parked → the "no pending" reply.

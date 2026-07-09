@@ -281,7 +281,7 @@ onMounted(load);
 .cp-currency-row__avatar {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--cp-radius-xl);
   background: var(--cp-primary-soft);
   color: var(--cp-primary);
   display: inline-flex;

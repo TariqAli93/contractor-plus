@@ -24,25 +24,10 @@ const toneClass = computed(() => {
   }
 });
 
-const accentVar = computed(() => {
-  switch (props.tone) {
-    case 'urgent':
-      return 'var(--cp-error)';
-    case 'attention':
-      return 'var(--cp-warning)';
-    case 'positive':
-      return 'var(--cp-success)';
-    default:
-      return 'transparent';
-  }
-});
 </script>
 
 <template>
-  <div
-    class="cp-panel cp-panel-hover cp-metric"
-    :style="{ '--cp-metric-accent': accentVar }"
-  >
+  <div class="cp-panel cp-panel-hover cp-metric">
     <div class="cp-metric__inner">
       <div class="min-w-0 flex-1">
         <div class="cp-eyebrow truncate">{{ title }}</div>
@@ -61,22 +46,11 @@ const accentVar = computed(() => {
 </template>
 
 <style scoped>
+/* Tone is carried by the icon tile alone. A coloured rail down the card edge is
+   the side-stripe pattern DESIGN.md bans — the sidebar's active-item rail is
+   the one sanctioned exception, and this is not it. */
 .cp-metric {
-  position: relative;
-  overflow: hidden;
   padding: 11px 13px;
-}
-.cp-metric::before {
-  content: '';
-  position: absolute;
-  inset-inline-start: 0;
-  top: 10px;
-  bottom: 10px;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--cp-metric-accent);
-  opacity: 0.9;
-  transition: opacity var(--cp-dur-base) var(--cp-ease);
 }
 .cp-metric__inner {
   display: flex;
