@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-09T00:00:00.000Z",
+  "title": "Design System: Contractor Plus",
+  "extensions": {
+    "colorMeta": {
+      "ledger-blue": {
+        "role": "primary",
+        "displayName": "Ledger Blue",
+        "canonical": "#1E5F8C",
+        "tonalRamp": ["#0B2436", "#123449", "#18455F", "#1E5F8C", "#3E7CA6", "#6E9EC3", "#A6C4DD", "#EAF2F9"]
+      },
+      "ochre-flag": {
+        "role": "tertiary",
+        "displayName": "Ochre Flag",
+        "canonical": "#D97706",
+        "tonalRamp": ["#3D2102", "#5C3203", "#8A4B04", "#B36106", "#D97706", "#E8963A", "#F2BE84", "#FEF3E1"]
+      },
+      "slate-secondary": {
+        "role": "secondary",
+        "displayName": "Slate Secondary",
+        "canonical": "#37474F",
+        "tonalRamp": ["#141B1F", "#1F292E", "#2A373D", "#37474F", "#52666F", "#7B8D96", "#AAB8BF", "#DCE3E6"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#0F172A",
+        "tonalRamp": ["#0F172A", "#1E293B", "#334155", "#475569", "#64748B", "#94A3B8", "#CBD5E1", "#F6F8FB"]
+      }
+    },
+    "typographyMeta": {
+      "metric": { "displayName": "Metric", "purpose": "Large financial figures and dashboard totals; tabular numerals." },
+      "title": { "displayName": "Title", "purpose": "Section and panel titles." },
+      "body": { "displayName": "Body", "purpose": "Default reading text and dialog bodies." },
+      "label": { "displayName": "Label", "purpose": "Buttons, nav items, form labels, toolbar text." },
+      "eyebrow": { "displayName": "Eyebrow", "purpose": "Sparse section kickers and sidebar group headings only." }
+    },
+    "shadows": [
+      { "name": "xs", "value": "0 1px 0 rgba(15,23,42,0.03)", "purpose": "Barely-there seat under a resting panel." },
+      { "name": "sm", "value": "0 1px 2px rgba(15,23,42,0.06)", "purpose": "Elevated cards and the panel default." },
+      { "name": "md", "value": "0 2px 8px -2px rgba(15,23,42,0.12)", "purpose": "Panel hover and low popovers." },
+      { "name": "lg", "value": "0 8px 24px -6px rgba(15,23,42,0.18)", "purpose": "Dialogs and true overlays." }
+    ],
+    "motion": [
+      { "name": "ease", "value": "cubic-bezier(0.2, 0.8, 0.2, 1)", "purpose": "Snappy default easing; no soft web bounce." },
+      { "name": "dur-fast", "value": "90ms", "purpose": "Hover/state feedback on small controls." },
+      { "name": "dur-base", "value": "140ms", "purpose": "Default transition for panels and content swaps." },
+      { "name": "dur-slow", "value": "220ms", "purpose": "Larger reveals; ceiling for in-flow motion." }
+    ],
+    "breakpoints": [
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The default committed action; Ledger Blue fill, compact desktop height.",
+      "html": "<button class=\"ds-btn-primary\">حفظ</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 28px; padding: 0 12px; background: #1E5F8C; color: #fff; font-family: 'Segoe UI', Tahoma, 'IBM Plex Sans Arabic', system-ui, sans-serif; font-size: 0.8rem; font-weight: 500; border: none; border-radius: 3px; cursor: pointer; transition: background 90ms cubic-bezier(0.2,0.8,0.2,1); } .ds-btn-primary:hover { background: #1A5379; } .ds-btn-primary:focus-visible { outline: 2px solid #1E5F8C; outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Lower-priority action; text-only in Ink Muted.",
+      "html": "<button class=\"ds-btn-ghost\">إلغاء</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; background: transparent; color: #64748B; font-family: 'Segoe UI', Tahoma, 'IBM Plex Sans Arabic', system-ui, sans-serif; font-size: 0.8rem; font-weight: 500; border: none; border-radius: 3px; cursor: pointer; transition: background 90ms cubic-bezier(0.2,0.8,0.2,1); } .ds-btn-ghost:hover { background: #FAFBFD; color: #0F172A; } .ds-btn-ghost:focus-visible { outline: 2px solid #1E5F8C; outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Compact outlined field; border shifts to Ledger Blue on focus, no glow.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"اسم العميل\" dir=\"rtl\" />",
+      "css": ".ds-input { width: 100%; height: 32px; padding: 0 10px; background: #fff; color: #0F172A; font-family: 'Segoe UI', Tahoma, 'IBM Plex Sans Arabic', system-ui, sans-serif; font-size: 0.875rem; border: 1px solid #E3E8EF; border-radius: 3px; transition: border-color 90ms cubic-bezier(0.2,0.8,0.2,1); } .ds-input::placeholder { color: #94A3B8; } .ds-input:hover { border-color: #CBD5E1; } .ds-input:focus { outline: none; border-color: #1E5F8C; }"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Reusable flat surface; hairline border, lifts on hover.",
+      "html": "<div class=\"ds-panel\"><div class=\"ds-panel-title\">الملخص المالي</div><div class=\"ds-panel-body\">إجمالي المدفوعات هذا الشهر</div></div>",
+      "css": ".ds-panel { background: #fff; border: 1px solid #E3E8EF; border-radius: 7px; box-shadow: 0 1px 0 rgba(15,23,42,0.03); padding: 16px; transition: box-shadow 140ms cubic-bezier(0.2,0.8,0.2,1), border-color 140ms cubic-bezier(0.2,0.8,0.2,1); } .ds-panel:hover { box-shadow: 0 2px 8px -2px rgba(15,23,42,0.12); border-color: #CBD5E1; } .ds-panel-title { font-family: 'Segoe UI', Tahoma, 'IBM Plex Sans Arabic', system-ui, sans-serif; font-size: 0.95rem; font-weight: 600; letter-spacing: -0.005em; color: #0F172A; } .ds-panel-body { margin-top: 6px; font-size: 0.875rem; color: #64748B; }"
+    },
+    {
+      "name": "Nav Item (Active)",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Sidebar item in its active state; soft-blue fill with a 3px inline-start accent rail.",
+      "html": "<a class=\"ds-nav-item ds-nav-item--active\" dir=\"rtl\"><svg class=\"ds-nav-ico\" viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M12 3 2 12h3v8h6v-6h2v6h6v-8h3z\"/></svg><span>المشاريع</span></a>",
+      "css": ".ds-nav-item { position: relative; display: flex; align-items: center; gap: 9px; min-height: 28px; margin: 1px 5px; padding: 0 8px; border-radius: 3px; font-family: 'Segoe UI', Tahoma, 'IBM Plex Sans Arabic', system-ui, sans-serif; font-size: 0.8rem; color: #0F172A; text-decoration: none; cursor: pointer; transition: background-color 90ms cubic-bezier(0.2,0.8,0.2,1); } .ds-nav-item:hover:not(.ds-nav-item--active) { background: #FAFBFD; } .ds-nav-item--active { background: #EAF2F9; color: #1E5F8C; font-weight: 600; } .ds-nav-item--active::before { content: ''; position: absolute; inset-block: 4px; inset-inline-start: 0; width: 3px; border-radius: 0 2px 2px 0; background: #1E5F8C; } .ds-nav-ico { flex-shrink: 0; }"
+    },
+    {
+      "name": "Status Orb",
+      "kind": "custom",
+      "refersTo": "status-orb",
+      "description": "Connection/health dot with an optional pulsing ring for live service/tunnel state.",
+      "html": "<span class=\"ds-orb ds-orb--success ds-orb--pulse\" role=\"img\" aria-label=\"متصل\"></span>",
+      "css": ".ds-orb { position: relative; display: inline-block; width: 10px; height: 10px; border-radius: 999px; background: #94A3B8; } .ds-orb--success { background: #16A34A; } .ds-orb--warning { background: #F59E0B; } .ds-orb--error { background: #DC2626; } .ds-orb--pulse::after { content: ''; position: absolute; inset: -4px; border-radius: 999px; background: inherit; opacity: 0.35; animation: ds-pulse 1.6s cubic-bezier(0.2,0.8,0.2,1) infinite; } @keyframes ds-pulse { 0% { transform: scale(0.6); opacity: 0.5; } 100% { transform: scale(1.6); opacity: 0; } } @media (prefers-reduced-motion: reduce) { .ds-orb--pulse::after { animation: none; } }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Small state chip backed by a soft semantic tint.",
+      "html": "<span class=\"ds-chip ds-chip--success\">معتمد</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 3px; font-family: 'Segoe UI', Tahoma, 'IBM Plex Sans Arabic', system-ui, sans-serif; font-size: 0.72rem; font-weight: 600; background: #EEF2F7; color: #64748B; } .ds-chip--success { background: #E7F6EC; color: #16A34A; } .ds-chip--warning { background: #FEF3E1; color: #B36106; } .ds-chip--error { background: #FDECEC; color: #DC2626; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Ledger Instrument",
+    "overview": "Contractor Plus is a precise desktop instrument for tracking money and work, not a web app that happens to run on a desktop. Its surface is built like a well-kept ledger: dense, tabular, hairline-ruled, with quiet chrome so the data is always the hero. It serves both a non-technical contractor owner and keyboard-bound office staff, so it must read calm and unintimidating at a glance while staying tight and fast under the fingers. The language is native-desktop business software rendered through Electron but never looking like a browser: structure from 1px hairline borders and tonal layering, low crisp corners, opaque flat toolbars, a thin bottom status strip, one UI type family, and tabular numerals. It rejects both sterile enterprise gray and consumer web-app fluff, and is Arabic-first and RTL by default.",
+    "keyCharacteristics": [
+      "Native-desktop density: hairline borders, low radii, opaque flat toolbars, a bottom status bar.",
+      "One quiet UI type family, tuned tight, with tabular numerals for money and metrics.",
+      "Calm blue chrome; a rare burnt-amber accent that only marks what needs attention.",
+      "Flat by default; shadows appear only on genuinely floating layers (menus, dialogs).",
+      "Keyboard-first, RTL-first, AA-contrast, reduced-motion aware."
+    ],
+    "rules": [
+      { "name": "The Ochre Flag Rule", "body": "The amber accent (#D97706) is never decoration. It appears only to flag the one thing on a screen that needs attention. If two things are amber, one is wrong.", "section": "colors" },
+      { "name": "The Blue-Is-Chrome Rule", "body": "Ledger Blue owns navigation, primary actions, selection, and focus, never body backgrounds or large fills. Chrome is calm; the data carries the screen.", "section": "colors" },
+      { "name": "The One Family Rule", "body": "No display font, no second family. Hierarchy comes from size and weight within Segoe UI.", "section": "typography" },
+      { "name": "The Tabular Numerals Rule", "body": "Every money value, metric, count, and clock uses tabular-nums so columns align and figures don't jitter as they update.", "section": "typography" },
+      { "name": "The Hairline Rule", "body": "Structure is drawn with 1px borders (#E3E8EF), not shadows. If a boundary needs emphasis, step the border to Border Strong (#CBD5E1); do not add a shadow to a non-floating element.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do define structure with 1px hairline borders (#E3E8EF) and tonal layering; reserve shadows for floating layers only.",
+      "Do keep the amber accent (#D97706) rare, one attention flag per screen.",
+      "Do use tabular-nums on every money value, metric, count, and clock.",
+      "Do use one UI family (Segoe UI stack); build hierarchy with size/weight, not new fonts.",
+      "Do keep radii low and crisp (3-7px), density compact, and forms Enter-to-save and fully keyboard-operable with a visible Ledger Blue focus ring.",
+      "Do author in logical properties (inline-start/end) so Arabic RTL is correct by default; verify AA contrast in both themes.",
+      "Do honor prefers-reduced-motion; keep transitions 90-220ms and state-conveying only."
+    ],
+    "donts": [
+      "Don't ship sterile enterprise gray, gray-on-gray with no hierarchy, no accent, and dead screens (SAP/legacy-ERP look).",
+      "Don't ship consumer web-app fluff: no big rounded cards, roomy padding, decorative gradients, marketing hero sections, or illustrated flourishes.",
+      "Don't use toy/gamified touches (mascots, confetti, candy color) or the dark-glass AI-product aesthetic (glassmorphism, neon gradients, purple-black).",
+      "Don't use background-clip: text gradient text, or a border-left/border-right greater than 1px as a colored stripe on cards, callouts, or alerts (the sidebar's 3px active rail is the one sanctioned exception).",
+      "Don't add glass/blur to the top bar or any non-floating chrome; desktop toolbars are opaque and flat.",
+      "Don't reach for a modal first, invent non-standard controls, or let a save button look different in two places."
+    ]
+  }
+}

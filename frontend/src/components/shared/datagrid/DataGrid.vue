@@ -1047,7 +1047,7 @@ function runRowAction(a: GridRowAction) {
 .cp-grid {
   position: relative;
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 5px;
+  border-radius: var(--cp-radius-md);
   overflow: hidden;
 }
 .cp-grid-bar {
@@ -1107,7 +1107,7 @@ function runRowAction(a: GridRowAction) {
 .cp-filter-input {
   width: 100%;
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  border-radius: 4px;
+  border-radius: var(--cp-radius-sm);
   padding: 1px 6px;
   font-size: 0.8rem;
   background: rgb(var(--v-theme-surface));

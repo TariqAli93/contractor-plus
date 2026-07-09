@@ -57,7 +57,7 @@ import {
 import reportsRoutes from './modules/reports/reports.routes.js';
 import auditRoutes from './modules/audit/audit.routes.js';
 import aiCommandRoutes from './modules/ai-command-workflow/ai-command-workflow.routes.js';
-import aiPlatformRoutes from './modules/ai-platform/ai-platform.routes.js';
+import assistantRoutes from './modules/ai-assistant/assistant.routes.js';
 import tunnelRoutes from './modules/tunnel/tunnel.routes.js';
 import settingsRoutes from './modules/settings/settings.routes.js';
 import uploadsRoutes from './modules/uploads/uploads.routes.js';
@@ -243,7 +243,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(reportsRoutes, { prefix: '/api/v1/reports' });
   await app.register(auditRoutes, { prefix: '/api/v1/audit' });
   await app.register(aiCommandRoutes, { prefix: '/api/v1/ai-command' });
-  await app.register(aiPlatformRoutes, { prefix: '/api/v1/ai' });
+  await app.register(assistantRoutes, { prefix: '/api/v1/ai' });
   await app.register(tunnelRoutes, { prefix: '/api/v1/tunnel' });
   await app.register(settingsRoutes, { prefix: '/api/v1/settings' });
   await app.register(uploadsRoutes, { prefix: '/api/v1/uploads' });

@@ -109,19 +109,14 @@ export const routes: RouteRecordRaw[] = [
     meta: { layout: 'app', access: { permissions: ['templates.update'], roles: WRITE_TEMPLATES } },
   },
 
-  // ----- Estimation Templates (AI Smart Estimation Template Builder) -----
+  // ----- Estimation Templates — plain records views (browse/inspect saved
+  //       templates). AI GENERATION now happens in the unified assistant (/ai),
+  //       so the standalone builder route is retired. -----
   {
     path: '/estimation-templates',
     name: 'estimation-templates',
     component: () => import('@/views/estimation-templates/EstimationTemplatesListView.vue'),
     meta: { layout: 'app', access: { permissions: ['estimation_templates.read'], roles: ALL_ROLES } },
-  },
-  {
-    // Declared before /:id so "build" is not captured as a template id.
-    path: '/estimation-templates/build',
-    name: 'estimation-template-builder',
-    component: () => import('@/views/estimation-templates/EstimationTemplateBuilderView.vue'),
-    meta: { layout: 'app', access: { permissions: ['estimation_templates.ai_generate'] } },
   },
   {
     path: '/estimation-templates/:id',
@@ -130,12 +125,20 @@ export const routes: RouteRecordRaw[] = [
     meta: { layout: 'app', access: { permissions: ['estimation_templates.read'], roles: ALL_ROLES } },
   },
 
-  // ----- AI Operating Platform (generic, tool-agnostic console) -----
+  // ----- The unified AI Assistant — the ONE entry point for every AI capability
+  //       (commands, estimation generation, queries, help). -----
   {
     path: '/ai',
     name: 'ai-console',
     component: () => import('@/views/ai/AiConsoleView.vue'),
     meta: { layout: 'app', access: { permissions: ['ai.session.use'], roles: ALL_ROLES } },
+  },
+  {
+    // Unified AI audit trail (all tools/categories) — admin view.
+    path: '/ai-audit',
+    name: 'ai-audit',
+    component: () => import('@/views/ai/AiAuditView.vue'),
+    meta: { layout: 'app', access: { permissions: ['audit.read'], roles: AUDIT_ROLES } },
   },
 
   // ----- Contracts -----

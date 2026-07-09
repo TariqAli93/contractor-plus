@@ -316,7 +316,7 @@ watch(
 
 <style scoped>
 .cp-pal-card {
-  border-radius: 14px;
+  border-radius: var(--cp-radius-xl);
   overflow: hidden;
 }
 .cp-pal-search {
@@ -355,7 +355,7 @@ watch(
   gap: 12px;
   width: 100%;
   padding: 9px 12px;
-  border-radius: 8px;
+  border-radius: var(--cp-radius-lg);
   text-align: start;
   color: rgb(var(--v-theme-on-surface));
   cursor: pointer;
@@ -396,7 +396,7 @@ watch(
   min-width: 18px;
   padding: 1px 5px;
   margin-inline-end: 3px;
-  border-radius: 4px;
+  border-radius: var(--cp-radius-sm);
   border: 1px solid rgba(var(--v-theme-on-surface), 0.2);
   background: rgba(var(--v-theme-on-surface), 0.06);
   font-size: 0.7rem;

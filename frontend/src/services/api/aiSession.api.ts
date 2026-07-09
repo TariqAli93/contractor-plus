@@ -1,5 +1,7 @@
 import { apiGet, apiPost } from './client';
 import type {
+  AiExecutionListResult,
+  AiExecutionQuery,
   AiSessionSummary,
   AiSessionView,
   AiToolInfo,
@@ -42,4 +44,8 @@ export const aiSessionApi = {
 
   /** Tool discovery (capabilities + required permissions). */
   listTools: (): Promise<AiToolInfo[]> => apiGet(`${BASE}/tools`),
+
+  /** Unified AI audit trail (all tools/categories), filterable. Gated audit.read. */
+  listAudit: (query: AiExecutionQuery = {}): Promise<AiExecutionListResult> =>
+    apiGet(`${BASE}/audit`, { params: query }),
 };

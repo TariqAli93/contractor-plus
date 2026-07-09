@@ -149,7 +149,7 @@ watch(
 .dot {
   width: 34px;
   height: 34px;
-  border-radius: 50%;
+  border-radius: var(--cp-radius-pill);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -183,7 +183,7 @@ watch(
   flex: 1;
   height: 2px;
   background: rgba(148, 163, 184, 0.18);
-  border-radius: 2px;
+  border-radius: var(--cp-radius-sm);
   margin-bottom: 22px;
   transition: background 0.3s ease;
 }

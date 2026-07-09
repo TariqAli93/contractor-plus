@@ -143,7 +143,7 @@ function fieldError(name: string): string {
         <v-icon icon="mdi-currency-usd" class="me-2" />
         {{ title }}
         <v-spacer />
-        <v-btn icon="mdi-close" variant="text" @click="close" />
+        <v-btn icon="mdi-close" variant="text" :aria-label="t('common.close')" @click="close" />
       </v-card-title>
       <v-divider />
       <v-card-text class="py-4">

@@ -9,6 +9,7 @@ import { useApiError } from '@/composables/useApiError';
 import SearchBar from '@/components/shared/SearchBar.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
 import RoleGate from '@/components/shared/RoleGate.vue';
+import AccessGate from '@/components/shared/AccessGate.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
@@ -120,11 +121,19 @@ async function handleDelete(row: EstimationTemplateSummary) {
 <template>
   <div>
     <PageHeader :title="t('estimation.title')" icon="mdi-robot-outline" :count="total || null" :hint="t('estimation.hint')">
-      <RoleGate :permissions="['estimation_templates.ai_generate']" :roles="AI_ROLES">
-        <v-btn color="primary" prepend-icon="mdi-creation" to="/estimation-templates/build">
+      <!-- Generation is unified into the assistant (/ai). The CTA must require
+           BOTH the ability to generate (estimation_templates.ai_generate) AND
+           access to the assistant (ai.session.use) — match="all" — so a custom
+           role can never see the button but be blocked at /ai. -->
+      <AccessGate
+        :permissions="['estimation_templates.ai_generate', 'ai.session.use']"
+        :roles="AI_ROLES"
+        match="all"
+      >
+        <v-btn color="primary" prepend-icon="mdi-creation" to="/ai">
           {{ t('estimation.new') }}
         </v-btn>
-      </RoleGate>
+      </AccessGate>
     </PageHeader>
 
     <v-card>
@@ -164,9 +173,9 @@ async function handleDelete(row: EstimationTemplateSummary) {
         </template>
         <template #[`item.actions`]="{ item }">
           <div class="flex justify-end gap-1" @click.stop>
-            <v-btn icon="mdi-eye-outline" size="small" variant="text" @click="openDetail(item)" />
+            <v-btn icon="mdi-eye-outline" size="small" variant="text" :aria-label="t('estimation.view')" @click="openDetail(item)" />
             <RoleGate :permissions="['estimation_templates.delete']" :roles="DELETE_ROLES">
-              <v-btn icon="mdi-delete-outline" size="small" variant="text" color="error" @click="handleDelete(item)" />
+              <v-btn icon="mdi-delete-outline" size="small" variant="text" color="error" :aria-label="t('common.delete')" @click="handleDelete(item)" />
             </RoleGate>
           </div>
         </template>

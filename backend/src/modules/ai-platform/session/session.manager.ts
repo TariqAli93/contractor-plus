@@ -113,16 +113,36 @@ export class SessionManager {
     );
   }
 
-  parkPlan(session: AiSession, plan: Plan): Promise<AiSession> {
+  /** Drop the working state and its owner — used when a guided conversation ends
+   *  and a tool takes over (Prisma treats `undefined` as "leave alone", so a
+   *  clear needs the explicit JsonNull). */
+  clearWorkingState(session: AiSession): Promise<AiSession> {
+    return this.repo.updateSession(session.id, { activeTool: null, workingState: Prisma.JsonNull });
+  }
+
+  parkPlan(session: AiSession, plan: Plan, activeTool?: string | null): Promise<AiSession> {
     return this.repo.updateSession(session.id, {
       pendingPlan: plan as unknown as Prisma.InputJsonValue,
       status: 'AWAITING_CONFIRMATION',
+      ...(activeTool ? { activeTool } : {}),
       expiresAt: nextExpiry(),
     });
   }
 
   clearPlan(session: AiSession): Promise<AiSession> {
     return this.repo.updateSession(session.id, { pendingPlan: Prisma.JsonNull, status: 'ACTIVE' });
+  }
+
+  /** Atomically claim a parked plan for execution: flip AWAITING_CONFIRMATION →
+   *  ACTIVE in ONE conditional update. Only the sole winner gets `count === 1`,
+   *  so two concurrent /confirm calls can never both execute the same plan
+   *  (the platform previously lacked this guard that ai-command always had). */
+  async claim(session: AiSession): Promise<boolean> {
+    const res = await this.prisma.aiSession.updateMany({
+      where: { id: session.id, status: 'AWAITING_CONFIRMATION' },
+      data: { status: 'ACTIVE' },
+    });
+    return res.count === 1;
   }
 
   complete(session: AiSession, client?: DbClient): Promise<AiSession> {

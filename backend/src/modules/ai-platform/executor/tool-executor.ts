@@ -26,12 +26,14 @@ export async function executePlan(
   const output: ExecutionResult = { executedActions: [], createdEntityIds: {}, result: null };
   const refs: Record<string, string> = { ...handle.contextRefs };
 
-  const record = (outcome: ActionOutcome | null): void => {
+  const record = (outcome: ActionOutcome | ActionOutcome[] | null): void => {
     if (!outcome) return;
-    output.executedActions.push({ entity: outcome.entity, entityId: outcome.entityId, operation: outcome.operation });
-    output.createdEntityIds[outcome.refKey ?? outcome.entity.toLowerCase()] = outcome.entityId;
-    if (outcome.data !== undefined) output.result = outcome.data;
-    if (outcome.refKey) refs[outcome.refKey] = outcome.entityId;
+    for (const o of Array.isArray(outcome) ? outcome : [outcome]) {
+      output.executedActions.push({ entity: o.entity, entityId: o.entityId, operation: o.operation });
+      output.createdEntityIds[o.refKey ?? o.entity.toLowerCase()] = o.entityId;
+      if (o.data !== undefined) output.result = o.data;
+      if (o.refKey) refs[o.refKey] = o.entityId;
+    }
   };
 
   const mutations = plan.steps.filter((s) => registry.getAction(qualify(s))?.action.kind === 'mutation');

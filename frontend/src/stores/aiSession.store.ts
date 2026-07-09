@@ -5,6 +5,7 @@ import { useToast } from '@/composables/useToast';
 import { llmErrorMessage } from '@/services/llmErrorMessages';
 import { t } from '@/i18n';
 import type {
+  AiMessageView,
   AiSessionSummary,
   PlatformCancelResult,
   PlatformClarificationResult,
@@ -18,8 +19,8 @@ export type AiTurn =
   | { role: 'user'; text: string }
   | { role: 'assistant'; result: PlatformMessageResult | PlatformCancelResult };
 
-// Plain-Arabic fallback for a caught exception (mirrors aiCommand.store). The
-// interceptor already normalizes API errors to `ApiError` with a `.message`.
+// Plain-Arabic fallback for a caught exception. The interceptor already
+// normalizes API errors to `ApiError` with a `.message`.
 function errMsg(e: unknown): string {
   if (e && typeof e === 'object' && 'message' in e) {
     return String((e as { message: unknown }).message);
@@ -130,6 +131,55 @@ export const useAiSessionStore = defineStore('aiSession', () => {
     }
   }
 
+  // Rebuild a past turn from a stored message. History shows as text bubbles; a
+  // parked preview's full payload is NOT persisted per-message, so a switched-in
+  // session renders history + lets you continue, but does not re-hydrate an
+  // interactive preview (send a fresh message to resume that flow).
+  function messageToTurn(m: AiMessageView): AiTurn {
+    if (m.role === 'USER') return { role: 'user', text: m.content };
+    const sid = sessionId.value ?? '';
+    const conf = m.confidence ?? 0;
+    switch (m.kind) {
+      case 'clarification':
+        return { role: 'assistant', result: { kind: 'clarification', sessionId: sid, question: m.content, missing: [], confidence: conf } };
+      case 'preview':
+        return { role: 'assistant', result: { kind: 'preview', sessionId: sid, toolName: m.toolName ?? '', renderKind: m.toolName ?? 'generic', summary: m.content, warnings: [], payload: null, requiresConfirmation: false, confidence: conf } };
+      case 'query':
+        return { role: 'assistant', result: { kind: 'query', sessionId: sid, toolName: m.toolName, message: m.content, data: null } };
+      case 'execution':
+        return { role: 'assistant', result: { kind: 'execution', sessionId: sid, toolName: m.toolName, message: m.content, executedActions: [], createdEntityIds: {}, result: null } };
+      case 'answer':
+        return { role: 'assistant', result: { kind: 'answer', sessionId: sid, message: m.content } };
+      case 'error':
+        return { role: 'assistant', result: { kind: 'error', sessionId: sid, reason: 'error', message: m.content } };
+      default:
+        return { role: 'assistant', result: { kind: 'rejected', sessionId: sid, reason: 'info', message: m.content } };
+    }
+  }
+
+  /** Switch the console to an existing session and load its history. */
+  async function selectSession(id: string) {
+    if (processing.value || id === sessionId.value) return;
+    error.value = null;
+    processing.value = true;
+    try {
+      const view = await aiSessionApi.getSession(id);
+      sessionId.value = view.id;
+      turns.value = view.messages.map(messageToTurn);
+      pending.value = null;
+      clarification.value = null;
+    } catch (e) {
+      error.value = errMsg(e);
+    } finally {
+      processing.value = false;
+    }
+  }
+
+  /** Start a fresh conversation (a new session is opened on the next message). */
+  function newSession() {
+    reset();
+  }
+
   function reset() {
     sessionId.value = null;
     turns.value = [];
@@ -151,6 +201,8 @@ export const useAiSessionStore = defineStore('aiSession', () => {
     confirm,
     cancel,
     loadSessions,
+    selectSession,
+    newSession,
     reset,
   };
 });
