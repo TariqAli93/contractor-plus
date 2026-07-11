@@ -1,9 +1,9 @@
 // Delimited-text interchange for the data grid. Two dialects share one parser:
 //   - TSV (tab) is what Excel / Google Sheets put on the CLIPBOARD as
-//     text/plain — used by in-grid copy/paste.
+//     text/plain - used by in-grid copy/paste.
 //   - CSV (comma) is the on-disk export/import format Excel opens directly.
 // A cell containing the delimiter, a newline, or a quote is wrapped in double
-// quotes with embedded quotes doubled — the dialect Excel reads back.
+// quotes with embedded quotes doubled - the dialect Excel reads back.
 
 export type TsvMatrix = string[][];
 

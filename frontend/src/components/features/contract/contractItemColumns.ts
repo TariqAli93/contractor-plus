@@ -8,7 +8,7 @@ export interface ContractItemColumnsCtx {
 
 /** Read-only column model for contract line-items. The backend has no per-item
  *  CRUD (items come from the template / estimate), so these columns carry no
- *  `type` — the grid renders them display-only but still sorts, filters,
+ *  `type` - the grid renders them display-only but still sorts, filters,
  *  copies, and exports them. */
 export function buildContractItemColumns({ t, money }: ContractItemColumnsCtx): GridColumn[] {
   return [

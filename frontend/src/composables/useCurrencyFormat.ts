@@ -8,7 +8,7 @@ import { formatMoney, type FormatMoneyOptions } from '@/lib/currency-format';
 export function useCurrencyFormat() {
   const settings = useSettingsStore();
 
-  // Trigger lazy load on first mount — but only ONCE across the app.
+  // Trigger lazy load on first mount - but only ONCE across the app.
   // ensureLoaded() de-dupes concurrent and repeated calls.
   onMounted(() => {
     void settings.ensureLoaded();

@@ -14,7 +14,7 @@ import { resolveAssetUrl } from '@/lib/asset-url';
 //   - "compact": inline header use (e.g. settings page header)
 //
 // The fallback is a Material icon inside a coloured tile, NEVER an <img>
-// requesting an unknown URL — that's what causes the console image spam
+// requesting an unknown URL - that's what causes the console image spam
 // the spec calls out.
 
 type Variant = 'sidebar' | 'login' | 'compact';
@@ -41,7 +41,7 @@ const settings = useSettingsStore();
 const failed = ref(false);
 
 onMounted(() => {
-  // Hydrate on first mount — safe to call repeatedly thanks to in-flight
+  // Hydrate on first mount - safe to call repeatedly thanks to in-flight
   // dedup inside the store. Skipped silently for unauthenticated mounts;
   // the login variant explicitly skips this.
   if (props.variant !== 'login') {
@@ -80,7 +80,7 @@ const markStyle = computed(() => ({
 
 function onImageError() {
   // Hard-flip to the fallback. The <img> is removed from the DOM by v-if,
-  // so the browser will NOT retry — that's the loop guard the spec asks for.
+  // so the browser will NOT retry - that's the loop guard the spec asks for.
   failed.value = true;
 }
 </script>
@@ -131,9 +131,9 @@ function onImageError() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--cp-radius-md, 10px);
-  background: var(--cp-primary-soft, #e6f0f9);
-  color: var(--cp-primary, #1e5f8c);
+  border-radius: var(--cp-radius-md, 5px);
+  background: var(--cp-primary-soft, #D9EAF7);
+  color: var(--cp-primary, #234E70);
   overflow: hidden;
   position: relative;
 }
@@ -142,7 +142,7 @@ function onImageError() {
   height: 100%;
   object-fit: contain;
   /* Subtle padding so a square uploaded logo isn't flush against the tile
-     edges — works for both transparent PNGs and rectangular JPGs. */
+     edges - works for both transparent PNGs and rectangular JPGs. */
   padding: 4px;
   background: white;
 }
@@ -165,7 +165,7 @@ function onImageError() {
 .cp-logo__label {
   font-weight: 600;
   font-size: 0.95rem;
-  color: var(--cp-text, #0f172a);
+  color: var(--cp-text, #1A202C);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -175,6 +175,6 @@ function onImageError() {
 }
 .cp-logo__caption {
   font-size: 0.78rem;
-  color: var(--cp-text-muted, #64748b);
+  color: var(--cp-text-muted, #4A5568);
 }
 </style>

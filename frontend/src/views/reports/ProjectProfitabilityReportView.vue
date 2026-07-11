@@ -11,6 +11,7 @@ import EmptyState from '@/components/shared/EmptyState.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import ProjectStatusBadge from '@/components/features/project/ProjectStatusBadge.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
+import DataTable from '@/components/shared/DataTable.vue';
 
 const router = useRouter();
 
@@ -130,11 +131,11 @@ function profitClass(p: string | null) {
 </script>
 
 <template>
-  <div>
+  <div class="cp-fill">
     <PageHeader :title="t('reports.profitability.title')" back="/reports" />
 
-    <v-card>
-      <v-card-text>
+    <section class="cp-pane">
+      <div class="cp-pane__toolbar">
         <v-chip-group
           :model-value="statusValue"
           mandatory
@@ -150,14 +151,12 @@ function profitClass(p: string | null) {
             {{ opt.title }}
           </v-chip>
         </v-chip-group>
-      </v-card-text>
+      </div>
 
-      <v-divider />
+      <ErrorState v-if="error" :error="error" class="ma-3" @retry="fetch" />
 
-      <ErrorState v-if="error" :error="error" class="my-4" @retry="fetch" />
-
-      <v-data-table-server
-        v-else
+      <div v-else class="cp-pane__body">
+        <DataTable
         :items="items"
         :items-length="total"
         :headers="columns"
@@ -171,7 +170,7 @@ function profitClass(p: string | null) {
         @click:row="onRowClick"
       >
         <template #[`item.customerName`]="{ item }">
-          {{ item.customerName ?? '—' }}
+          {{ item.customerName ?? '-' }}
         </template>
         <template #[`item.status`]="{ item }">
           <ProjectStatusBadge :status="item.status" />
@@ -193,7 +192,8 @@ function profitClass(p: string | null) {
         <template #no-data>
           <EmptyState :title="t('reports.profitability.empty')" icon="mdi-chart-bar" />
         </template>
-      </v-data-table-server>
-    </v-card>
+        </DataTable>
+      </div>
+    </section>
   </div>
 </template>

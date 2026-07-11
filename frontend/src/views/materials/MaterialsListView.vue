@@ -181,40 +181,65 @@ async function onDeleteRows(ids: string[]) {
 </script>
 
 <template>
-  <div>
+  <div class="cp-fill">
     <PageHeader :title="t('nav.materials')" icon="mdi-cube-outline" :count="total || null" :hint="t('help.materials')">
       <RoleGate :permissions="['materials.create']" :roles="WRITE_ROLES">
-        <v-btn color="primary" prepend-icon="mdi-plus" to="/materials/new">
+        <v-btn color="primary" size="small" variant="flat" prepend-icon="mdi-plus" to="/materials/new">
           {{ t('materials.new') }}
         </v-btn>
       </RoleGate>
     </PageHeader>
 
-    <p class="text-caption text-medium-emphasis mb-2">{{ t('datagrid.hint') }}</p>
+    <ErrorState v-if="error" :error="error" class="ma-3" @retry="refresh" />
 
-    <ErrorState v-if="error" :error="error" class="my-4" @retry="refresh" />
+    <!-- No properties pane here on purpose: this grid edits in place, so a
+         property sheet beside it would be a second, worse editor. The DataGrid
+         *is* the detail view. -->
+    <div v-else class="cp-pane">
+      <div class="cp-pane__toolbar">
+        <span class="cp-grid-hint">{{ t('datagrid.hint') }}</span>
+      </div>
 
-    <DataGrid
-      v-else
-      :rows="gridRows"
-      :columns="columns"
-      :editable="canEdit"
-      :show-new-row="canCreate"
-      :new-row-factory="newRowFactory"
-      :selectable="canDelete"
-      :row-actions="rowActions"
-      :enable-csv="true"
-      export-name="materials"
-      :loading="loading"
-      height="600px"
-      @cell-commit="onCellCommit"
-      @new-commit="onNewCommit"
-      @paste="onPaste"
-      @delete-rows="onDeleteRows"
-    />
+      <div class="cp-pane__body cp-grid-host">
+        <DataGrid
+          :rows="gridRows"
+          :columns="columns"
+          :editable="canEdit"
+          :show-new-row="canCreate"
+          :new-row-factory="newRowFactory"
+          :selectable="canDelete"
+          :row-actions="rowActions"
+          :enable-csv="true"
+          export-name="materials"
+          :loading="loading"
+          height="100%"
+          @cell-commit="onCellCommit"
+          @new-commit="onNewCommit"
+          @paste="onPaste"
+          @delete-rows="onDeleteRows"
+        />
+      </div>
 
-    <p v-if="total > materials.length" class="text-caption text-medium-emphasis mt-2">
-      {{ t('datagrid.truncated').replace('{shown}', String(materials.length)).replace('{total}', String(total)) }}
-    </p>
+      <div v-if="total > materials.length" class="cp-pane__foot">
+        {{ t('datagrid.truncated').replace('{shown}', String(materials.length)).replace('{total}', String(total)) }}
+      </div>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.cp-grid-hint {
+  font-size: 0.72rem;
+  color: var(--cp-text-muted);
+}
+/* The grid owns its own scrolling; the pane body just gives it the box. */
+.cp-grid-host {
+  overflow: hidden;
+  display: flex;
+  min-height: 0;
+}
+.cp-grid-host > :deep(*) {
+  flex: 1;
+  min-height: 0;
+}
+</style>

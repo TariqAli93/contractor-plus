@@ -11,6 +11,6 @@ defineProps<{ item: ContractItem }>();
     <td>{{ item.unit }}</td>
     <td class="text-end">{{ Number(item.quantity) }}</td>
     <td class="text-end"><MoneyDisplay :amount="item.estimatedPrice" /></td>
-    <td>{{ item.notes ?? '—' }}</td>
+    <td>{{ item.notes ?? '-' }}</td>
   </tr>
 </template>

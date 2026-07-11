@@ -46,7 +46,7 @@ export const useSettingsStore = defineStore('settings', () => {
       defaultCurrency.value = res.items.find((c) => c.isDefault) ?? null;
       currencyLoaded.value = true;
     } catch (err) {
-      // Silent on bootstrap — unauthenticated users get the formatter fallback.
+      // Silent on bootstrap - unauthenticated users get the formatter fallback.
       currencyError.value = err;
     } finally {
       currencyLoading.value = false;
@@ -87,7 +87,7 @@ export const useSettingsStore = defineStore('settings', () => {
       companyAssets.value = await uploadsApi.getCompanyAssets();
       assetsLoaded.value = true;
     } catch (err) {
-      // Anonymous users will hit 401 — that's fine; the logo simply falls
+      // Anonymous users will hit 401 - that's fine; the logo simply falls
       // back to the app icon. Don't toast.
       assetsError.value = err;
     } finally {

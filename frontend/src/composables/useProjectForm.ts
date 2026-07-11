@@ -58,7 +58,7 @@ export function useProjectForm(id?: string) {
         v === '' || v === undefined ? null : v;
 
       if (id) {
-        // Update — contractId is immutable post-creation, omit it from PATCH.
+        // Update - contractId is immutable post-creation, omit it from PATCH.
         await projectsApi.update(id, {
           name: form.value.name,
           startDate: emptyToNull(form.value.startDate),

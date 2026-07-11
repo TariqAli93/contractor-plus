@@ -48,7 +48,7 @@ const daysDelayed = computed(() => {
       <div>
         <div class="text-medium-emphasis text-xs">{{ t('projects.fields.customer') }}</div>
         <div class="text-subtitle-1">
-          {{ project.contract?.customer.name ?? '—' }}
+          {{ project.contract?.customer.name ?? '-' }}
         </div>
       </div>
       <div>
@@ -60,7 +60,7 @@ const daysDelayed = computed(() => {
         >
           {{ project.contract.contractNumber }}
         </button>
-        <div v-else class="text-subtitle-1 text-medium-emphasis">—</div>
+        <div v-else class="text-subtitle-1 text-medium-emphasis">-</div>
       </div>
       <div>
         <div class="text-medium-emphasis text-xs">{{ t('projects.fields.startDate') }}</div>

@@ -26,11 +26,11 @@ const enableDisabledReason = computed(() => {
 </script>
 
 <template>
-  <v-card variant="outlined" rounded="lg" class="pa-5">
-    <div class="text-subtitle-1 font-medium mb-1">
+  <section class="cp-panel cp-tunnel-actions">
+    <h2 class="cp-tunnel-actions__title">
       {{ t('tunnel.actions.title') }}
-    </div>
-    <p class="text-body-2 text-medium-emphasis mb-4">
+    </h2>
+    <p class="cp-tunnel-actions__copy">
       {{ t('tunnel.actions.subtitle') }}
     </p>
 
@@ -64,5 +64,11 @@ const enableDisabledReason = computed(() => {
       <v-icon icon="mdi-information-outline" size="small" class="me-1" />
       {{ enableDisabledReason }}
     </p>
-  </v-card>
+  </section>
 </template>
+
+<style scoped>
+.cp-tunnel-actions { padding: 8px; }
+.cp-tunnel-actions__title { margin: 0 0 2px; color: var(--cp-text); font-size: 0.82rem; font-weight: 600; }
+.cp-tunnel-actions__copy { margin: 0 0 8px; color: var(--cp-text-muted); font-size: 0.76rem; }
+</style>

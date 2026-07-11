@@ -9,7 +9,7 @@ import { readXsrfToken } from '@/lib/csrf';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
-// Endpoints excluded from the 401-refresh loop — failing here is a real
+// Endpoints excluded from the 401-refresh loop - failing here is a real
 // auth failure (bad credentials / invalid refresh token), not "token expired".
 const AUTH_BYPASS_PATHS = ['/auth/login', '/auth/refresh', '/auth/logout'];
 

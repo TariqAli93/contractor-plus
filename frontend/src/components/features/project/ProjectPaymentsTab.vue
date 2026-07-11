@@ -41,7 +41,7 @@ const { canAccess } = useAccess();
 const { confirm } = useConfirm();
 const { format: money } = useCurrencyFormat();
 
-// Payments are finance-only — engineers/viewers read but can't post.
+// Payments are finance-only - engineers/viewers read but can't post.
 const WRITE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ACCOUNTANT];
 const ADD_PERMS = ['payments.create'];
 const canCreate = computed(() => canAccess({ permissions: ADD_PERMS, roles: WRITE_ROLES }));
@@ -235,7 +235,7 @@ async function onCreated() {
           <MoneyDisplay :amount="summary.remainingBalance" />
         </SummaryCard>
         <SummaryCard :title="t('projects.payments.summary.collection')" icon="mdi-percent-outline">
-          {{ summary.collectionPercentage !== null ? `${summary.collectionPercentage}%` : '—' }}
+          {{ summary.collectionPercentage !== null ? `${summary.collectionPercentage}%` : '-' }}
         </SummaryCard>
       </div>
 

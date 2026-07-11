@@ -95,10 +95,6 @@ export interface ServiceConfig {
   frontendDist?: string;
   db: ServiceDbConfig;
   jwtSecret: string;
-  /** Dedicated key for at-rest secret encryption (lib/crypto). Optional for
-   *  backward compatibility — when absent the backend falls back to jwtSecret and
-   *  warns at startup. */
-  secretEncryptionKey?: string;
   corsOrigin?: string;
 }
 
@@ -117,8 +113,6 @@ export interface ResolvedServiceConfig {
   /** Database name — used by the single-source-of-truth mismatch guard. */
   expectedDbName: string;
   jwtSecret: string;
-  /** Dedicated at-rest secret-encryption key (optional; falls back to jwtSecret). */
-  secretEncryptionKey?: string;
   /** service.json corsOrigin, or the derived http://127.0.0.1:<port>. */
   corsOrigin: string;
   /** Absolute path to the SPA dist the service serves, if configured. */
@@ -377,7 +371,6 @@ export const ServiceConfigSchema = {
       frontendDist: optionalString(root, ['frontendDist'], 'frontendDist', configPath),
       db,
       jwtSecret: requireString(root, 'jwtSecret', 'jwtSecret', configPath, { minLength: 32 }),
-      secretEncryptionKey: optionalString(root, ['secretEncryptionKey'], 'secretEncryptionKey', configPath),
       corsOrigin: optionalString(root, ['corsOrigin'], 'corsOrigin', configPath),
     };
   },
@@ -469,7 +462,6 @@ export function loadServiceConfig(options: LoadServiceConfigOptions = {}): Resol
     databaseUrl: buildDatabaseUrl(cfg.db),
     expectedDbName: cfg.db.database,
     jwtSecret: cfg.jwtSecret,
-    secretEncryptionKey: cfg.secretEncryptionKey,
     corsOrigin,
     frontendDist: cfg.frontendDist,
   };

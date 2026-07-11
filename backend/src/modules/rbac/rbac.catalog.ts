@@ -1,5 +1,4 @@
 import { RoleName } from '@contractor-plus/shared';
-import { TOOL_CONTRIBUTED_PERMISSIONS } from '../ai-platform/tools/tool-permissions.js';
 
 // ============================================================
 // Permission catalog — the single, code-defined source of truth.
@@ -22,7 +21,6 @@ export const PERMISSION_MODULES = [
   'customers',
   'materials',
   'templates',
-  'estimation_templates',
   'contracts',
   'projects',
   'costs',
@@ -35,7 +33,6 @@ export const PERMISSION_MODULES = [
   'users',
   'rbac',
   'profile',
-  'ai',
 ] as const;
 export type PermissionModule = (typeof PERMISSION_MODULES)[number];
 
@@ -44,10 +41,7 @@ function p(key: string, module: PermissionModule, action: string, displayName: s
   return { key, module, action, displayName };
 }
 
-// Base catalog — every permission EXCEPT those owned by AI tools (estimation_*
-// and materials.create_from_assistant). Tool permissions are defined once by the
-// tools themselves and merged in below, so they can never drift out of sync.
-const BASE_PERMISSION_CATALOG: PermissionDef[] = [
+export const PERMISSION_CATALOG: PermissionDef[] = [
   p('dashboard.read', 'dashboard', 'read', 'عرض لوحة التحكم'),
 
   p('customers.read', 'customers', 'read', 'عرض العملاء'),
@@ -59,14 +53,11 @@ const BASE_PERMISSION_CATALOG: PermissionDef[] = [
   p('materials.create', 'materials', 'create', 'إنشاء مادة'),
   p('materials.update', 'materials', 'update', 'تعديل مادة'),
   p('materials.delete', 'materials', 'delete', 'حذف مادة'),
-  // materials.create_from_assistant is tool-owned → merged in from the tools.
 
   p('templates.read', 'templates', 'read', 'عرض القوالب'),
   p('templates.create', 'templates', 'create', 'إنشاء قالب'),
   p('templates.update', 'templates', 'update', 'تعديل قالب'),
   p('templates.delete', 'templates', 'delete', 'حذف قالب'),
-
-  // estimation_templates.* are tool-owned → merged in from the tools below.
 
   p('contracts.read', 'contracts', 'read', 'عرض العقود'),
   p('contracts.create', 'contracts', 'create', 'إنشاء عقد'),
@@ -130,19 +121,6 @@ const BASE_PERMISSION_CATALOG: PermissionDef[] = [
   p('profile.read', 'profile', 'read', 'عرض الملف الشخصي'),
   p('profile.update', 'profile', 'update', 'تعديل الملف الشخصي'),
   p('profile.change_password', 'profile', 'change_password', 'تغيير كلمة المرور'),
-
-  p('ai.use', 'ai', 'use', 'استخدام مساعد الأوامر الذكي'),
-  p('ai.settings.manage', 'ai', 'settings.manage', 'إدارة إعدادات مساعد الأوامر الذكي (LLM)'),
-  p('ai.session.use', 'ai', 'session.use', 'استخدام منصة المساعد الذكي'),
-];
-
-// The single source of truth: the base catalog PLUS every AI tool's contributed
-// permissions (deduped by key). Consuming the tools' own definitions means a tool
-// permission can never be silently absent from RBAC seeding / the OWNER super-set.
-const BASE_KEYS = new Set(BASE_PERMISSION_CATALOG.map((d) => d.key));
-export const PERMISSION_CATALOG: PermissionDef[] = [
-  ...BASE_PERMISSION_CATALOG,
-  ...TOOL_CONTRIBUTED_PERMISSIONS.filter((d) => !BASE_KEYS.has(d.key)),
 ];
 
 export const ALL_PERMISSION_KEYS: string[] = PERMISSION_CATALOG.map((d) => d.key);
@@ -162,9 +140,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
   [RoleName.ADMIN]: [
     'dashboard.read',
     'customers.read', 'customers.create', 'customers.update', 'customers.delete',
-    'materials.read', 'materials.create', 'materials.update', 'materials.delete', 'materials.create_from_assistant',
+    'materials.read', 'materials.create', 'materials.update', 'materials.delete',
     'templates.read', 'templates.create', 'templates.update', 'templates.delete',
-    'estimation_templates.read', 'estimation_templates.create', 'estimation_templates.update', 'estimation_templates.delete', 'estimation_templates.ai_generate',
     'contracts.read', 'contracts.create', 'contracts.update', 'contracts.delete', 'contracts.approve', 'contracts.cancel', 'contracts.generate_docx',
     'projects.read', 'projects.create', 'projects.update', 'projects.delete', 'projects.start', 'projects.pause', 'projects.resume', 'projects.complete', 'projects.cancel',
     'costs.read', 'costs.create', 'costs.update', 'costs.delete',
@@ -173,10 +150,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'reports.read',
     'audit.read',
     'tunnel.manage',
-    'settings.read', 'settings.manage', 'settings.company.manage', 'settings.currency.manage', 'settings.contract_templates.manage', 'ai.settings.manage',
+    'settings.read', 'settings.manage', 'settings.company.manage', 'settings.currency.manage', 'settings.contract_templates.manage',
     'users.read', 'users.create', 'users.update', 'users.delete', 'users.reset_password', 'users.activate',
     'rbac.read', // ADMIN can view, but NOT rbac.manage
-    'ai.use', 'ai.session.use',
     ...PROFILE,
   ],
   [RoleName.ACCOUNTANT]: [
@@ -188,22 +164,19 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'payments.read', 'payments.create', 'payments.update', 'payments.delete', 'payments.mark_paid', 'payments.cancel',
     'change_orders.read', 'change_orders.create', 'change_orders.update', 'change_orders.approve', 'change_orders.delete',
     'reports.read',
-    'ai.use', 'ai.session.use',
     ...PROFILE,
   ],
   [RoleName.ENGINEER]: [
     'dashboard.read',
     'customers.read',
-    'materials.read', 'materials.create_from_assistant',
+    'materials.read',
     'templates.read',
-    'estimation_templates.read', 'estimation_templates.create', 'estimation_templates.ai_generate',
     'contracts.read',
     'projects.read', 'projects.create', 'projects.update', 'projects.start', 'projects.pause', 'projects.resume', 'projects.complete', 'projects.cancel',
     'costs.read', 'costs.create', 'costs.update', 'costs.delete',
     'payments.read',
     'change_orders.read',
     'reports.read',
-    'ai.use', 'ai.session.use',
     ...PROFILE,
   ],
   [RoleName.VIEWER]: [
@@ -211,13 +184,11 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'customers.read',
     'materials.read',
     'templates.read',
-    'estimation_templates.read',
     'contracts.read',
     'projects.read',
     'costs.read',
     'payments.read',
     'change_orders.read',
-    'ai.use', 'ai.session.use',
     ...PROFILE,
   ],
 };

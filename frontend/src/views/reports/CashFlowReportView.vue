@@ -5,7 +5,6 @@ import { reportsApi } from '@/services/api/reports.api';
 import { ApiError } from '@/types/api';
 import type { CashFlowReport } from '@/types/report';
 import ErrorState from '@/components/shared/ErrorState.vue';
-import SummaryCard from '@/components/shared/SummaryCard.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
@@ -13,7 +12,6 @@ import PageHeader from '@/components/shared/PageHeader.vue';
 const data = ref<CashFlowReport | null>(null);
 const loading = ref(false);
 const error = ref<ApiError | null>(null);
-
 const dateFrom = ref<string | undefined>(undefined);
 const dateTo = ref<string | undefined>(undefined);
 
@@ -21,10 +19,7 @@ async function fetch() {
   loading.value = true;
   error.value = null;
   try {
-    data.value = await reportsApi.cashFlow({
-      dateFrom: dateFrom.value,
-      dateTo: dateTo.value,
-    });
+    data.value = await reportsApi.cashFlow({ dateFrom: dateFrom.value, dateTo: dateTo.value });
   } catch (e) {
     error.value = e instanceof ApiError ? e : new ApiError(0, 'UNKNOWN', String(e));
   } finally {
@@ -37,18 +32,24 @@ onMounted(fetch);
 
 const netClass = computed(() => {
   const n = Number(data.value?.netCashFlow ?? 0);
-  if (n > 0) return 'text-success';
-  if (n < 0) return 'text-error';
-  return '';
+  return n > 0 ? 'text-success' : n < 0 ? 'text-error' : '';
 });
+
+const metrics = computed(() => [
+  { key: 'revenue', label: t('reports.cashFlow.totalRevenue'), icon: 'mdi-cash-multiple', amount: data.value?.totalRevenue ?? 0 },
+  { key: 'collected', label: t('reports.cashFlow.totalCollected'), icon: 'mdi-cash-check', amount: data.value?.totalCollected ?? 0 },
+  { key: 'outstanding', label: t('reports.cashFlow.outstanding'), icon: 'mdi-cash-clock', amount: data.value?.outstandingBalance ?? 0 },
+  { key: 'costs', label: t('reports.cashFlow.totalCosts'), icon: 'mdi-cash-minus', amount: data.value?.totalCosts ?? 0 },
+  { key: 'net', label: t('reports.cashFlow.netCashFlow'), icon: 'mdi-scale-balance', amount: data.value?.netCashFlow ?? 0 },
+]);
 </script>
 
 <template>
-  <div>
+  <div class="cp-fill">
     <PageHeader :title="t('reports.cashFlow.title')" back="/reports" />
 
-    <v-card class="mb-4">
-      <v-card-text class="flex flex-wrap items-end gap-3">
+    <section class="cp-pane">
+      <div class="cp-pane__toolbar cp-cash-flow__filters">
         <v-text-field
           v-model="dateFrom"
           :label="t('reports.cashFlow.dateFrom')"
@@ -65,65 +66,61 @@ const netClass = computed(() => {
           hide-details
           style="max-width: 200px"
         />
-        <v-spacer />
         <v-btn variant="text" prepend-icon="mdi-refresh" :loading="loading" @click="fetch">
           {{ t('common.retry') }}
         </v-btn>
-      </v-card-text>
-    </v-card>
-
-    <ErrorState v-if="error" :error="error" @retry="fetch" />
-
-    <div v-else class="space-y-4">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <SummaryCard
-          :title="t('reports.cashFlow.totalRevenue')"
-          icon="mdi-cash-multiple"
-          :loading="loading"
-        >
-          <MoneyDisplay :amount="data?.totalRevenue ?? 0" />
-        </SummaryCard>
-        <SummaryCard
-          :title="t('reports.cashFlow.totalCollected')"
-          icon="mdi-cash-check"
-          :loading="loading"
-        >
-          <MoneyDisplay :amount="data?.totalCollected ?? 0" />
-        </SummaryCard>
-        <SummaryCard
-          :title="t('reports.cashFlow.outstanding')"
-          icon="mdi-cash-clock"
-          :loading="loading"
-        >
-          <MoneyDisplay :amount="data?.outstandingBalance ?? 0" />
-        </SummaryCard>
-        <SummaryCard
-          :title="t('reports.cashFlow.totalCosts')"
-          icon="mdi-cash-minus"
-          :loading="loading"
-        >
-          <MoneyDisplay :amount="data?.totalCosts ?? 0" />
-        </SummaryCard>
-        <SummaryCard
-          :title="t('reports.cashFlow.netCashFlow')"
-          icon="mdi-scale-balance"
-          :loading="loading"
-        >
-          <span :class="netClass" class="font-medium">
-            <MoneyDisplay :amount="data?.netCashFlow ?? 0" />
-          </span>
-        </SummaryCard>
       </div>
 
-      <v-card v-if="data && (data.dateFrom || data.dateTo)">
-        <v-card-text class="flex items-center gap-2 text-body-2 text-medium-emphasis">
-          <v-icon icon="mdi-calendar-range" size="small" />
+      <ErrorState v-if="error" :error="error" class="ma-3" @retry="fetch" />
+
+      <div v-else class="cp-pane__body cp-cash-flow__body">
+        <v-table class="cp-cash-flow__table">
+          <thead>
+            <tr>
+              <th>{{ t('reports.cashFlow.title') }}</th>
+              <th class="text-end">{{ t('payments.fields.amount') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="metric in metrics" :key="metric.key">
+              <td>
+                <span class="cp-cash-flow__label">
+                  <v-icon :icon="metric.icon" size="16" />
+                  {{ metric.label }}
+                </span>
+              </td>
+              <td class="text-end font-weight-medium" :class="metric.key === 'net' ? netClass : ''">
+                <MoneyDisplay :amount="metric.amount" />
+              </td>
+            </tr>
+          </tbody>
+        </v-table>
+
+        <div v-if="data && (data.dateFrom || data.dateTo)" class="cp-cash-flow__period">
+          <v-icon icon="mdi-calendar-range" size="16" />
           <span>{{ t('reports.cashFlow.period') }}:</span>
           <DateDisplay :value="data.dateFrom" />
-          <span>—</span>
+          <span>-</span>
           <DateDisplay :value="data.dateTo" />
-        </v-card-text>
-      </v-card>
-    </div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
+
+<style scoped>
+.cp-cash-flow__filters { flex-wrap: wrap; }
+.cp-cash-flow__filters .v-btn { margin-inline-start: auto; }
+.cp-cash-flow__body { overflow: auto; }
+.cp-cash-flow__table { max-width: 680px; }
+.cp-cash-flow__label,
+.cp-cash-flow__period { display: inline-flex; align-items: center; gap: 6px; }
+.cp-cash-flow__period {
+  min-height: 30px;
+  padding: 4px 8px;
+  color: var(--cp-text-muted);
+  background: var(--cp-surface-2);
+  border-block-start: 1px solid var(--cp-border);
+  font-size: 0.76rem;
+}
+</style>

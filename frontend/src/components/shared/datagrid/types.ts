@@ -1,6 +1,6 @@
 // Column/row contract for the reusable Excel-like DataGrid. The grid owns
 // interaction (editing, keyboard nav, clipboard, selection, sort/filter); the
-// parent owns the data and persistence — it reacts to the emitted events.
+// parent owns the data and persistence - it reacts to the emitted events.
 
 /** Editor kind for a cell. Omit `type` (or set editable:false) for a
  *  display-only column. */

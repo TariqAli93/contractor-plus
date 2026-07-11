@@ -116,7 +116,7 @@ async function remove() {
       <td>{{ item.material.unit }}</td>
       <td class="text-end">{{ Number(item.estimatedQuantity) }}</td>
       <td class="text-end"><MoneyDisplay :amount="item.estimatedPrice" /></td>
-      <td>{{ item.notes ?? '—' }}</td>
+      <td>{{ item.notes ?? '-' }}</td>
       <td class="text-end">
         <v-btn icon="mdi-pencil" size="small" variant="text" :aria-label="t('common.edit')" @click="startEdit" />
         <v-btn icon="mdi-delete-outline" size="small" variant="text" color="error" :aria-label="t('common.delete')" @click="remove" />
@@ -139,7 +139,7 @@ async function remove() {
       </td>
       <td>
         <span class="text-medium-emphasis text-sm">
-          {{ materials.find((m) => m.id === form.materialId)?.unit ?? '—' }}
+          {{ materials.find((m) => m.id === form.materialId)?.unit ?? '-' }}
         </span>
       </td>
       <td>

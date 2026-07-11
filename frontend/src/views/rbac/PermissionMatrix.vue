@@ -14,15 +14,12 @@ void props;
 </script>
 
 <template>
-  <div>
-    <v-alert type="info" variant="tonal" density="comfortable" class="mb-4 text-body-2">
-      {{ t('rbac.matrixNote') }}
-    </v-alert>
+  <div class="cp-matrix">
+    <div class="cp-matrix__note">{{ t('rbac.matrixNote') }}</div>
 
-    <v-card v-for="mod in matrix.modules" :key="mod.key" variant="outlined" class="mb-4">
-      <v-card-title class="text-subtitle-1 font-medium">{{ moduleTitle(mod.key) }}</v-card-title>
-      <v-divider />
-      <v-table density="comfortable">
+    <section v-for="mod in matrix.modules" :key="mod.key" class="cp-panel cp-matrix__module">
+      <h2 class="cp-matrix__title">{{ moduleTitle(mod.key) }}</h2>
+      <v-table>
         <thead>
           <tr>
             <th class="text-start">{{ t('rbac.permission') }}</th>
@@ -40,6 +37,29 @@ void props;
           </tr>
         </tbody>
       </v-table>
-    </v-card>
+    </section>
   </div>
 </template>
+
+<style scoped>
+.cp-matrix { padding: 6px; overflow: auto; }
+.cp-matrix__note {
+  padding: 5px 8px;
+  margin-bottom: 6px;
+  color: var(--cp-text-muted);
+  background: var(--cp-surface-2);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-sm);
+  font-size: 0.72rem;
+}
+.cp-matrix__module { margin-bottom: 6px; overflow: hidden; }
+.cp-matrix__title {
+  margin: 0;
+  padding: 5px 8px;
+  color: var(--cp-text);
+  background: var(--cp-surface-2);
+  border-block-end: 1px solid var(--cp-border);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+</style>

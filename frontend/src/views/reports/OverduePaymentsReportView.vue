@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { t } from '@/i18n';
 import { reportsApi } from '@/services/api/reports.api';
 import { ApiError } from '@/types/api';
@@ -9,6 +9,7 @@ import EmptyState from '@/components/shared/EmptyState.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
+import DataTable from '@/components/shared/DataTable.vue';
 
 const groups = ref<OverduePaymentsByProject[]>([]);
 const loading = ref(false);
@@ -27,80 +28,92 @@ async function fetch() {
 }
 
 onMounted(fetch);
+
+const rows = computed(() => groups.value.flatMap((group) => group.payments.map((payment) => ({
+  ...payment,
+  projectId: group.projectId,
+  projectName: group.projectName,
+  customerName: group.customerName,
+  contractNumber: group.contractNumber,
+}))));
+
+const headers = computed(() => [
+  { key: 'projectName', title: t('projects.fields.name'), sortable: true },
+  { key: 'customerName', title: t('customers.fields.name'), sortable: true },
+  { key: 'dueDate', title: t('payments.fields.dueDate'), sortable: true, width: 130 },
+  { key: 'daysOverdue', title: t('reports.overdue.daysLate'), sortable: true, width: 110, align: 'end' as const },
+  { key: 'method', title: t('payments.fields.method'), sortable: true, width: 130 },
+  { key: 'reference', title: t('payments.fields.reference'), sortable: true },
+  { key: 'amount', title: t('payments.fields.amount'), sortable: true, align: 'end' as const },
+]);
 </script>
 
 <template>
-  <div>
+  <div class="cp-fill">
     <PageHeader :title="t('reports.overdue.title')" back="/reports">
-      <v-btn variant="text" prepend-icon="mdi-refresh" :loading="loading" @click="fetch">
+      <v-btn variant="text" size="small" prepend-icon="mdi-refresh" :loading="loading" @click="fetch">
         {{ t('common.retry') }}
       </v-btn>
     </PageHeader>
 
-    <ErrorState v-if="error" :error="error" @retry="fetch" />
+    <ErrorState v-if="error" :error="error" class="ma-3" @retry="fetch" />
 
-    <div v-else-if="loading && groups.length === 0" class="space-y-3">
-      <v-skeleton-loader type="article" />
-      <v-skeleton-loader type="article" />
-    </div>
-
-    <EmptyState
-      v-else-if="groups.length === 0"
-      :title="t('reports.overdue.empty')"
-      icon="mdi-check-circle-outline"
-    />
-
-    <div v-else class="space-y-3">
-      <v-card v-for="g in groups" :key="g.projectId">
-        <v-card-text>
-          <div class="flex items-start justify-between flex-wrap gap-3 mb-3">
-            <div>
-              <RouterLink
-                :to="`/projects/${g.projectId}`"
-                class="text-subtitle-1 font-medium text-primary"
-              >
-                {{ g.projectName }}
-              </RouterLink>
-              <div class="text-caption text-medium-emphasis">
-                <span v-if="g.contractNumber">{{ g.contractNumber }}</span>
-                <span v-if="g.customerName"> · {{ g.customerName }}</span>
-              </div>
-            </div>
-            <div class="text-end">
-              <div class="text-h6 text-error font-medium">
-                <MoneyDisplay :amount="g.totalOverdueAmount" />
-              </div>
-              <div class="text-caption text-medium-emphasis">
-                {{ t('reports.overdue.invoiceCount', { n: g.overduePaymentsCount }) }}
-                · {{ t('reports.overdue.oldest') }} <DateDisplay :value="g.oldestDueDate" />
-              </div>
-            </div>
-          </div>
-
-          <v-divider class="mb-3" />
-
-          <v-table density="compact">
-            <thead>
-              <tr>
-                <th>{{ t('payments.fields.dueDate') }}</th>
-                <th>{{ t('reports.overdue.daysLate') }}</th>
-                <th>{{ t('payments.fields.method') }}</th>
-                <th>{{ t('payments.fields.reference') }}</th>
-                <th class="text-end">{{ t('payments.fields.amount') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in g.payments" :key="row.id">
-                <td><DateDisplay :value="row.dueDate" /></td>
-                <td class="text-error">{{ row.daysOverdue }}d</td>
-                <td>{{ row.method ?? '—' }}</td>
-                <td>{{ row.reference ?? '—' }}</td>
-                <td class="text-end"><MoneyDisplay :amount="row.amount" /></td>
-              </tr>
-            </tbody>
-          </v-table>
-        </v-card-text>
-      </v-card>
-    </div>
+    <section v-else class="cp-pane">
+      <div class="cp-pane__toolbar">
+        <span class="text-caption text-medium-emphasis">{{ t('reports.overdue.title') }}</span>
+        <span class="text-caption text-medium-emphasis">{{ rows.length }}</span>
+      </div>
+      <div class="cp-pane__body">
+        <DataTable
+          :items="rows"
+          :items-length="rows.length"
+          :headers="headers"
+          :loading="loading"
+          :items-per-page="-1"
+          :server="false"
+          item-value="id"
+          hide-default-footer
+        >
+          <template #[`item.projectName`]="{ item }">
+            <RouterLink :to="`/projects/${item.projectId}`" class="cp-overdue__project">
+              {{ item.projectName }}
+            </RouterLink>
+            <small v-if="item.contractNumber">{{ item.contractNumber }}</small>
+          </template>
+          <template #[`item.customerName`]="{ item }">
+            {{ item.customerName ?? '-' }}
+          </template>
+          <template #[`item.dueDate`]="{ item }">
+            <DateDisplay :value="item.dueDate" />
+          </template>
+          <template #[`item.daysOverdue`]="{ item }">
+            <span class="text-error font-weight-medium">{{ item.daysOverdue }}d</span>
+          </template>
+          <template #[`item.method`]="{ item }">
+            {{ item.method ?? '-' }}
+          </template>
+          <template #[`item.reference`]="{ item }">
+            {{ item.reference ?? '-' }}
+          </template>
+          <template #[`item.amount`]="{ item }">
+            <MoneyDisplay :amount="item.amount" />
+          </template>
+          <template #no-data>
+            <EmptyState :title="t('reports.overdue.empty')" icon="mdi-check-circle-outline" />
+          </template>
+        </DataTable>
+      </div>
+    </section>
   </div>
 </template>
+
+<style scoped>
+.cp-overdue__project {
+  display: block;
+  color: var(--cp-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+.cp-overdue__project:hover { color: var(--cp-primary-hover); text-decoration: underline; }
+.cp-overdue__project + small { color: var(--cp-text-muted); font-size: 0.68rem; }
+</style>

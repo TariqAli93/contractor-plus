@@ -30,7 +30,7 @@ watch(
 );
 
 const methodOptions = [
-  { value: undefined as PaymentMethod | undefined, title: '—' },
+  { value: undefined as PaymentMethod | undefined, title: '-' },
   { value: PaymentMethod.CASH, title: 'CASH' },
   { value: PaymentMethod.BANK_TRANSFER, title: 'BANK_TRANSFER' },
   { value: PaymentMethod.CHECK, title: 'CHECK' },

@@ -50,7 +50,6 @@ export function buildServiceModeConfig(): AppConfig {
     PORT: cfg.port,
     DATABASE_URL: cfg.databaseUrl,
     JWT_ACCESS_SECRET: cfg.jwtSecret,
-    SECRET_ENCRYPTION_KEY: cfg.secretEncryptionKey,
     JWT_ACCESS_TTL: APP_CONSTANTS.JWT_ACCESS_TTL,
     REFRESH_TOKEN_TTL_DAYS: APP_CONSTANTS.REFRESH_TOKEN_TTL_DAYS,
     BCRYPT_ROUNDS: APP_CONSTANTS.BCRYPT_ROUNDS,

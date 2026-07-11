@@ -20,7 +20,7 @@ const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } =
 
 // Per-source state: each selector loads independently so a single API
 // failure can never white-screen the form. Backend's
-// paginationQuerySchema caps pageSize at 100 — sending more returns 400.
+// paginationQuerySchema caps pageSize at 100 - sending more returns 400.
 // We use the minimal {page, pageSize} shape (no isActive/sortBy/sortDir)
 // per the stabilization brief; client-side sort happens below.
 const PICKER_PAGE_SIZE = 100;
@@ -69,7 +69,7 @@ async function loadTemplates(): Promise<void> {
 }
 
 onMounted(() => {
-  // Promise.allSettled — any single failure (load contract, customers,
+  // Promise.allSettled - any single failure (load contract, customers,
   // or templates) leaves the others usable. The form is operational with
   // partial data; selectors render an inline retry on individual failures.
   void Promise.allSettled([load(), loadCustomers(), loadTemplates()]);

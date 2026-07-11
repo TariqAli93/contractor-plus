@@ -26,10 +26,11 @@ const tabsLocked = computed(() => !templateId.value);
 </script>
 
 <template>
-  <div>
+  <div class="cp-fill">
     <PageHeader :title="heading" back="/templates" />
 
-    <v-card>
+    <section class="cp-pane">
+      <div class="cp-pane__toolbar">
       <v-tabs v-model="activeTab" color="primary" align-tabs="start">
         <v-tab value="general">{{ t('templates.tabs.general') }}</v-tab>
         <v-tab value="materials" :disabled="tabsLocked">
@@ -42,45 +43,39 @@ const tabsLocked = computed(() => !templateId.value);
           {{ t('templates.tabs.estimate') }}
         </v-tab>
       </v-tabs>
+      </div>
 
-      <v-divider />
-
-      <v-window v-model="activeTab">
-        <v-window-item value="general" class="pa-4">
+      <v-window v-model="activeTab" class="cp-pane__body">
+        <v-window-item value="general" class="pa-2">
           <TemplateGeneralTab
             v-if="activeTab === 'general'"
             :id="templateId"
           />
         </v-window-item>
-        <v-window-item value="materials" class="pa-4">
+        <v-window-item value="materials" class="pa-2">
           <TemplateMaterialsTab
             v-if="activeTab === 'materials' && templateId"
             :template-id="templateId"
           />
         </v-window-item>
-        <v-window-item value="steps" class="pa-4">
+        <v-window-item value="steps" class="pa-2">
           <TemplateStepsTab
             v-if="activeTab === 'steps' && templateId"
             :template-id="templateId"
           />
         </v-window-item>
-        <v-window-item value="estimate" class="pa-4">
+        <v-window-item value="estimate" class="pa-2">
           <TemplateEstimateTab
             v-if="activeTab === 'estimate' && templateId"
             :template-id="templateId"
           />
         </v-window-item>
       </v-window>
-    </v-card>
 
-    <v-alert
-      v-if="tabsLocked"
-      type="info"
-      variant="tonal"
-      icon="mdi-information-outline"
-      class="mt-4"
-    >
-      {{ t('templates.saveFirstHint') }}
-    </v-alert>
+      <div v-if="tabsLocked" class="cp-pane__foot">
+        <v-icon icon="mdi-information-outline" size="15" />
+        {{ t('templates.saveFirstHint') }}
+      </div>
+    </section>
   </div>
 </template>

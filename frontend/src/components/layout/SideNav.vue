@@ -28,7 +28,7 @@ const ALL: RoleName[] = [
   RoleName.VIEWER,
 ];
 
-// Grouping is presentation-only — the route list and role gating are
+// Grouping is presentation-only - the route list and role gating are
 // identical to the previous flat array. New translations land in
 // `nav.groups.*`; missing keys fall back gracefully to a blank label.
 const FINANCE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ACCOUNTANT, RoleName.ENGINEER];
@@ -46,8 +46,6 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/projects', i18nKey: 'nav.projects', icon: 'mdi-office-building-outline', access: { permissions: ['projects.read'], roles: ALL } },
       { to: '/contracts', i18nKey: 'nav.contracts', icon: 'mdi-file-sign', access: { permissions: ['contracts.read'], roles: ALL } },
       { to: '/templates', i18nKey: 'nav.templates', icon: 'mdi-file-document-multiple-outline', access: { permissions: ['templates.read'], roles: ALL } },
-      { to: '/estimation-templates', i18nKey: 'nav.estimationTemplates', icon: 'mdi-file-document-outline', access: { permissions: ['estimation_templates.read'], roles: ALL } },
-      { to: '/ai', i18nKey: 'nav.aiConsole', icon: 'mdi-robot-outline', access: { permissions: ['ai.session.use'], roles: ALL } },
     ],
   },
   {
@@ -71,7 +69,6 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/users', i18nKey: 'nav.users', icon: 'mdi-account-cog-outline', access: { permissions: ['users.read'], roles: OA } },
       { to: '/rbac', i18nKey: 'nav.rbac', icon: 'mdi-shield-key-outline', access: { permissions: ['rbac.manage'], roles: [RoleName.OWNER] } },
       { to: '/audit', i18nKey: 'nav.audit', icon: 'mdi-history', access: { permissions: ['audit.read'], roles: OA } },
-      { to: '/ai-audit', i18nKey: 'nav.aiAudit', icon: 'mdi-history', access: { permissions: ['audit.read'], roles: OA } },
       { to: '/tunnel', i18nKey: 'nav.tunnel', icon: 'mdi-tunnel', access: { permissions: ['tunnel.manage'], roles: OA } },
       { to: '/settings', i18nKey: 'nav.settings', icon: 'mdi-cog-outline', access: { permissions: ['settings.read'], roles: OA } },
     ],
@@ -95,24 +92,15 @@ function groupLabel(key?: string): string {
 </script>
 
 <template>
-  <v-navigation-drawer
-    :rail="ui.sidebarCollapsed"
-    permanent
-    width="198"
-    rail-width="52"
-    color="surface"
-  >
+  <!-- A docked navigation pane, not a drawer. It never floats over the
+       workspace and never overlays a scrim: it is a column of the window, the
+       way an Explorer tree or an ERP module list is. -->
+  <aside class="cp-sidenav" :class="{ 'cp-sidenav--rail': ui.sidebarCollapsed }">
     <div class="cp-brand">
-      <CompanyLogo
-        variant="sidebar"
-        :label="t('app.name')"
-        :icon-only="ui.sidebarCollapsed"
-      />
+      <CompanyLogo variant="sidebar" :label="t('app.name')" :icon-only="ui.sidebarCollapsed" />
     </div>
 
-    <v-divider />
-
-    <div class="cp-nav py-1">
+    <nav class="cp-nav">
       <template v-for="(group, idx) in visibleGroups" :key="idx">
         <div v-if="groupLabel(group.labelKey)" class="cp-nav-group-label">
           {{ groupLabel(group.labelKey) }}
@@ -124,9 +112,50 @@ function groupLabel(key?: string): string {
             :to="item.to"
             :prepend-icon="item.icon"
             :title="t(item.i18nKey)"
-          />
+            :aria-label="ui.sidebarCollapsed ? t(item.i18nKey) : undefined"
+          >
+            <v-tooltip v-if="ui.sidebarCollapsed" activator="parent" location="end">
+              {{ t(item.i18nKey) }}
+            </v-tooltip>
+          </v-list-item>
         </v-list>
       </template>
-    </div>
-  </v-navigation-drawer>
+    </nav>
+  </aside>
 </template>
+
+<style scoped>
+.cp-sidenav {
+  flex: none;
+  width: 190px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--cp-surface);
+  border-inline-end: 1px solid var(--cp-border);
+  overflow: hidden;
+}
+.cp-sidenav--rail {
+  width: 44px;
+}
+
+.cp-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-block: 2px;
+}
+
+/* Rail: the labels go, the icons stay put. Tooltips carry the names. */
+.cp-sidenav--rail :deep(.cp-nav-group-label),
+.cp-sidenav--rail :deep(.v-list-item-title) {
+  display: none;
+}
+.cp-sidenav--rail :deep(.v-list-item__prepend > .v-icon) {
+  margin-inline-end: 0 !important;
+}
+.cp-sidenav--rail :deep(.v-list-item) {
+  padding-inline: 0 !important;
+  justify-content: center;
+}
+</style>

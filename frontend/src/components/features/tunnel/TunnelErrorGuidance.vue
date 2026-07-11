@@ -71,7 +71,6 @@ const guidance = computed<GuidanceCopy | null>(() => {
     :type="guidance.color"
     variant="tonal"
     :icon="guidance.icon"
-    rounded="lg"
     border="start"
   >
     <div class="text-subtitle-2 font-medium">{{ guidance.title }}</div>

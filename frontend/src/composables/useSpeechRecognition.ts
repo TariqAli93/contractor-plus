@@ -2,14 +2,14 @@
 // Speech-to-Text adapter (المرحلة الأولى).
 //
 // Wraps the browser Web Speech API behind a small reactive port. The rest of
-// the app depends only on { isSupported, isListening, transcript, start, stop } —
+// the app depends only on { isSupported, isListening, transcript, start, stop } -
 // so swapping to a cloud STT (Whisper, Azure, …) later means rewriting only this
 // file. STT runs in the browser; only the final TEXT is sent to the backend.
 // ============================================================
 
 import { onBeforeUnmount, ref, shallowRef } from 'vue';
 
-// Minimal typings — the DOM lib does not ship SpeechRecognition types.
+// Minimal typings - the DOM lib does not ship SpeechRecognition types.
 interface SpeechRecognitionResultLike {
   0: { transcript: string };
   isFinal: boolean;
@@ -107,7 +107,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
       rec.start();
       isListening.value = true;
     } catch {
-      // start() throws if already running — ignore.
+      // start() throws if already running - ignore.
     }
   }
 

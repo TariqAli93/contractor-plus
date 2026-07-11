@@ -25,7 +25,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { app, BrowserWindow, protocol, net, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, protocol, net, dialog } from 'electron';
 
 import * as rt from '../scripts/runtime.js';
 import * as logger from '../scripts/logger.js';
@@ -73,6 +73,17 @@ function registerAppProtocol() {
   });
 }
 
+// The renderer draws its own title bar, but the caption buttons stay native:
+// `titleBarOverlay` keeps Windows 11 Snap Layouts (the flyout on maximize-hover)
+// and puts the buttons on the correct side for an RTL app — the two things a
+// hand-drawn frame always gets wrong. Linux has no overlay support, so there we
+// keep the OS frame rather than ship a window nobody can move.
+const OVERLAY_HEIGHT = 32;
+const OVERLAY_SUPPORTED = process.platform === 'win32' || process.platform === 'darwin';
+
+// Mirrors the one approved desktop surface in frontend/src/assets/styles/main.css.
+const OVERLAY_OPTIONS = { color: '#FFFFFF', symbolColor: '#1A202C', height: OVERLAY_HEIGHT };
+
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -81,7 +92,10 @@ function createMainWindow() {
     minHeight: 680,
     title: APP_TITLE,
     show: false,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#F3F5F7',
+    ...(OVERLAY_SUPPORTED
+      ? { titleBarStyle: 'hidden', titleBarOverlay: OVERLAY_OPTIONS }
+      : {}),
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'preload.mjs'),
       contextIsolation: true,
@@ -89,6 +103,18 @@ function createMainWindow() {
       nodeIntegration: false,
     },
   });
+  // With a hidden title bar, Electron's default menu would render *inside* the
+  // client area, directly on top of the menu row the renderer draws. Remove it.
+  // Its accelerators go with it, so re-bind the two that matter for development.
+  Menu.setApplicationMenu(null);
+  mainWindow.webContents.on('before-input-event', (_event, input) => {
+    if (rt.isPackaged() || input.type !== 'keyDown') return;
+    const devtools = input.key === 'F12' || (input.control && input.shift && input.key === 'I');
+    const reload = input.key === 'F5' || (input.control && input.key.toLowerCase() === 'r');
+    if (devtools) mainWindow.webContents.toggleDevTools();
+    else if (reload) mainWindow.webContents.reload();
+  });
+
   // The SPA sets its own <title>; force the Arabic product name.
   mainWindow.on('page-title-updated', (e) => e.preventDefault());
   mainWindow.once('ready-to-show', () => mainWindow.show());
@@ -252,7 +278,6 @@ async function boot() {
     },
     logger,
   });
-
   logger.info(
     `[main] desktop v${versionManager.desktopVersion()} packaged=${rt.isPackaged()} ` +
       `backend=${versionManager.packagedBackendVersion()}`,

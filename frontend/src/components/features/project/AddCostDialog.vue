@@ -12,7 +12,7 @@ import type { CreateCostInput } from '@/types/cost';
 import type { Material } from '@/types/material';
 
 // Inline create dialog hosted by ProjectCostsTab. Project is fixed by the
-// parent — there is no project selector. Material picker is shown only when
+// parent - there is no project selector. Material picker is shown only when
 // category is MATERIAL; switching to any other category clears materialId
 // so the body we send never violates the backend's category/material rule.
 
@@ -62,7 +62,7 @@ function emptyForm(): FormState {
 const form = ref<FormState>(emptyForm());
 const submitting = ref(false);
 
-// Lazy-loaded material picker — only fetched the first time the dialog opens
+// Lazy-loaded material picker - only fetched the first time the dialog opens
 // so a project page that never opens the dialog pays nothing.
 const materials = ref<Material[]>([]);
 const materialsLoaded = ref(false);
@@ -74,7 +74,7 @@ async function ensureMaterials() {
   materialsLoading.value = true;
   materialsError.value = false;
   try {
-    // Minimal request — backend caps `pageSize` at 100; sending higher (or
+    // Minimal request - backend caps `pageSize` at 100; sending higher (or
     // any extra unsupported filter) returns 400 and would crash the dialog.
     // The list is only used to populate a dropdown for MATERIAL costs; richer
     // filtering lives on the dedicated /materials page.
@@ -97,7 +97,7 @@ function retryMaterials() {
 }
 
 // Reset the form whenever the dialog opens; load the material list on first
-// open. Closing the dialog mid-edit discards local state — that matches the
+// open. Closing the dialog mid-edit discards local state - that matches the
 // "no optimistic / no draft" stance the page already takes for projects.
 watch(
   () => props.modelValue,
@@ -125,7 +125,7 @@ watch(
   },
 );
 
-// Drop materialId the moment the user moves away from MATERIAL — the backend
+// Drop materialId the moment the user moves away from MATERIAL - the backend
 // rejects the combination, so the field must not be in the payload at all.
 watch(
   () => form.value.category,
@@ -148,7 +148,7 @@ const materialOptions = computed(() =>
 
 const isMaterialCategory = computed(() => form.value.category === CostCategory.MATERIAL);
 
-// Display-only preview of qty * unitPrice — the backend is the source of
+// Display-only preview of qty * unitPrice - the backend is the source of
 // financial truth. We never auto-fill totalAmount from this; it just lets
 // the user sanity-check what will be persisted if they leave the field blank.
 const derivedTotal = computed(() => {

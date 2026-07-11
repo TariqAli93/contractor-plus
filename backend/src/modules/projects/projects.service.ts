@@ -21,8 +21,6 @@ import type {
 
 const PROJECT = 'Project';
 
-/** The non-destructive status transitions the AI command workflow can drive. */
-export type ProjectStatusAction = 'start' | 'pause' | 'resume' | 'complete';
 
 // Project lifecycle:
 //
@@ -91,7 +89,7 @@ export class ProjectsService {
     return this.prisma.$transaction((tx) => this.createWithinTx(tx, data, actor));
   }
 
-  /** Tx-aware create — lets the AI command workflow compose project creation with
+  /** Tx-aware create — lets a caller compose project creation with
    *  a customer + contract in a single all-or-nothing transaction. */
   async createWithinTx(
     tx: Prisma.TransactionClient,
@@ -421,76 +419,6 @@ export class ProjectsService {
       );
       return updated;
     });
-  }
-
-  // ---------- Voice engine (tx-aware status transitions) ----------
-  //
-  // The lifecycle methods above each open their OWN transaction, so they can't
-  // be called from the voice executor's transaction (Prisma forbids nesting).
-  // These run inside a provided tx instead. `transitionPatch` is the single
-  // source of the transition rules — Arabic errors, since the assistant speaks
-  // them. `changeStatusWithinTx` reads → validates → writes → audits in `tx`.
-
-  static transitionPatch(existing: Project, action: ProjectStatusAction): Prisma.ProjectUpdateInput {
-    switch (action) {
-      case 'start':
-        if (existing.status !== ProjectStatus.PLANNED) {
-          throw new ConflictError('لا يمكن بدء المشروع إلا وهو "مخطط".', 'PROJECT_NOT_STARTABLE');
-        }
-        return {
-          status: ProjectStatus.IN_PROGRESS,
-          ...(existing.startDate === null && { startDate: new Date() }),
-        };
-      case 'pause':
-        if (existing.status !== ProjectStatus.IN_PROGRESS) {
-          throw new ConflictError('لا يمكن إيقاف مشروع غير قيد التنفيذ.', 'PROJECT_NOT_PAUSABLE');
-        }
-        return { status: ProjectStatus.PAUSED };
-      case 'resume':
-        if (existing.status !== ProjectStatus.PAUSED) {
-          throw new ConflictError('لا يمكن استئناف مشروع غير متوقّف.', 'PROJECT_NOT_RESUMABLE');
-        }
-        return { status: ProjectStatus.IN_PROGRESS };
-      case 'complete':
-        if (
-          existing.status !== ProjectStatus.IN_PROGRESS &&
-          existing.status !== ProjectStatus.PAUSED
-        ) {
-          throw new ConflictError(
-            'لا يمكن إنجاز مشروع إلا وهو قيد التنفيذ أو متوقّف.',
-            'PROJECT_NOT_COMPLETABLE',
-          );
-        }
-        return { status: ProjectStatus.COMPLETED, progressPercentage: 100 };
-    }
-  }
-
-  async changeStatusWithinTx(
-    tx: Prisma.TransactionClient,
-    id: string,
-    action: ProjectStatusAction,
-    actor: AuditActor,
-  ): Promise<Project> {
-    const existing = await this.repo.findById(id, tx);
-    if (!existing) throw new NotFoundError('Project', 'PROJECT_NOT_FOUND');
-    const patch = ProjectsService.transitionPatch(existing, action);
-    const updated = await this.repo.update(id, patch, tx);
-    await this.audit.log(
-      actor,
-      {
-        action: 'UPDATE',
-        entity: PROJECT,
-        entityId: id,
-        oldValues: toJsonValue({ status: existing.status }),
-        newValues: toJsonValue({
-          event: action,
-          status: updated.status,
-          previousStatus: existing.status,
-        }),
-      },
-      tx,
-    );
-    return updated;
   }
 
   private isTerminal(status: ProjectStatus): boolean {

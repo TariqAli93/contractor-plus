@@ -4,7 +4,7 @@ import { t } from '@/i18n';
 import { useToast } from '@/composables/useToast';
 
 // Read-only reference of every {{token}} the renderer supports. Grouping
-// here mirrors the backend's PLACEHOLDER_GROUPS — keep in sync when adding
+// here mirrors the backend's PLACEHOLDER_GROUPS - keep in sync when adding
 // new tokens.
 
 interface PlaceholderGroup {
@@ -116,7 +116,7 @@ async function copy(token: string) {
 .cp-placeholder-ref__title {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--cp-text, #0f172a);
+  color: var(--cp-text, #1A202C);
 }
 .cp-placeholder-ref__groups {
   display: grid;
@@ -124,8 +124,8 @@ async function copy(token: string) {
   gap: 14px;
 }
 .cp-placeholder-ref__group {
-  background: var(--cp-surface-2, #fafbfd);
-  border: 1px solid var(--cp-border, #e3e8ef);
+  background: var(--cp-surface-2, #E9EEF3);
+  border: 1px solid var(--cp-border, #CBD5E0);
   border-radius: var(--cp-radius-xl);
   padding: 10px 12px;
 }

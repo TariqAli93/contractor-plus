@@ -37,24 +37,24 @@ defineProps<{
 .cp-settings-card__head {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  padding: 18px 20px;
+  gap: 8px;
+  padding: 7px 8px;
   border-bottom: 1px solid var(--cp-border);
   flex-wrap: wrap;
 }
 .cp-settings-card__title {
-  font-size: 1rem;
+  font-size: 0.86rem;
   font-weight: 600;
   color: var(--cp-text);
   letter-spacing: -0.005em;
 }
 .cp-settings-card__desc {
-  font-size: 0.85rem;
+  font-size: 0.76rem;
   color: var(--cp-text-muted);
   margin-top: 2px;
   max-width: 60ch;
 }
 .cp-settings-card__body {
-  padding: 20px;
+  padding: 8px;
 }
 </style>

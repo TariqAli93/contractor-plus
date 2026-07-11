@@ -47,7 +47,7 @@ export class CustomersService {
     return this.prisma.$transaction((tx) => this.createWithinTx(tx, data, actor));
   }
 
-  /** Tx-aware create — lets the AI command workflow compose customer creation with
+  /** Tx-aware create — lets a caller compose customer creation with
    *  a contract + project in a single all-or-nothing transaction. */
   async createWithinTx(
     tx: Prisma.TransactionClient,

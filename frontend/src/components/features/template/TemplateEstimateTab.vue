@@ -1,15 +1,29 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import { t } from '@/i18n';
 import { useTemplateEstimate } from '@/composables/useTemplateEstimate';
 import SummaryCard from '@/components/shared/SummaryCard.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
 import EmptyState from '@/components/shared/EmptyState.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
+import DataTable from '@/components/shared/DataTable.vue';
 
 const props = defineProps<{ templateId: string }>();
 
 const { data, loading, error, fetch } = useTemplateEstimate(props.templateId);
+
+const materialHeaders = computed(() => [
+  { key: 'materialName', title: t('templates.items.fields.material'), sortable: true },
+  { key: 'unit', title: t('templates.items.fields.unit'), sortable: true, width: 90 },
+  { key: 'estimatedQuantity', title: t('templates.items.fields.quantityPer100m2'), sortable: true, align: 'end' as const, width: 180 },
+  { key: 'estimatedPrice', title: t('templates.items.fields.estimatedPrice'), sortable: true, align: 'end' as const, width: 160 },
+]);
+const stepHeaders = computed(() => [
+  { key: 'sortOrder', title: t('templates.steps.fields.sortOrder'), sortable: true, align: 'end' as const, width: 90 },
+  { key: 'name', title: t('templates.steps.fields.name'), sortable: true },
+  { key: 'percentage', title: t('templates.steps.fields.percentage'), sortable: true, align: 'end' as const, width: 130 },
+  { key: 'estimatedDays', title: t('templates.steps.fields.estimatedDays'), sortable: true, align: 'end' as const, width: 130 },
+]);
 
 onMounted(fetch);
 </script>
@@ -44,7 +58,7 @@ onMounted(fetch);
           icon="mdi-chart-line"
           :loading="loading"
         >
-          {{ data.suggestedProfitMargin !== null ? `${data.suggestedProfitMargin}%` : '—' }}
+          {{ data.suggestedProfitMargin !== null ? `${data.suggestedProfitMargin}%` : '-' }}
         </SummaryCard>
         <SummaryCard
           :title="t('templates.estimate.fields.profitAmount')"
@@ -65,7 +79,7 @@ onMounted(fetch);
           icon="mdi-calendar-clock"
           :loading="loading"
         >
-          {{ data.estimatedDurationDays ?? '—' }}
+          {{ data.estimatedDurationDays ?? '-' }}
         </SummaryCard>
         <SummaryCard
           :title="t('templates.estimate.fields.stepsPercentage')"
@@ -90,63 +104,62 @@ onMounted(fetch);
         </SummaryCard>
       </div>
 
-      <v-card variant="outlined" class="mb-4">
-        <v-card-title class="text-h6">{{ t('templates.estimate.materialsBreakdown') }}</v-card-title>
-        <v-divider />
-        <v-table density="comfortable">
-          <thead>
-            <tr>
-              <th class="text-start">{{ t('templates.items.fields.material') }}</th>
-              <th class="text-start" style="width: 90px">{{ t('templates.items.fields.unit') }}</th>
-              <th class="text-end" style="width: 180px">{{ t('templates.items.fields.quantityPer100m2') }}</th>
-              <th class="text-end" style="width: 160px">{{ t('templates.items.fields.estimatedPrice') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="m in data.materials" :key="m.itemId">
-              <td>{{ m.materialName }}</td>
-              <td>{{ m.unit }}</td>
-              <td class="text-end">{{ m.estimatedQuantity }}</td>
-              <td class="text-end"><MoneyDisplay :amount="m.estimatedPrice" /></td>
-            </tr>
-          </tbody>
-        </v-table>
+      <section class="cp-panel cp-estimate-table">
+        <h3 class="cp-estimate-table__title">{{ t('templates.estimate.materialsBreakdown') }}</h3>
+        <DataTable
+          :items="data.materials"
+          :items-length="data.materials.length"
+          :headers="materialHeaders"
+          :items-per-page="-1"
+          :server="false"
+          item-value="itemId"
+          hide-default-footer
+        >
+          <template #[`item.estimatedPrice`]="{ item }"><MoneyDisplay :amount="item.estimatedPrice" /></template>
+        </DataTable>
         <EmptyState
           v-if="data.materials.length === 0"
           :title="t('templates.items.empty')"
           icon="mdi-package-variant"
         />
-      </v-card>
+      </section>
 
-      <v-card variant="outlined">
-        <v-card-title class="text-h6">{{ t('templates.estimate.stepsSummary') }}</v-card-title>
-        <v-divider />
-        <v-table density="comfortable">
-          <thead>
-            <tr>
-              <th class="text-end" style="width: 90px">{{ t('templates.steps.fields.sortOrder') }}</th>
-              <th class="text-start">{{ t('templates.steps.fields.name') }}</th>
-              <th class="text-end" style="width: 130px">{{ t('templates.steps.fields.percentage') }}</th>
-              <th class="text-end" style="width: 130px">{{ t('templates.steps.fields.estimatedDays') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="s in data.steps" :key="s.id">
-              <td class="text-end">{{ s.sortOrder }}</td>
-              <td>{{ s.name }}</td>
-              <td class="text-end">{{ s.percentage }}%</td>
-              <td class="text-end">{{ s.estimatedDays ?? '—' }}</td>
-            </tr>
-          </tbody>
-        </v-table>
+      <section class="cp-panel cp-estimate-table">
+        <h3 class="cp-estimate-table__title">{{ t('templates.estimate.stepsSummary') }}</h3>
+        <DataTable
+          :items="data.steps"
+          :items-length="data.steps.length"
+          :headers="stepHeaders"
+          :items-per-page="-1"
+          :server="false"
+          item-value="id"
+          hide-default-footer
+        >
+          <template #[`item.percentage`]="{ item }">{{ item.percentage }}%</template>
+          <template #[`item.estimatedDays`]="{ item }">{{ item.estimatedDays ?? '-' }}</template>
+        </DataTable>
         <EmptyState
           v-if="data.steps.length === 0"
           :title="t('templates.steps.empty')"
           icon="mdi-format-list-numbered"
         />
-      </v-card>
+      </section>
     </template>
 
     <v-progress-linear v-else indeterminate />
   </div>
 </template>
+
+<style scoped>
+.cp-estimate-table { margin-bottom: 6px; overflow: hidden; }
+.cp-estimate-table__title {
+  margin: 0;
+  padding: 6px 8px;
+  color: var(--cp-text);
+  background: var(--cp-surface-2);
+  border-block-end: 1px solid var(--cp-border);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.cp-estimate-table :deep(.cp-smart-table) { height: auto; max-height: 340px; }
+</style>

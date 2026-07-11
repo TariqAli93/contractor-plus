@@ -4,7 +4,7 @@ import { reportsApi } from '@/services/api/reports.api';
 import { useCurrencyFormat } from '@/composables/useCurrencyFormat';
 
 // Cross-page actionable alerts, aggregated from EXISTING report endpoints
-// (delayed projects + overdue payments) — no new backend. Surfaced by the
+// (delayed projects + overdue payments) - no new backend. Surfaced by the
 // topbar NotificationsBell. Each alert links to the relevant project.
 export interface AlertItem {
   id: string;

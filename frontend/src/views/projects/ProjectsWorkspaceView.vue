@@ -1,12 +1,6 @@
 <script setup lang="ts">
-// Master-detail projects workspace (roadmap Phase 2, "single screen"): a
-// compact, searchable project list on the start side; the selected project's
-// full detail panel on the other — no page hop. On narrow screens it falls
-// back to navigating to the full-page detail. Selection is mirrored to ?p= so
-// a refresh / shared link reopens the same project.
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useDisplay } from 'vuetify';
 import { t } from '@/i18n';
 import { useProjects } from '@/composables/useProjects';
 import { ProjectStatus, RoleName } from '@/types/enums';
@@ -19,14 +13,13 @@ import DateDisplay from '@/components/shared/DateDisplay.vue';
 import ProjectStatusBadge from '@/components/features/project/ProjectStatusBadge.vue';
 import ProjectProgressBar from '@/components/features/project/ProjectProgressBar.vue';
 import ProjectDetailPanel from '@/components/features/project/ProjectDetailPanel.vue';
+import WorkspaceSplit from '@/components/shared/workspace/WorkspaceSplit.vue';
+import DetailsPane from '@/components/shared/workspace/DetailsPane.vue';
+import DataTable from '@/components/shared/DataTable.vue';
 
 const route = useRoute();
 const router = useRouter();
-// Match the Tailwind `lg:` (1024px) split layout below, so the click behaviour
-// (inline-select vs navigate) flips at the same width the panes appear.
-const { width } = useDisplay();
-const isSplit = computed(() => width.value >= 1024);
-
+const splitActive = ref(true);
 const {
   items,
   total,
@@ -37,6 +30,8 @@ const {
   searchInput,
   status,
   delayed,
+  sortBy,
+  sortDir,
   fetch,
   setStatusFilter,
   setDelayedFilter,
@@ -44,191 +39,172 @@ const {
 
 const WRITE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ENGINEER];
 const WRITE_PERMS = ['projects.create', 'projects.update', 'projects.delete'];
-
 const selectedId = ref<string | undefined>(
   typeof route.query.p === 'string' ? route.query.p : undefined,
 );
-
 const statusFilter = computed<'all' | ProjectStatus>(() => status.value ?? 'all');
-function onStatusChange(v: 'all' | ProjectStatus) {
-  setStatusFilter(v === 'all' ? undefined : v);
+const selectedName = computed(
+  () => items.value.find((project) => project.id === selectedId.value)?.name ?? null,
+);
+
+function onStatusChange(value: 'all' | ProjectStatus) {
+  setStatusFilter(value === 'all' ? undefined : value);
 }
 
-function isDelayed(p: ProjectWithContract): boolean {
-  if (!p.deliveryDate) return false;
-  if (p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.CANCELLED) return false;
-  return new Date(p.deliveryDate).getTime() < Date.now();
+function isDelayed(project: ProjectWithContract): boolean {
+  if (!project.deliveryDate) return false;
+  if (project.status === ProjectStatus.COMPLETED || project.status === ProjectStatus.CANCELLED) return false;
+  return new Date(project.deliveryDate).getTime() < Date.now();
 }
 
-function select(p: ProjectWithContract) {
-  if (isSplit.value) {
-    selectedId.value = p.id;
-    void router.replace({ query: { ...route.query, p: p.id } });
-  } else {
-    void router.push(`/projects/${p.id}`);
+function select(project: ProjectWithContract) {
+  if (!splitActive.value) {
+    void router.push(`/projects/${project.id}`);
+    return;
+  }
+  selectedId.value = project.id;
+  void router.replace({ query: { ...route.query, p: project.id } });
+}
+
+const columns = computed(() => [
+  { key: 'name', title: t('projects.fields.name'), sortable: true },
+  { key: 'customer', title: t('nav.customers'), sortable: false },
+  { key: 'status', title: t('projects.fields.status'), sortable: false, width: 125 },
+  { key: 'progressPercentage', title: t('projects.fields.progress'), sortable: false, width: 120, align: 'end' as const },
+  { key: 'deliveryDate', title: t('projects.fields.deliveryDate'), sortable: true, width: 145 },
+]);
+
+function onTableUpdate(opts: {
+  page: number;
+  itemsPerPage: number;
+  sortBy: Array<{ key: string; order: 'asc' | 'desc' }>;
+}) {
+  page.value = opts.page;
+  pageSize.value = opts.itemsPerPage;
+  const first = opts.sortBy[0];
+  if (first && (first.key === 'name' || first.key === 'deliveryDate')) {
+    sortBy.value = first.key;
+    sortDir.value = first.order;
   }
 }
 
-const pageCount = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)));
+function rowProps({ item }: { item: ProjectWithContract }) {
+  return item.id === selectedId.value ? { class: 'cp-row-selected' } : {};
+}
 
 onMounted(fetch);
 </script>
 
 <template>
-  <div>
+  <div class="cp-fill">
     <PageHeader :title="t('nav.projects')" :count="total || null" icon="mdi-office-building-outline" :hint="t('help.projects')">
       <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
-        <v-btn color="primary" size="small" prepend-icon="mdi-plus" to="/projects/new">
+        <v-btn color="primary" prepend-icon="mdi-plus" to="/projects/new">
           {{ t('projects.new') }}
         </v-btn>
       </RoleGate>
     </PageHeader>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
-      <!-- Master: searchable list -->
-      <div class="lg:col-span-4">
-        <v-card>
-          <v-card-text class="pb-2">
-            <SearchBar v-model="searchInput" :placeholder="t('projects.searchPlaceholder')" />
-            <v-chip-group
-              :model-value="statusFilter"
-              mandatory
-              selected-class="bg-primary text-white"
-              class="mt-1"
-              @update:model-value="onStatusChange"
-            >
-              <v-chip value="all" size="x-small">{{ t('common.empty') }}</v-chip>
-              <v-chip :value="ProjectStatus.PLANNED" size="x-small">{{ t('projects.status.PLANNED') }}</v-chip>
-              <v-chip :value="ProjectStatus.IN_PROGRESS" size="x-small">{{ t('projects.status.IN_PROGRESS') }}</v-chip>
-              <v-chip :value="ProjectStatus.PAUSED" size="x-small">{{ t('projects.status.PAUSED') }}</v-chip>
-              <v-chip :value="ProjectStatus.COMPLETED" size="x-small">{{ t('projects.status.COMPLETED') }}</v-chip>
-              <v-chip :value="ProjectStatus.CANCELLED" size="x-small">{{ t('projects.status.CANCELLED') }}</v-chip>
-            </v-chip-group>
-            <v-switch
-              :model-value="delayed"
-              :label="t('projects.filter.delayedOnly')"
-              color="error"
-              hide-details
-              inset
-              density="compact"
-              @update:model-value="(v) => setDelayedFilter(Boolean(v))"
-            />
-          </v-card-text>
+    <WorkspaceSplit
+      storage-key="projects"
+      :default-width="580"
+      :min-master="430"
+      :min-details="360"
+      @update:show-details="splitActive = $event"
+    >
+      <div class="cp-pane">
+        <div class="cp-pane__toolbar cp-projects__filters">
+          <SearchBar v-model="searchInput" :placeholder="t('projects.searchPlaceholder')" />
+          <v-chip-group :model-value="statusFilter" mandatory @update:model-value="onStatusChange">
+            <v-chip value="all">{{ t('common.empty') }}</v-chip>
+            <v-chip :value="ProjectStatus.PLANNED">{{ t('projects.status.PLANNED') }}</v-chip>
+            <v-chip :value="ProjectStatus.IN_PROGRESS">{{ t('projects.status.IN_PROGRESS') }}</v-chip>
+            <v-chip :value="ProjectStatus.PAUSED">{{ t('projects.status.PAUSED') }}</v-chip>
+            <v-chip :value="ProjectStatus.COMPLETED">{{ t('projects.status.COMPLETED') }}</v-chip>
+            <v-chip :value="ProjectStatus.CANCELLED">{{ t('projects.status.CANCELLED') }}</v-chip>
+          </v-chip-group>
+          <v-switch
+            :model-value="delayed"
+            :label="t('projects.filter.delayedOnly')"
+            color="error"
+            hide-details
+            @update:model-value="(value) => setDelayedFilter(Boolean(value))"
+          />
+        </div>
 
-          <v-divider />
-
-          <ErrorState v-if="error" :error="error" class="my-4" @retry="fetch" />
-          <template v-else>
-            <v-progress-linear v-if="loading" indeterminate />
-            <div class="cp-master-list">
-              <button
-                v-for="p in items"
-                :key="p.id"
-                type="button"
-                class="cp-master-item"
-                :class="{ 'is-active': p.id === selectedId }"
-                @click="select(p)"
-              >
-                <div class="flex items-center justify-between gap-2">
-                  <span class="cp-master-name">{{ p.name }}</span>
-                  <ProjectStatusBadge :status="p.status" />
-                </div>
-                <div class="text-caption text-medium-emphasis">{{ p.contract?.customer.name ?? '—' }}</div>
-                <div class="flex items-center gap-2 mt-1">
-                  <ProjectProgressBar :value="p.progressPercentage" class="flex-1" />
-                  <span class="text-caption" :class="{ 'text-error font-medium': isDelayed(p) }">
-                    <DateDisplay :value="p.deliveryDate" />
-                  </span>
-                </div>
-              </button>
-              <div v-if="!loading && items.length === 0" class="cp-master-empty">
-                {{ t('common.empty') }}
-              </div>
-            </div>
-
-            <template v-if="pageCount > 1">
-              <v-divider />
-              <div class="pa-2 d-flex justify-center">
-                <v-pagination v-model="page" :length="pageCount" :total-visible="4" density="comfortable" />
-              </div>
+        <ErrorState v-if="error" :error="error" class="ma-2" @retry="fetch" />
+        <div v-else class="cp-pane__body">
+          <DataTable
+            :items="items"
+            :items-length="total"
+            :headers="columns"
+            :loading="loading"
+            :page="page"
+            :items-per-page="pageSize"
+            :row-props="rowProps"
+            item-value="id"
+            @update:options="onTableUpdate"
+            @click:row="(_event, row) => select(row.item)"
+            @dblclick:row="(_event, row) => router.push(`/projects/${row.item.id}`)"
+          >
+            <template #[`item.name`]="{ item }"><span class="cp-projects-table__name">{{ item.name }}</span></template>
+            <template #[`item.customer`]="{ item }">{{ item.contract?.customer.name ?? '-' }}</template>
+            <template #[`item.status`]="{ item }"><ProjectStatusBadge :status="item.status" /></template>
+            <template #[`item.progressPercentage`]="{ item }">
+              <span class="cp-projects-table__progress">
+                <span>{{ item.progressPercentage }}%</span>
+                <ProjectProgressBar :value="item.progressPercentage" :show-label="false" :height="3" />
+              </span>
             </template>
-          </template>
-        </v-card>
+            <template #[`item.deliveryDate`]="{ item }">
+              <span :class="{ 'cp-projects-table__late': isDelayed(item) }"><DateDisplay :value="item.deliveryDate" /></span>
+            </template>
+            <template #no-data><span class="cp-projects-table__empty">{{ t('common.empty') }}</span></template>
+          </DataTable>
+        </div>
       </div>
 
-      <!-- Detail: the selected project, or a hint -->
-      <div class="lg:col-span-8">
-        <template v-if="selectedId">
-          <div class="d-flex justify-end mb-2">
-            <v-btn
-              variant="text"
-              size="small"
-              prepend-icon="mdi-open-in-new"
-              :to="`/projects/${selectedId}`"
-            >
+      <template #details>
+        <DetailsPane :title="selectedName ?? t('nav.projects')" icon="mdi-office-building-outline" :selected="Boolean(selectedId)">
+          <ProjectDetailPanel v-if="selectedId" :project-id="selectedId" @changed="fetch" />
+          <template #actions>
+            <v-btn size="x-small" variant="text" prepend-icon="mdi-open-in-new" :to="`/projects/${selectedId}`">
               {{ t('projects.openFull') }}
             </v-btn>
-          </div>
-          <ProjectDetailPanel :project-id="selectedId" @changed="fetch" />
-        </template>
-        <v-card v-else class="cp-detail-empty">
-          <div class="text-center text-medium-emphasis pa-12">
-            <v-icon size="48" class="mb-3 d-block mx-auto">mdi-gesture-tap</v-icon>
-            {{ t('projects.workspace.selectHint') }}
-          </div>
-        </v-card>
-      </div>
-    </div>
+          </template>
+        </DetailsPane>
+      </template>
+    </WorkspaceSplit>
   </div>
 </template>
 
 <style scoped>
-.cp-master-list {
-  max-height: calc(100vh - 300px);
-  min-height: 200px;
-  overflow-y: auto;
+.cp-projects__filters {
+  flex-wrap: wrap;
+  row-gap: 2px;
 }
-.cp-master-item {
-  display: block;
-  width: 100%;
-  text-align: start;
-  padding: 7px 12px;
-  border-bottom: 1px solid rgba(var(--v-border-color), 0.4);
-  cursor: pointer;
-}
-.cp-master-item:hover {
-  background: rgba(var(--v-theme-on-surface), 0.03);
-}
-/* Active-item rail, drawn the way .cp-nav draws it: an overlaid pseudo-element
-   rather than a border that only exists when selected (which shifted the row
-   3px on click). Logical inset keeps it on the correct edge under RTL. */
-.cp-master-item.is-active {
-  position: relative;
-  background: rgba(var(--v-theme-primary), 0.1);
-}
-.cp-master-item.is-active::before {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: 3px;
-  background: rgb(var(--v-theme-primary));
-}
-.cp-master-name {
+.cp-projects-table__name {
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.cp-master-empty {
-  padding: 36px;
-  text-align: center;
-  color: rgba(var(--v-theme-on-surface), 0.5);
+.cp-projects-table__progress {
+  display: inline-block;
+  min-width: 92px;
+  font-variant-numeric: tabular-nums;
 }
-.cp-detail-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 320px;
+.cp-projects-table__progress :deep(.v-progress-linear) {
+  margin-top: 2px;
+  border-radius: var(--cp-radius-sm);
+}
+.cp-projects-table__late {
+  color: var(--cp-error);
+  font-weight: 600;
+}
+.cp-projects-table__empty {
+  display: block;
+  padding: 16px;
+  color: var(--cp-text-muted);
 }
 </style>

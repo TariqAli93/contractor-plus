@@ -50,7 +50,7 @@ const itemsCount = computed(() => props.contract.items.length);
         </template>
         <v-list-item-title>{{ t('contracts.summary.profitMargin') }}</v-list-item-title>
         <template #append>
-          {{ contract.expectedProfitMargin !== null ? `${contract.expectedProfitMargin}%` : '—' }}
+          {{ contract.expectedProfitMargin !== null ? `${contract.expectedProfitMargin}%` : '-' }}
         </template>
       </v-list-item>
       <v-divider />

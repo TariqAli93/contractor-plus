@@ -91,7 +91,7 @@ async function runGenerate() {
           :title="t('contracts.estimate.fields.profitMargin')"
           icon="mdi-percent-outline"
         >
-          {{ result.expectedProfitMargin !== null ? `${result.expectedProfitMargin}%` : '—' }}
+          {{ result.expectedProfitMargin !== null ? `${result.expectedProfitMargin}%` : '-' }}
         </SummaryCard>
         <SummaryCard
           :title="t('contracts.estimate.fields.profitAmount')"

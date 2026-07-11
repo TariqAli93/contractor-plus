@@ -21,7 +21,7 @@ const profitTone = computed<'positive' | 'urgent' | 'neutral'>(() => {
 </script>
 
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1">
     <SummaryMetricCard
       :title="t('dashboard.metrics.monthlyRevenue')"
       icon="mdi-cash-plus"

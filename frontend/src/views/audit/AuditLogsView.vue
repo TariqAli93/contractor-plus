@@ -9,6 +9,7 @@ import ErrorState from '@/components/shared/ErrorState.vue';
 import EmptyState from '@/components/shared/EmptyState.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
+import DataTable from '@/components/shared/DataTable.vue';
 import AuditActionBadge from '@/components/features/audit/AuditActionBadge.vue';
 import AuditDiffPanel from '@/components/features/audit/AuditDiffPanel.vue';
 
@@ -84,7 +85,7 @@ function onTableUpdate(opts: {
   if (first) sortDir.value = first.order;
 }
 
-// Inline expansion for the diff panel — opening a row reveals oldValues/newValues
+// Inline expansion for the diff panel - opening a row reveals oldValues/newValues
 // without navigating away.
 const expanded = ref<string[]>([]);
 
@@ -101,11 +102,11 @@ function openUserHistory(userId: string | null) {
 </script>
 
 <template>
-  <div>
+  <div class="cp-fill">
     <PageHeader :title="t('nav.audit')" icon="mdi-history" />
 
-    <v-card>
-      <v-card-text class="space-y-3">
+    <section class="cp-pane">
+      <div class="cp-pane__toolbar flex flex-wrap items-center gap-3">
         <div class="flex flex-wrap items-center gap-3">
           <v-text-field
             v-model="entityInput"
@@ -155,14 +156,12 @@ function openUserHistory(userId: string | null) {
             {{ opt.title }}
           </v-chip>
         </v-chip-group>
-      </v-card-text>
+      </div>
 
-      <v-divider />
+      <ErrorState v-if="error" :error="error" class="ma-3" @retry="fetch" />
 
-      <ErrorState v-if="error" :error="error" class="my-4" @retry="fetch" />
-
-      <v-data-table-server
-        v-else
+      <div v-else class="cp-pane__body">
+        <DataTable
         v-model:expanded="expanded"
         :items="items"
         :items-length="total"
@@ -208,7 +207,7 @@ function openUserHistory(userId: string | null) {
           </button>
         </template>
         <template #[`item.ipAddress`]="{ item }">
-          {{ item.ipAddress ?? '—' }}
+          {{ item.ipAddress ?? '-' }}
         </template>
         <template #expanded-row="{ columns: cols, item }">
           <tr>
@@ -220,7 +219,8 @@ function openUserHistory(userId: string | null) {
         <template #no-data>
           <EmptyState :title="t('audit.empty')" icon="mdi-history" />
         </template>
-      </v-data-table-server>
-    </v-card>
+        </DataTable>
+      </div>
+    </section>
   </div>
 </template>

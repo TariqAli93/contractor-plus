@@ -5,7 +5,7 @@
 // "value does not conform to the required format yyyy-MM-dd" in the browser.
 //
 // Important: this is one-way (server → input). The form payload sent back to
-// the server is the same `yyyy-MM-dd` string the user typed — backends already
+// the server is the same `yyyy-MM-dd` string the user typed - backends already
 // `z.coerce.date()` it, so no extra serialization on submit is needed.
 
 export function toDateInput(value?: string | Date | null): string {
@@ -14,7 +14,7 @@ export function toDateInput(value?: string | Date | null): string {
     if (Number.isNaN(value.getTime())) return '';
     return formatDate(value);
   }
-  // Already in `yyyy-MM-dd` shape — fast path, no Date construction.
+  // Already in `yyyy-MM-dd` shape - fast path, no Date construction.
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return value;
   }

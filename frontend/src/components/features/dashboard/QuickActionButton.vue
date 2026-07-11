@@ -57,7 +57,7 @@ defineProps<{
   color: var(--cp-primary);
   transform: translateX(-3px);
 }
-/* In LTR layouts the chevron points the wrong way — flip it visually. */
+/* In LTR layouts the chevron points the wrong way - flip it visually. */
 :global([dir='ltr']) .cp-quick-action__chev {
   transform: scaleX(-1);
 }

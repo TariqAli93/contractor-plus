@@ -1,4 +1,8 @@
 <script setup lang="ts">
+// Payments workspace: a dense grid on one side, the selected payment's property
+// sheet on the other. Single click selects (the pane follows), double click
+// opens the full record - the Explorer/Access convention. On a window too narrow
+// for two panes the single click navigates instead.
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { t } from '@/i18n';
@@ -17,9 +21,14 @@ import ErrorState from '@/components/shared/ErrorState.vue';
 import RoleGate from '@/components/shared/RoleGate.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
+import DataTable from '@/components/shared/DataTable.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import PaymentStatusBadge from '@/components/features/payment/PaymentStatusBadge.vue';
 import MarkPaidDialog from '@/components/features/payment/MarkPaidDialog.vue';
+import WorkspaceSplit from '@/components/shared/workspace/WorkspaceSplit.vue';
+import DetailsPane from '@/components/shared/workspace/DetailsPane.vue';
+import PropertyGrid from '@/components/shared/workspace/PropertyGrid.vue';
+import type { PropertyRow } from '@/components/shared/workspace/types';
 
 const router = useRouter();
 const route = useRoute();
@@ -73,6 +82,10 @@ const projectOptions = computed(() => [
   ...projects.value.map((p) => ({ value: p.id, title: p.name })),
 ]);
 
+function projectName(id: string): string | null {
+  return projects.value.find((p) => p.id === id)?.name ?? null;
+}
+
 const statusFilter = computed<'all' | PaymentStatus>(() => status.value ?? 'all');
 function onStatusChange(v: 'all' | PaymentStatus) {
   setStatusFilter(v === 'all' ? undefined : v);
@@ -81,6 +94,17 @@ function onStatusChange(v: 'all' | PaymentStatus) {
 const localDueFrom = ref<string | undefined>(undefined);
 const localDueTo = ref<string | undefined>(undefined);
 watch([localDueFrom, localDueTo], ([from, to]) => setDueDateRange(from, to));
+
+// Selection is mirrored to ?id= so a refresh reopens the same record.
+const selectedId = ref<string | null>(
+  typeof route.query.id === 'string' ? route.query.id : null,
+);
+const selected = computed<Payment | null>(
+  () => items.value.find((p) => p.id === selectedId.value) ?? null,
+);
+
+// True when the details pane is actually on screen; WorkspaceSplit owns the rule.
+const splitActive = ref(true);
 
 onMounted(async () => {
   const qp = route.query.projectId;
@@ -114,6 +138,42 @@ function newPayment() {
   void router.push(`/payments/new${qs}`);
 }
 
+function select(p: Payment) {
+  if (!splitActive.value) {
+    openEdit(p);
+    return;
+  }
+  selectedId.value = p.id;
+  void router.replace({ query: { ...route.query, id: p.id } });
+}
+
+function onRowClick(_e: unknown, row: { item: Payment }) {
+  select(row.item);
+}
+function onRowDblClick(_e: unknown, row: { item: Payment }) {
+  openEdit(row.item);
+}
+
+/** Mark the selected row so the grid and the pane agree at a glance. */
+function rowProps({ item }: { item: Payment }) {
+  return item.id === selectedId.value ? { class: 'cp-row-selected' } : {};
+}
+
+const rows = computed<PropertyRow[]>(() => {
+  const p = selected.value;
+  if (!p) return [];
+  return [
+    { key: 'project', label: t('payments.fields.project'), value: projectName(p.projectId) },
+    { key: 'dueDate', label: t('payments.fields.dueDate') },
+    { key: 'status', label: t('payments.fields.status') },
+    { key: 'amount', label: t('payments.fields.amount'), tabular: true },
+    { key: 'paymentDate', label: t('payments.fields.paymentDate') },
+    { key: 'method', label: t('payments.fields.method') },
+    { key: 'reference', label: t('payments.fields.reference'), value: p.reference },
+    { key: 'notes', label: t('payments.fields.notes'), value: p.notes },
+  ];
+});
+
 async function handleDelete(p: Payment) {
   const ok = await confirm({
     title: t('payments.deleteConfirmTitle'),
@@ -125,6 +185,7 @@ async function handleDelete(p: Payment) {
   try {
     await paymentsApi.remove(p.id);
     toast.success(t('common.deleted'));
+    if (selectedId.value === p.id) selectedId.value = null;
     await fetch();
   } catch (e) {
     handle(e);
@@ -189,157 +250,234 @@ function canEditDelete(p: Payment) {
 </script>
 
 <template>
-  <div>
+  <div class="cp-fill">
     <PageHeader :title="t('nav.payments')" :count="total || null" icon="mdi-cash-plus" :hint="t('help.payments')">
       <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
-        <v-btn color="primary" prepend-icon="mdi-plus" @click="newPayment">
+        <v-btn color="primary" size="small" variant="flat" prepend-icon="mdi-plus" @click="newPayment">
           {{ t('payments.new') }}
         </v-btn>
       </RoleGate>
     </PageHeader>
 
-    <v-card>
-      <v-card-text class="space-y-3">
-        <div class="flex flex-wrap items-center gap-3">
-          <div class="flex-1 min-w-[240px]">
-            <SearchBar v-model="searchInput" :placeholder="t('payments.searchPlaceholder')" />
+    <WorkspaceSplit storage-key="payments" @update:show-details="splitActive = $event">
+      <div class="cp-pane">
+        <div class="cp-pane__toolbar">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex-1 min-w-[240px]">
+              <SearchBar v-model="searchInput" :placeholder="t('payments.searchPlaceholder')" />
+            </div>
+            <v-select
+              :model-value="projectId"
+              :items="projectOptions"
+              :label="t('payments.filter.project')"
+              density="compact"
+              hide-details
+              style="min-width: 220px"
+              clearable
+              @update:model-value="setProjectFilter"
+            />
+            <v-text-field
+              v-model="localDueFrom"
+              :label="t('payments.filter.dueFrom')"
+              type="date"
+              density="compact"
+              hide-details
+              style="max-width: 170px"
+            />
+            <v-text-field
+              v-model="localDueTo"
+              :label="t('payments.filter.dueTo')"
+              type="date"
+              density="compact"
+              hide-details
+              style="max-width: 170px"
+            />
+            <v-switch
+              :model-value="late"
+              :label="t('payments.filter.lateOnly')"
+              color="error"
+              hide-details
+              inset
+              density="compact"
+              @update:model-value="(v) => setLateFilter(Boolean(v))"
+            />
           </div>
-          <v-select
-            :model-value="projectId"
-            :items="projectOptions"
-            :label="t('payments.filter.project')"
-            density="compact"
-            hide-details
-            style="min-width: 220px"
-            clearable
-            @update:model-value="setProjectFilter"
-          />
-          <v-text-field
-            v-model="localDueFrom"
-            :label="t('payments.filter.dueFrom')"
-            type="date"
-            density="compact"
-            hide-details
-            style="max-width: 170px"
-          />
-          <v-text-field
-            v-model="localDueTo"
-            :label="t('payments.filter.dueTo')"
-            type="date"
-            density="compact"
-            hide-details
-            style="max-width: 170px"
-          />
-          <v-switch
-            :model-value="late"
-            :label="t('payments.filter.lateOnly')"
-            color="error"
-            hide-details
-            inset
-            density="compact"
-            @update:model-value="(v) => setLateFilter(Boolean(v))"
-          />
+          <v-chip-group
+            :model-value="statusFilter"
+            mandatory
+            selected-class="bg-primary text-white"
+            @update:model-value="onStatusChange"
+          >
+            <v-chip value="all" size="small">{{ t('payments.filter.allStatuses') }}</v-chip>
+            <v-chip :value="PaymentStatus.PENDING" size="small">
+              {{ t('payments.status.PENDING') }}
+            </v-chip>
+            <v-chip :value="PaymentStatus.PAID" size="small">
+              {{ t('payments.status.PAID') }}
+            </v-chip>
+            <v-chip :value="PaymentStatus.LATE" size="small">
+              {{ t('payments.status.LATE') }}
+            </v-chip>
+            <v-chip :value="PaymentStatus.CANCELLED" size="small">
+              {{ t('payments.status.CANCELLED') }}
+            </v-chip>
+          </v-chip-group>
         </div>
-        <v-chip-group
-          :model-value="statusFilter"
-          mandatory
-          selected-class="bg-primary text-white"
-          @update:model-value="onStatusChange"
+
+        <ErrorState v-if="error" :error="error" class="ma-3" @retry="fetch" />
+
+        <div v-else class="cp-pane__body">
+          <DataTable
+            :items="items"
+            :items-length="total"
+            :headers="columns"
+            :loading="loading"
+            :page="page"
+            :items-per-page="pageSize"
+            :items-per-page-options="[25, 50, 100, 200]"
+            item-value="id"
+            hover
+            density="compact"
+            :row-props="rowProps"
+            @update:options="onTableUpdate"
+            @click:row="onRowClick"
+            @dblclick:row="onRowDblClick"
+          >
+            <template #[`item.dueDate`]="{ item }">
+              <DateDisplay :value="item.dueDate" />
+            </template>
+            <template #[`item.status`]="{ item }">
+              <PaymentStatusBadge :status="item.status" />
+            </template>
+            <template #[`item.amount`]="{ item }">
+              <span class="font-medium"><MoneyDisplay :amount="item.amount" /></span>
+            </template>
+            <template #[`item.paymentDate`]="{ item }">
+              <DateDisplay :value="item.paymentDate" />
+            </template>
+            <template #[`item.method`]="{ item }">
+              <span v-if="item.method">{{ t(`payments.method.${item.method}`) }}</span>
+              <span v-else class="text-medium-emphasis">-</span>
+            </template>
+            <template #[`item.reference`]="{ item }">
+              <span v-if="item.reference">{{ item.reference }}</span>
+              <span v-else class="text-medium-emphasis">-</span>
+            </template>
+            <template #[`item.actions`]="{ item }">
+              <div class="cp-row-actions" @click.stop>
+                <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
+                  <v-btn
+                    v-if="canMarkPaid(item)"
+                    icon="mdi-check"
+                    size="x-small"
+                    variant="text"
+                    color="success"
+                    :title="t('payments.markPaid.title')"
+                    @click="openMarkPaid(item)"
+                  />
+                  <v-btn
+                    v-if="canCancel(item)"
+                    icon="mdi-close"
+                    size="x-small"
+                    variant="text"
+                    color="warning"
+                    :title="t('payments.cancel.title')"
+                    @click="handleCancel(item)"
+                  />
+                  <v-btn
+                    v-if="canEditDelete(item)"
+                    icon="mdi-pencil"
+                    size="x-small"
+                    variant="text"
+                    @click="openEdit(item)"
+                  />
+                  <v-btn
+                    v-if="canEditDelete(item)"
+                    icon="mdi-delete-outline"
+                    size="x-small"
+                    variant="text"
+                    color="error"
+                    @click="handleDelete(item)"
+                  />
+                </RoleGate>
+              </div>
+            </template>
+          </DataTable>
+        </div>
+      </div>
+
+      <template #details>
+        <DetailsPane
+          :title="selected?.reference ?? t('details.title')"
+          icon="mdi-cash"
+          :selected="Boolean(selected)"
         >
-          <v-chip value="all" size="small">{{ t('payments.filter.allStatuses') }}</v-chip>
-          <v-chip :value="PaymentStatus.PENDING" size="small">
-            {{ t('payments.status.PENDING') }}
-          </v-chip>
-          <v-chip :value="PaymentStatus.PAID" size="small">
-            {{ t('payments.status.PAID') }}
-          </v-chip>
-          <v-chip :value="PaymentStatus.LATE" size="small">
-            {{ t('payments.status.LATE') }}
-          </v-chip>
-          <v-chip :value="PaymentStatus.CANCELLED" size="small">
-            {{ t('payments.status.CANCELLED') }}
-          </v-chip>
-        </v-chip-group>
-      </v-card-text>
+          <PropertyGrid :rows="rows">
+            <template #dueDate>
+              <DateDisplay :value="selected?.dueDate" />
+            </template>
+            <template #status>
+              <PaymentStatusBadge v-if="selected" :status="selected.status" />
+            </template>
+            <template #amount>
+              <MoneyDisplay v-if="selected" :amount="selected.amount" />
+            </template>
+            <template #paymentDate>
+              <DateDisplay :value="selected?.paymentDate" />
+            </template>
+            <template #method>
+              <span v-if="selected?.method">{{ t(`payments.method.${selected.method}`) }}</span>
+              <span v-else>-</span>
+            </template>
+          </PropertyGrid>
 
-      <v-divider />
-
-      <ErrorState v-if="error" :error="error" class="my-4" @retry="fetch" />
-
-      <v-data-table-server
-        v-else
-        :items="items"
-        :items-length="total"
-        :headers="columns"
-        :loading="loading"
-        :page="page"
-        :items-per-page="pageSize"
-        :items-per-page-options="[10, 20, 50, 100]"
-        item-value="id"
-        hover
-        @update:options="onTableUpdate"
-      >
-        <template #[`item.dueDate`]="{ item }">
-          <DateDisplay :value="item.dueDate" />
-        </template>
-        <template #[`item.status`]="{ item }">
-          <PaymentStatusBadge :status="item.status" />
-        </template>
-        <template #[`item.amount`]="{ item }">
-          <span class="font-medium"><MoneyDisplay :amount="item.amount" /></span>
-        </template>
-        <template #[`item.paymentDate`]="{ item }">
-          <DateDisplay :value="item.paymentDate" />
-        </template>
-        <template #[`item.method`]="{ item }">
-          <span v-if="item.method">{{ t(`payments.method.${item.method}`) }}</span>
-          <span v-else class="text-medium-emphasis">—</span>
-        </template>
-        <template #[`item.reference`]="{ item }">
-          <span v-if="item.reference">{{ item.reference }}</span>
-          <span v-else class="text-medium-emphasis">—</span>
-        </template>
-        <template #[`item.actions`]="{ item }">
-          <div class="flex justify-end gap-1" @click.stop>
+          <template #actions>
             <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
               <v-btn
-                v-if="canMarkPaid(item)"
-                icon="mdi-check"
-                size="small"
-                variant="text"
+                v-if="selected && canMarkPaid(selected)"
+                size="x-small"
+                variant="flat"
                 color="success"
-                :title="t('payments.markPaid.title')"
-                @click="openMarkPaid(item)"
-              />
+                prepend-icon="mdi-check"
+                @click="selected && openMarkPaid(selected)"
+              >
+                {{ t('payments.markPaid.title') }}
+              </v-btn>
               <v-btn
-                v-if="canCancel(item)"
-                icon="mdi-close"
-                size="small"
+                v-if="selected && canCancel(selected)"
+                size="x-small"
                 variant="text"
                 color="warning"
-                :title="t('payments.cancel.title')"
-                @click="handleCancel(item)"
-              />
+                prepend-icon="mdi-close"
+                @click="selected && handleCancel(selected)"
+              >
+                {{ t('payments.cancel.title') }}
+              </v-btn>
               <v-btn
-                v-if="canEditDelete(item)"
-                icon="mdi-pencil"
-                size="small"
-                variant="text"
-                @click="openEdit(item)"
-              />
+                v-if="selected && canEditDelete(selected)"
+                size="x-small"
+                variant="flat"
+                color="primary"
+                prepend-icon="mdi-pencil"
+                @click="selected && openEdit(selected)"
+              >
+                {{ t('common.edit') }}
+              </v-btn>
               <v-btn
-                v-if="canEditDelete(item)"
-                icon="mdi-delete-outline"
-                size="small"
+                v-if="selected && canEditDelete(selected)"
+                size="x-small"
                 variant="text"
                 color="error"
-                @click="handleDelete(item)"
-              />
+                prepend-icon="mdi-delete-outline"
+                @click="selected && handleDelete(selected)"
+              >
+                {{ t('common.delete') }}
+              </v-btn>
             </RoleGate>
-          </div>
-        </template>
-      </v-data-table-server>
-    </v-card>
+          </template>
+        </DetailsPane>
+      </template>
+    </WorkspaceSplit>
 
     <MarkPaidDialog
       v-model="markPaidOpen"
@@ -348,3 +486,11 @@ function canEditDelete(p: Payment) {
     />
   </div>
 </template>
+
+<style scoped>
+.cp-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+}
+</style>

@@ -22,8 +22,8 @@ export interface PaymentColumnsCtx {
 }
 
 /** Column model for the project-payments grid. `status` and `paymentDate` are
- *  display-only — they're driven by the mark-paid / cancel actions, not by a
- *  direct field update — so only dueDate / amount / method / reference edit. */
+ *  display-only - they're driven by the mark-paid / cancel actions, not by a
+ *  direct field update - so only dueDate / amount / method / reference edit. */
 export function buildPaymentColumns({ t, money }: PaymentColumnsCtx): GridColumn[] {
   const methodOptions: GridSelectOption[] = [
     { value: PaymentMethod.CASH, title: t('payments.method.CASH') },
@@ -56,7 +56,7 @@ export function buildPaymentColumns({ t, money }: PaymentColumnsCtx): GridColumn
       field: 'paymentDate',
       title: t('payments.fields.paymentDate'),
       width: 150,
-      format: (v) => (v ? String(v).slice(0, 10) : '—'),
+      format: (v) => (v ? String(v).slice(0, 10) : '-'),
     },
     {
       field: 'method',

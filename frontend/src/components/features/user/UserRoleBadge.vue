@@ -12,15 +12,15 @@ const props = defineProps<{
 const color = computed(() => {
   switch (props.role) {
     case RoleName.OWNER:
-      return 'deep-purple';
+      return 'primary';
     case RoleName.ADMIN:
       return 'primary';
     case RoleName.ACCOUNTANT:
-      return 'teal';
+      return 'accent';
     case RoleName.ENGINEER:
-      return 'indigo';
+      return 'info';
     case RoleName.VIEWER:
-      return 'blue-grey';
+      return 'secondary';
     default:
       return undefined;
   }

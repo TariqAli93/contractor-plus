@@ -8,7 +8,7 @@ const props = defineProps<{
 }>();
 
 function pretty(v: unknown): string {
-  if (v === null || v === undefined) return '—';
+  if (v === null || v === undefined) return '-';
   try {
     return JSON.stringify(v, null, 2);
   } catch {
@@ -27,7 +27,7 @@ const hasNew = computed(() => props.newValues !== null && props.newValues !== un
         {{ t('audit.fields.oldValues') }}
       </div>
       <pre
-        class="text-caption bg-grey-lighten-4 dark:bg-grey-darken-4 rounded pa-3 overflow-auto max-h-80 whitespace-pre-wrap break-words mb-0"
+        class="cp-audit-json text-caption pa-3 overflow-auto max-h-80 whitespace-pre-wrap break-words mb-0"
         :class="{ 'text-medium-emphasis italic': !hasOld }"
       >{{ pretty(oldValues) }}</pre>
     </div>
@@ -36,9 +36,19 @@ const hasNew = computed(() => props.newValues !== null && props.newValues !== un
         {{ t('audit.fields.newValues') }}
       </div>
       <pre
-        class="text-caption bg-grey-lighten-4 dark:bg-grey-darken-4 rounded pa-3 overflow-auto max-h-80 whitespace-pre-wrap break-words mb-0"
+        class="cp-audit-json text-caption pa-3 overflow-auto max-h-80 whitespace-pre-wrap break-words mb-0"
         :class="{ 'text-medium-emphasis italic': !hasNew }"
       >{{ pretty(newValues) }}</pre>
     </div>
   </div>
 </template>
+
+<style scoped>
+.cp-audit-json {
+  margin: 0;
+  color: var(--cp-text);
+  background: var(--cp-panel);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-sm);
+}
+</style>

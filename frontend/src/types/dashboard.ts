@@ -1,6 +1,6 @@
 import type { PaymentMethod, PaymentStatus, ProjectStatus } from './enums';
 
-// Mirrors backend reports.types — RecentProject is a Project row with the
+// Mirrors backend reports.types - RecentProject is a Project row with the
 // contract + customer summary joined in.
 export interface DashboardRecentProject {
   id: string;
@@ -19,7 +19,7 @@ export interface DashboardRecentProject {
   updatedAt: string;
 }
 
-// Backend returns bare Payment rows for recentPayments — no project join.
+// Backend returns bare Payment rows for recentPayments - no project join.
 export interface DashboardRecentPayment {
   id: string;
   projectId: string;

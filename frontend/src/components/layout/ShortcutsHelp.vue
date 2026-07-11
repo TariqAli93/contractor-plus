@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Keyboard-shortcuts cheat sheet. Opened with `?` or the topbar button — makes
+// Keyboard-shortcuts cheat sheet. Opened with `?` or the topbar button - makes
 // the otherwise-hidden Ctrl+K palette, g-then-key navigation, and grid keys
 // discoverable. Pure reference; open state lives in the ui store.
 import { computed } from 'vue';
@@ -101,7 +101,7 @@ const groups = computed<Group[]>(() => [
   line-height: 1;
   padding: 3px 7px;
   border-radius: 5px;
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  background: rgba(var(--v-theme-on-surface), 0.06);
+  border: 1px solid var(--cp-border);
+  background: var(--cp-surface-2);
 }
 </style>

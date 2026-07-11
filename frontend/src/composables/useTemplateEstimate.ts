@@ -3,7 +3,7 @@ import { templatesApi } from '@/services/api/templates.api';
 import { ApiError } from '@/types/api';
 import type { TemplateEstimate } from '@/types/template';
 
-// Reads the backend-computed estimate. No client-side math — frontend just
+// Reads the backend-computed estimate. No client-side math - frontend just
 // renders what the server returned.
 export function useTemplateEstimate(templateId: string) {
   const data = ref<TemplateEstimate | null>(null);

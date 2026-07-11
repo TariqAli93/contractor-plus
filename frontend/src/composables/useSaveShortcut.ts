@@ -5,7 +5,7 @@ import { onBeforeUnmount, onMounted, toValue, type MaybeRefOrGetter } from 'vue'
  * suppresses the browser's native "save page" dialog.
  *
  * Opt-in per form/dialog so only the *active* one responds: pass `enabled`
- * (e.g. `() => dialogOpen && !submitting`) to gate it — closed or mid-submit
+ * (e.g. `() => dialogOpen && !submitting`) to gate it - closed or mid-submit
  * forms then ignore the shortcut, so several mounted forms don't all fire.
  */
 export function useSaveShortcut(

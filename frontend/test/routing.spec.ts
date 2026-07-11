@@ -1,55 +1,55 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { routes } from '@/router/routes';
 
-// These specs read source files off disk. `import.meta.url` cannot anchor them:
-// under `environment: 'jsdom'` it is an http:// URL, and `fileURLToPath` rejects
-// any non-file scheme. Vitest runs with cwd set to the config root (frontend/),
-// so resolve from there instead.
+// Vitest runs with cwd set to the config root (frontend/), so resolve from there:
+// `import.meta.url` is an http:// URL under `environment: 'jsdom'`.
 const fromFrontend = (relative: string) => resolve(process.cwd(), relative);
 
-// Proves the three AI surfaces collapsed into ONE entry point — the crux of the
-// unification. Pure route-config + source assertions (no component runtime).
-describe('unified AI assistant — single entry point', () => {
-  it('exposes exactly one AI assistant page (/ai)', () => {
-    const ai = routes.filter((r) => r.path === '/ai');
-    expect(ai).toHaveLength(1);
-    expect(ai[0]?.name).toBe('ai-console');
-  });
-
-  it('retires the standalone estimation "build" AI route', () => {
+// The AI subsystem (assistant, command workflow, AI-generated estimation
+// templates, OpenRouter settings) was removed wholesale. These specs are the
+// regression guard: they fail if any AI surface is reintroduced by accident.
+describe('AI subsystem is fully removed', () => {
+  it('exposes no AI routes', () => {
     const paths = routes.map((r) => r.path);
-    expect(paths).not.toContain('/estimation-templates/build');
-    expect(routes.some((r) => r.name === 'estimation-template-builder')).toBe(false);
+    for (const path of ['/ai', '/ai-audit', '/estimation-templates', '/estimation-templates/:id']) {
+      expect(paths).not.toContain(path);
+    }
   });
 
-  it('keeps the estimation records views (list + detail) reachable', () => {
-    const paths = routes.map((r) => r.path);
-    expect(paths).toContain('/estimation-templates');
-    expect(paths).toContain('/estimation-templates/:id');
+  it('exposes no AI route names', () => {
+    const names = routes.map((r) => r.name);
+    for (const name of ['ai-console', 'ai-audit', 'estimation-templates', 'estimation-template-detail']) {
+      expect(names).not.toContain(name);
+    }
   });
 
-  it('adds the unified AI audit page', () => {
-    expect(routes.some((r) => r.path === '/ai-audit' && r.name === 'ai-audit')).toBe(true);
-  });
-
-  it('removes the duplicate global command FAB', () => {
-    const appLayout = readFileSync(fromFrontend('src/components/layout/AppLayout.vue'), 'utf8');
-    expect(appLayout).not.toContain('AiCommandConsole');
-    expect(existsSync(fromFrontend('src/components/ai-command/AiCommandConsole.vue'))).toBe(false);
-  });
-
-  it('gates the estimation "generate" CTA on BOTH generation AND assistant access', () => {
-    const src = readFileSync(
-      fromFrontend('src/views/estimation-templates/EstimationTemplatesListView.vue'),
-      'utf8',
+  it('declares no AI permission in any route guard', () => {
+    const guarded = routes.flatMap((r) => {
+      const permissions = (r.meta as { access?: { permissions?: string[] } } | undefined)?.access
+        ?.permissions;
+      return permissions ?? [];
+    });
+    expect(guarded.filter((p) => p.startsWith('ai.') || p.startsWith('estimation_templates.'))).toEqual(
+      [],
     );
-    // The CTA deep-links to /ai, so it must require ai.session.use (what /ai needs)
-    // in addition to estimation_templates.ai_generate — combined with AND — so it
-    // can never appear while /ai is inaccessible.
-    expect(src).toContain('estimation_templates.ai_generate');
-    expect(src).toContain('ai.session.use');
-    expect(src).toMatch(/match="all"/);
+  });
+
+  it('ships no AI source directories or modules', () => {
+    const gone = [
+      'src/components/ai',
+      'src/views/ai',
+      'src/views/estimation-templates',
+      'src/stores/aiSession.store.ts',
+      'src/services/api/aiCommand.api.ts',
+      'src/services/api/aiSession.api.ts',
+      'src/services/api/estimationTemplates.api.ts',
+      'src/services/llmErrorMessages.ts',
+      'src/components/features/settings/AiCommandSettingsTab.vue',
+    ];
+    for (const relative of gone) {
+      expect(existsSync(fromFrontend(relative)), `${relative} should not exist`).toBe(false);
+    }
   });
 });

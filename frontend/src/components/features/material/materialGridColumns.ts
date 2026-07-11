@@ -6,7 +6,7 @@ export interface MaterialColumnsCtx {
   money: (value: number | string | null | undefined) => string;
 }
 
-/** Column model for the central materials grid — name/unit/price/active/notes,
+/** Column model for the central materials grid - name/unit/price/active/notes,
  *  all inline-editable. `isActive` is a boolean select. */
 export function buildMaterialColumns({ t, money }: MaterialColumnsCtx): GridColumn[] {
   const activeOptions: GridSelectOption[] = [

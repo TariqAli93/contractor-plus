@@ -77,32 +77,36 @@ onMounted(fetch);
 </script>
 
 <template>
-  <div>
+  <div class="cp-fill">
     <PageHeader :title="t('nav.rbac')" icon="mdi-shield-key-outline" />
-    <p class="text-medium-emphasis text-body-2 mb-4">{{ t('rbac.intro') }}</p>
 
-    <v-tabs v-model="activeTab" color="primary" density="comfortable" class="mb-4">
-      <v-tab value="roles" prepend-icon="mdi-shield-account-outline">{{ t('rbac.rolesTab') }}</v-tab>
-      <v-tab value="matrix" prepend-icon="mdi-table-lock">{{ t('rbac.matrixTab') }}</v-tab>
-    </v-tabs>
+    <section class="cp-pane">
+      <div class="cp-pane__toolbar">
+        <v-tabs v-model="activeTab" color="primary">
+          <v-tab value="roles" prepend-icon="mdi-shield-account-outline">{{ t('rbac.rolesTab') }}</v-tab>
+          <v-tab value="matrix" prepend-icon="mdi-table-lock">{{ t('rbac.matrixTab') }}</v-tab>
+        </v-tabs>
+        <span class="cp-rbac__intro">{{ t('rbac.intro') }}</span>
+      </div>
 
-    <ErrorState v-if="error" :error="error" @retry="fetch" />
-    <v-progress-linear v-else-if="loading && roles.length === 0" indeterminate />
+      <ErrorState v-if="error" :error="error" class="ma-3" @retry="fetch" />
+      <v-progress-linear v-else-if="loading && roles.length === 0" indeterminate height="2" />
 
-    <v-window v-else v-model="activeTab">
-      <v-window-item value="roles">
-        <RolesList
-          :roles="roles"
-          @create="openCreate"
-          @edit="openEdit"
-          @edit-permissions="openPerms"
-          @delete="onDelete"
-        />
-      </v-window-item>
-      <v-window-item value="matrix">
-        <PermissionMatrix v-if="matrix" :matrix="matrix" />
-      </v-window-item>
-    </v-window>
+      <v-window v-else v-model="activeTab" class="cp-pane__body">
+        <v-window-item value="roles">
+          <RolesList
+            :roles="roles"
+            @create="openCreate"
+            @edit="openEdit"
+            @edit-permissions="openPerms"
+            @delete="onDelete"
+          />
+        </v-window-item>
+        <v-window-item value="matrix">
+          <PermissionMatrix v-if="matrix" :matrix="matrix" />
+        </v-window-item>
+      </v-window>
+    </section>
 
     <RoleEditDialog v-model="editOpen" :role="editTarget" @saved="fetch" />
     <RolePermissionsDialog
@@ -113,3 +117,10 @@ onMounted(fetch);
     />
   </div>
 </template>
+
+<style scoped>
+.cp-rbac__intro {
+  color: var(--cp-text-muted);
+  font-size: 0.72rem;
+}
+</style>

@@ -25,7 +25,7 @@ async function submit() {
   submitting.value = true;
   try {
     await auth.login(username.value, password.value);
-    // After a successful login we have credentials — pull the logo + the
+    // After a successful login we have credentials - pull the logo + the
     // default currency so the destination page renders branded on the
     // first paint.
     void settings.ensureCompanyAssetsLoaded();
@@ -40,7 +40,7 @@ async function submit() {
 }
 
 // If a logged-in user lands on /login (e.g. clicked the route directly),
-// the assets are already in the store — the logo renders immediately.
+// the assets are already in the store - the logo renders immediately.
 // For first visits we don't try; the store deliberately stays empty until
 // after authentication so anonymous GETs don't spam 401s.
 onMounted(() => {
@@ -51,15 +51,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="cp-login flex flex-col items-center gap-6">
+  <div class="cp-login flex flex-col items-center gap-3">
     <CompanyLogo
       variant="login"
       :label="t('app.name')"
       :caption="t('app.tagline')"
     />
 
-    <v-card width="400" class="pa-2" elevation="2">
-      <v-card-title class="text-h5 font-medium">{{ t('auth.login') }}</v-card-title>
+    <v-card width="360" class="cp-login__panel">
+      <v-card-title class="text-subtitle-1 font-medium">{{ t('auth.login') }}</v-card-title>
       <v-card-subtitle>{{ t('auth.welcome') }}</v-card-subtitle>
 
       <v-form @submit.prevent="submit">
@@ -83,7 +83,7 @@ onMounted(() => {
           />
         </v-card-text>
 
-        <v-card-actions class="px-4 pb-4">
+        <v-card-actions>
           <v-btn
             type="submit"
             color="primary"
@@ -98,3 +98,10 @@ onMounted(() => {
     </v-card>
   </div>
 </template>
+
+<style scoped>
+.cp-login__panel {
+  border: 1px solid var(--cp-border);
+  box-shadow: var(--cp-shadow-lg) !important;
+}
+</style>

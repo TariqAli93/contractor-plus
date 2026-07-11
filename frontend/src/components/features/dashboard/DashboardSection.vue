@@ -27,8 +27,9 @@ defineProps<{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 14px 18px;
+  gap: 8px;
+  min-height: 30px;
+  padding: 5px 8px;
   border-bottom: 1px solid var(--cp-border);
 }
 .cp-section__icon {

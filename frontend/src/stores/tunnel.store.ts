@@ -4,7 +4,7 @@ import type { TunnelStatusResponse } from '@/services/api/tunnel.api';
 
 // Holds the last server response verbatim plus in-flight flags. The store is
 // the single source of truth: the dashboard widget, the topbar chip, and the
-// /tunnel view all read from here and never optimistically mutate it — every
+// /tunnel view all read from here and never optimistically mutate it - every
 // state change comes from a server response we received back.
 
 export type TunnelTone = 'green' | 'yellow' | 'red' | 'gray';
@@ -17,7 +17,7 @@ export const useTunnelStore = defineStore('tunnel', () => {
   const refreshing = ref(false);
   const acting = ref(false);
 
-  // True only after the very first successful fetch — used to choose between
+  // True only after the very first successful fetch - used to choose between
   // skeleton-on-empty vs preserve-last-known on subsequent refreshes.
   const initialized = ref(false);
 
@@ -43,7 +43,7 @@ export const useTunnelStore = defineStore('tunnel', () => {
   const configExists = computed(() => status.value?.configExists ?? false);
 
   // Single source of truth for the colored-dot semantic. Every chip,
-  // widget, and view derives its color from this — no per-component drift.
+  // widget, and view derives its color from this - no per-component drift.
   //   red    = something is broken we need the user to act on
   //   yellow = transient or partially-working (starting, warning)
   //   green  = enabled + running + no error

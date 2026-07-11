@@ -84,7 +84,6 @@ async function doUnlink() {
               :model-value="Number(contract.project.progressPercentage)"
               height="20"
               color="primary"
-              rounded
             >
               <template #default>
                 <span class="text-caption">{{ contract.project.progressPercentage }}%</span>

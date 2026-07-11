@@ -17,6 +17,8 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
 
     if (error instanceof AppError) {
       if (error.statusCode >= 500) {
+        // 5xx carries a `cause` (e.g. the original Prisma error) which pino's
+        // error serializer follows — full detail in the log, never on the wire.
         request.log.error({ err: error, reqId: request.id });
       }
       return reply.code(error.statusCode).send({
@@ -24,6 +26,8 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
         code: error.code,
         message: error.message,
         details: error.details,
+        // Only present when true, so existing 4xx envelopes are byte-identical.
+        ...(error.retryable ? { retryable: true } : {}),
         reqId: request.id,
       });
     }

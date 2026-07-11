@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted } from 'vue';
+import { defineAsyncComponent, onMounted } from 'vue';
 import { t } from '@/i18n';
 import { useDashboard } from '@/composables/useDashboard';
-import { useAuthStore } from '@/stores/auth.store';
 import TopSummaryCards from '@/components/features/dashboard/TopSummaryCards.vue';
 import MonthlyFinancialSummary from '@/components/features/dashboard/MonthlyFinancialSummary.vue';
 import DelayedProjectsWidget from '@/components/features/dashboard/DelayedProjectsWidget.vue';
@@ -13,35 +12,25 @@ import QuickActionsPanel from '@/components/features/dashboard/QuickActionsPanel
 import TunnelStatusWidget from '@/components/features/dashboard/TunnelStatusWidget.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 
-const auth = useAuthStore();
 const { summary, delayed, overdue, loading, error, fetch } = useDashboard();
 
 // Lazy-load the chart so ApexCharts (heavy) is split into its own async chunk,
-// fetched only when the dashboard actually renders — keeping the route chunk lean.
+// fetched only when the dashboard actually renders - keeping the route chunk lean.
 const FinancialOverviewChart = defineAsyncComponent(
   () => import('@/components/features/dashboard/FinancialOverviewChart.vue'),
 );
 
 onMounted(fetch);
 
-const greetingName = computed(() => auth.user?.fullName?.split(' ')[0] ?? '');
 </script>
 
 <template>
   <div class="cp-dashboard">
-    <header class="cp-dashboard__header">
-      <div class="min-w-0">
-        <p class="cp-eyebrow mb-1">{{ t('nav.dashboard') }}</p>
-        <h1 class="cp-dashboard__title">
-          {{ t('auth.welcome') }}{{ greetingName ? ', ' + greetingName : '' }}
-        </h1>
-        <p v-if="summary" class="text-medium-emphasis text-sm mt-1">
-          {{ t('dashboard.asOf') }} <DateDisplay :value="summary.asOf" />
-        </p>
-      </div>
+    <PageHeader :title="t('nav.dashboard')" icon="mdi-view-dashboard-outline">
       <v-btn
-        variant="tonal"
+        variant="outlined"
         color="primary"
         prepend-icon="mdi-refresh"
         :loading="loading"
@@ -49,17 +38,20 @@ const greetingName = computed(() => auth.user?.fullName?.split(' ')[0] ?? '');
       >
         {{ t('dashboard.refresh') }}
       </v-btn>
-    </header>
+    </PageHeader>
+    <div v-if="summary" class="cp-dashboard__context">
+      {{ t('dashboard.asOf') }} <DateDisplay :value="summary.asOf" />
+    </div>
 
-    <ErrorState v-if="error" :error="error" class="my-6" @retry="fetch" />
+    <ErrorState v-if="error" :error="error" class="my-2" @retry="fetch" />
 
     <template v-else>
-      <TopSummaryCards :summary="summary" :loading="loading" class="mb-6" />
+      <TopSummaryCards :summary="summary" :loading="loading" class="cp-dashboard__metrics" />
 
       <div class="cp-dashboard__grid">
         <div class="cp-dashboard__main">
-          <section>
-            <h2 class="cp-section-title mb-3 px-1">
+          <section class="cp-dashboard__month">
+            <h2 class="cp-section-title">
               {{ t('dashboard.metrics.monthlyRevenue') }}
             </h2>
             <MonthlyFinancialSummary :summary="summary" :loading="loading" />
@@ -102,18 +94,29 @@ const greetingName = computed(() => auth.user?.fullName?.split(' ')[0] ?? '');
   flex-wrap: wrap;
   margin-bottom: 24px;
 }
-.cp-dashboard__title {
-  font-size: 1.75rem;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  line-height: 1.15;
-  color: var(--cp-text);
+.cp-dashboard__context {
+  min-height: 22px;
+  padding: 3px 8px;
+  margin-bottom: 6px;
+  font-size: 0.74rem;
+  color: var(--cp-text-muted);
+  background: var(--cp-panel);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-sm);
+}
+.cp-dashboard__metrics {
+  margin-bottom: 6px;
+}
+.cp-dashboard__month {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .cp-dashboard__grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
+  gap: 6px;
 }
 @media (min-width: 1100px) {
   .cp-dashboard__grid {
@@ -124,14 +127,14 @@ const greetingName = computed(() => auth.user?.fullName?.split(' ')[0] ?? '');
 .cp-dashboard__main {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 6px;
   min-width: 0;
 }
 
 .cp-dashboard__pair {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 20px;
+  gap: 6px;
 }
 @media (min-width: 768px) {
   .cp-dashboard__pair {
@@ -145,8 +148,8 @@ const greetingName = computed(() => auth.user?.fullName?.split(' ')[0] ?? '');
 .cp-dashboard__sticky {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 6px;
   position: sticky;
-  top: 88px;
+  top: 6px;
 }
 </style>

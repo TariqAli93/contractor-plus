@@ -1,5 +1,5 @@
 // Arabic-only string lookup. This intentionally replaces vue-i18n: there is no
-// runtime locale switching, no fallback locale, and no missing-key warnings —
+// runtime locale switching, no fallback locale, and no missing-key warnings -
 // the app ships a single Arabic dictionary (./locales/ar.json).
 //
 // Usage mirrors the old vue-i18n surface so call sites stayed unchanged:

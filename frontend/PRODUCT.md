@@ -25,7 +25,7 @@ Access is **role-scoped (RBAC, ~60 permission keys, OWNER is super-admin)**, so 
 
 ## Product Purpose
 
-Contractor Plus runs the full **money-and-progress lifecycle** for a construction contractor in one place. It turns reusable cost/step **building templates** into **contracts**, converts approved contracts into **projects**, tracks construction steps and progress, logs **costs and payments**, and surfaces **cash flow, profitability, overdue amounts, and delays** in reports — then generates the contract DOCX from templates. An AI assistant sits alongside to answer questions and drive commands. Success = the contractor always knows their financial and project standing, and staff can keep the books current without friction. This is a contractor/project system, not a store — no products/inventory/POS.
+Contractor Plus runs the full **money-and-progress lifecycle** for a construction contractor in one place. It turns reusable cost/step **building templates** into **contracts**, converts approved contracts into **projects**, tracks construction steps and progress, logs **costs and payments**, and surfaces **cash flow, profitability, overdue amounts, and delays** in reports — then generates the contract DOCX from templates. Success = the contractor always knows their financial and project standing, and staff can keep the books current without friction. This is a contractor/project system, not a store — no products/inventory/POS.
 
 ## Brand Personality
 
@@ -47,7 +47,7 @@ Contractor Plus runs the full **money-and-progress lifecycle** for a constructio
 
 ## Accessibility & Inclusion
 
-- **WCAG AA contrast** for all text and UI, verified in **both light and dark themes** (placeholder and muted text included — no light-gray-on-tinted-white).
+- **WCAG AA contrast** for all text and UI in the approved light desktop theme (placeholder and muted text included, with no light-gray-on-tinted-white).
 - **Full keyboard operability** — everything reachable and operable by keyboard, with visible focus states; critical for fast data entry.
 - **RTL-first correctness** — Arabic RTL is the primary layout: logical CSS properties (inline-start/end), mirrored directional icons where needed, tabular numerals for figures.
 - **Reduced-motion support** — honor `prefers-reduced-motion`; animations degrade to instant or crossfade. Motion conveys state (150–250 ms), never decoration.

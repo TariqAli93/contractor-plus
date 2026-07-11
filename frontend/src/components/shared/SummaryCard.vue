@@ -17,7 +17,7 @@ defineProps<{
             <v-skeleton-loader type="text" />
           </div>
           <div v-else class="text-h5 mt-1">
-            <slot>{{ value ?? '—' }}</slot>
+            <slot>{{ value ?? '-' }}</slot>
           </div>
         </div>
         <v-icon v-if="icon" :icon="icon" size="32" class="text-medium-emphasis" />

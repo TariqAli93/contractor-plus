@@ -13,7 +13,7 @@ const ICON: Record<DesktopStepStatus, string> = {
   error: 'mdi-alert-circle',
 };
 const COLOR: Record<DesktopStepStatus, string> = {
-  pending: 'rgba(148,163,184,0.5)',
+  pending: 'var(--cp-text-muted)',
   loading: 'rgb(var(--v-theme-info))',
   success: 'rgb(var(--v-theme-success))',
   error: 'rgb(var(--v-theme-error))',
@@ -83,10 +83,10 @@ function retry(): void {
   margin-bottom: 4px;
 }
 .step-sub {
-  color: rgba(203, 213, 225, 0.72);
+  color: var(--cp-text-muted);
   font-size: 0.9rem;
-  margin-bottom: 20px;
-  line-height: 1.7;
+  margin-bottom: 12px;
+  line-height: 1.5;
 }
 .check {
   list-style: none;
@@ -94,36 +94,36 @@ function retry(): void {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 .row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: var(--cp-radius-xl);
-  background: rgba(148, 163, 184, 0.06);
-  border: 1px solid transparent;
-  transition: all 0.25s ease;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--cp-radius-md);
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
 }
 .row.loading {
-  background: rgba(56, 189, 248, 0.08);
-  border-color: rgba(56, 189, 248, 0.25);
+  background: var(--cp-primary-soft);
+  border-color: var(--cp-primary);
 }
 .row.success {
-  background: rgba(34, 197, 94, 0.07);
+  background: var(--cp-surface);
+  border-color: var(--cp-success);
 }
 .row.error {
-  background: rgba(248, 113, 113, 0.09);
-  border-color: rgba(248, 113, 113, 0.3);
+  background: var(--cp-surface);
+  border-color: var(--cp-error);
 }
 .row-text {
   display: flex;
   flex-direction: column;
 }
 .row-label {
-  font-size: 0.94rem;
-  color: rgba(226, 232, 240, 0.92);
+  font-size: 0.82rem;
+  color: var(--cp-text);
 }
 .row-msg {
   font-size: 0.78rem;
@@ -134,7 +134,7 @@ function retry(): void {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 24px;
+  margin-top: 14px;
   min-height: 40px;
 }
 .spin {

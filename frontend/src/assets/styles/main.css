@@ -12,97 +12,79 @@ body,
 .v-overlay-container {
   /* Native Windows feel first: Segoe UI (ships Arabic) leads, Tahoma covers
      older Windows, the self-hosted IBM Plex Sans Arabic is the cross-platform
-     fallback. On the target Electron/Windows build Segoe UI renders — which is
+     fallback. On the target Electron/Windows build Segoe UI renders - which is
      exactly the "desktop program, not web app" cue we want. */
   font-family: 'Segoe UI', 'Tahoma', 'IBM Plex Sans Arabic', system-ui, -apple-system, sans-serif;
 }
 
 /* ---------- design tokens ---------- */
 :root {
-  /* Surfaces — kept aligned with Vuetify theme (primary #1E5F8C) but pulled
-     into CSS so non-Vuetify chrome (sidebar, panels) can stay coherent. */
-  --cp-bg: #f6f8fb;
-  --cp-bg-soft: #eef2f7;
-  --cp-surface: #ffffff;
-  --cp-surface-2: #fafbfd;
-  --cp-border: #e3e8ef;
-  --cp-border-strong: #cbd5e1;
-  --cp-text: #0f172a;
-  --cp-text-muted: #64748b;
-  --cp-text-subtle: #94a3b8;
-  --cp-primary: #1e5f8c;
-  --cp-primary-soft: #eaf2f9;
-  --cp-accent: #d97706;
-  --cp-success: #16a34a;
-  --cp-success-soft: #e7f6ec;
-  --cp-warning: #f59e0b;
-  --cp-warning-soft: #fef3e1;
-  --cp-error: #dc2626;
-  --cp-error-soft: #fdecec;
-  --cp-info: #0284c7;
+  /* Surface roles are mirrored in Vuetify so custom chrome remains coherent. */
+  --cp-bg: #F3F5F7;
+  --cp-panel: #E9EEF3;
+  --cp-bg-soft: #E9EEF3;
+  --cp-surface: #FFFFFF;
+  --cp-surface-2: #E9EEF3;
+  --cp-border: #CBD5E0;
+  --cp-border-strong: #CBD5E0;
+  --cp-text: #1A202C;
+  --cp-text-muted: #4A5568;
+  --cp-text-subtle: #4A5568;
+  --cp-primary: #234E70;
+  /* DESIGN.md names this as `button-primary-hover` but never gave it a token. */
+  --cp-primary-hover: #1C3F5A;
+  --cp-primary-soft: #D9EAF7;
+  --cp-table-header: #E2E8F0;
+  --cp-accent: #B7791F;
+  --cp-success: #2F855A;
+  --cp-success-soft: #E9EEF3;
+  --cp-warning: #B7791F;
+  --cp-warning-soft: #E9EEF3;
+  --cp-error: #C53030;
+  --cp-error-soft: #E9EEF3;
+  --cp-info: #234E70;
 
-  /* Elevation — desktop chrome is defined by hairline borders, not float.
+  /* Elevation - desktop chrome is defined by hairline borders, not float.
      Shadows are reserved for genuinely floating layers (menus, dialogs) and
      kept shallow so panels sit flat against the workspace. */
-  --cp-shadow-xs: 0 1px 0 rgba(15, 23, 42, 0.03);
-  --cp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
-  --cp-shadow-md: 0 2px 8px -2px rgba(15, 23, 42, 0.12);
-  --cp-shadow-lg: 0 8px 24px -6px rgba(15, 23, 42, 0.18);
+  --cp-shadow-xs: 0 1px 0 rgba(26, 32, 44, 0.06);
+  --cp-shadow-sm: 0 1px 2px rgba(26, 32, 44, 0.08);
+  --cp-shadow-md: 0 2px 8px rgba(26, 32, 44, 0.12);
+  --cp-shadow-lg: 0 8px 20px rgba(26, 32, 44, 0.18);
 
-  /* Radii — low and crisp, like native window controls. */
+  /* Radii - near-square, like Win32 controls. A rounded container is a web
+     container; the desktop draws boxes and rules. Nothing boxy exceeds 4px. */
   --cp-radius-sm: 3px;
   --cp-radius-md: 5px;
   --cp-radius-lg: 7px;
-  --cp-radius-xl: 10px;
-  /* Pill/circle — only for genuinely round chrome (status orbs, icon halos),
+  --cp-radius-xl: 7px;
+  /* Pill/circle - only for genuinely round chrome (status orbs, icon halos),
      never for panels or cards. The low scale above governs everything boxy. */
-  --cp-radius-pill: 999px;
+  --cp-radius-pill: 7px;
 
-  /* Toolbar / chrome metrics — tightened for a denser, data-first workspace. */
-  --cp-topbar-h: 42px;
+  /* Window chrome, top to bottom. The three strips stack into `--cp-chrome-h`,
+     which is what a view subtracts when it wants to fill the workspace. */
+  --cp-titlebar-h: 32px;
+  --cp-menubar-h: 26px;
+  --cp-commandbar-h: 32px;
+  --cp-chrome-h: 118px;
   --cp-statusbar-h: 24px;
-  --cp-row-h: 30px;
+
+  /* Grid metrics. Rows are tight enough to put a working day on one screen. */
+  --cp-row-h: 26px;
+  --cp-header-h: 28px;
+  /* The workspace gutter. Not a page margin - a document-area inset. */
+  --cp-gutter: 6px;
 
   /* The one non-UI face: literal machine tokens the user copies verbatim
      (DOCX placeholders, generated credentials). Never for label or body text. */
   --cp-font-mono: ui-monospace, 'Consolas', 'SFMono-Regular', Menlo, monospace;
 
-  /* Motion — snappy, no soft web easing. */
+  /* Motion - snappy, no soft web easing. */
   --cp-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --cp-dur-fast: 90ms;
   --cp-dur-base: 140ms;
   --cp-dur-slow: 220ms;
-}
-
-/* ---------- dark theme tokens ----------
-   Vuetify applies `.v-theme--contractorPlusDark` on the app root, so overriding
-   the --cp-* custom properties here re-themes all the non-Vuetify chrome
-   (panels, sidebar, topbar) to match the dark Vuetify surfaces. */
-.v-theme--contractorPlusDark {
-  --cp-bg: #0f172a;
-  --cp-bg-soft: #16223b;
-  --cp-surface: #1e293b;
-  --cp-surface-2: #243349;
-  --cp-border: #334155;
-  --cp-border-strong: #475569;
-  --cp-text: #e2e8f0;
-  --cp-text-muted: #94a3b8;
-  --cp-text-subtle: #64748b;
-  --cp-primary: #4f9bd0;
-  --cp-primary-soft: rgba(79, 155, 208, 0.16);
-  --cp-accent: #f59e0b;
-  --cp-success: #22c55e;
-  --cp-success-soft: rgba(34, 197, 94, 0.16);
-  --cp-warning: #fbbf24;
-  --cp-warning-soft: rgba(251, 191, 36, 0.16);
-  --cp-error: #f87171;
-  --cp-error-soft: rgba(248, 113, 113, 0.16);
-  --cp-info: #38bdf8;
-
-  --cp-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --cp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.5);
-  --cp-shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
-  --cp-shadow-lg: 0 12px 24px -8px rgba(0, 0, 0, 0.6), 0 4px 8px -4px rgba(0, 0, 0, 0.5);
 }
 
 html,
@@ -125,30 +107,79 @@ body {
 }
 
 /* ---------- vuetify surface tuning ----------
-   Vuetify default cards apply a hard mid-grey border with variant="outlined".
-   We soften the border, drop the corner radius into our token scale, and
-   layer in soft shadow on the elevated variant so the dashboard reads as
-   one cohesive surface instead of a grid of boxed crates. */
-.v-card.v-card--variant-outlined {
-  border-color: var(--cp-border);
+   A card is a web affordance: a rounded, shadowed thing floating on a page. A
+   desktop workspace has *panes* - flat regions separated by 1px rules. Every
+   v-card in the app is therefore flattened into a hairline panel. Only genuinely
+   floating layers (dialogs, menus) keep a shadow; see the dialog section below,
+   which re-applies one. */
+.v-card {
+  border-radius: var(--cp-radius-md);
+}
+.v-card.v-card--variant-outlined,
+.v-card.v-card--variant-elevated,
+.v-card.v-card--variant-flat,
+.v-card.v-card--variant-tonal {
+  border: 1px solid var(--cp-border);
+  background: var(--cp-surface);
+  box-shadow: none;
+}
+
+/* Controls share one compact desktop vocabulary. The command bars carry the
+   primary fill; page commands and inputs stay crisp, short, and ruled. */
+.v-btn {
+  min-height: 28px;
+  border-radius: var(--cp-radius-sm) !important;
+  box-shadow: none !important;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.v-btn--variant-outlined {
+  border-color: var(--cp-border) !important;
+}
+.v-btn--variant-text:not(.v-btn--disabled) {
+  color: var(--cp-primary);
+}
+.v-btn:active {
+  transform: translateY(1px);
+}
+.v-field {
+  border-radius: var(--cp-radius-sm) !important;
   background: var(--cp-surface);
 }
-
-.v-card.v-card--variant-elevated {
-  box-shadow: var(--cp-shadow-sm);
+.v-field--focused .v-field__outline {
+  --v-field-border-opacity: 1;
+  color: var(--cp-primary);
+}
+.v-chip {
+  border-radius: var(--cp-radius-sm) !important;
+  font-size: 0.72rem;
+}
+.v-progress-linear {
+  border-radius: var(--cp-radius-sm) !important;
+}
+.v-tab {
+  min-height: 30px;
+  border-radius: var(--cp-radius-sm) var(--cp-radius-sm) 0 0;
+  font-size: 0.76rem;
+  font-weight: 600;
 }
 
-.v-app-bar {
-  box-shadow: none !important;
+/* Vuetify's card slots are laid out for a roomy web card. Compress them. */
+.v-card-item {
+  padding: 8px 10px;
 }
-
-/* RTL-safe nudge: keep nav drawer border crisp. */
-.v-navigation-drawer {
-  border-color: var(--cp-border) !important;
+.v-card-text {
+  padding: 8px 10px;
+  font-size: 0.82rem;
+}
+.v-card-actions {
+  padding: 6px 8px;
+  min-height: 0;
 }
 
 /* Placeholders. Vuetify paints them as `currentColor` at --v-disabled-opacity
-   (0.38 light / 0.50 dark), which lands ink at ~2.4:1 and ~4.1:1 — both under
+   (0.38 light / 0.50 dark), which lands ink at ~2.4:1 and ~4.1:1 - both under
    AA, and exactly the "light grey on tinted white" the design system forbids.
    A placeholder is read, not decoration: use the muted ink token at full
    strength (4.76:1 light, 5.68:1 dark). Loaded after `vuetify/styles`, so the
@@ -161,17 +192,17 @@ textarea.v-field__input::placeholder {
 }
 
 /* ---------- reusable primitives ---------- */
+/* A pane: flat, hairline-bounded, seated directly on the workspace. */
 .cp-panel {
   background: var(--cp-surface);
   border: 1px solid var(--cp-border);
-  border-radius: var(--cp-radius-lg);
-  box-shadow: var(--cp-shadow-xs);
-  transition: box-shadow var(--cp-dur-base) var(--cp-ease),
-    border-color var(--cp-dur-base) var(--cp-ease);
+  border-radius: var(--cp-radius-md);
+  transition: border-color var(--cp-dur-base) var(--cp-ease);
 }
 
+/* A hoverable pane steps its border. It does not lift: nothing in the workspace
+   floats, and a shadow here would be the web-card reflex. */
 .cp-panel-hover:hover {
-  box-shadow: var(--cp-shadow-md);
   border-color: var(--cp-border-strong);
 }
 
@@ -179,7 +210,7 @@ textarea.v-field__input::placeholder {
   display: block;
   width: 100%;
   text-align: start;
-  padding: 0.875rem 1rem;
+  padding: 5px 10px;
   border-bottom: 1px solid var(--cp-border);
   transition: background-color var(--cp-dur-fast) var(--cp-ease);
 }
@@ -254,27 +285,14 @@ textarea.v-field__input::placeholder {
   display: inline-block;
   width: 10px;
   height: 10px;
-  border-radius: var(--cp-radius-pill);
+  border-radius: var(--cp-radius-sm);
   background: var(--cp-text-subtle);
 }
 .cp-orb--success { background: var(--cp-success); }
 .cp-orb--warning { background: var(--cp-warning); }
 .cp-orb--error   { background: var(--cp-error); }
-.cp-orb--pulse::after {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: var(--cp-radius-pill);
-  background: inherit;
-  opacity: 0.35;
-  animation: cp-pulse 1.6s var(--cp-ease) infinite;
-}
-@keyframes cp-pulse {
-  0%   { transform: scale(0.6); opacity: 0.5; }
-  100% { transform: scale(1.6); opacity: 0; }
-}
 
-/* Sidebar item polish — Vuetify's v-list-item active uses primary-ish but
+/* Sidebar item polish - Vuetify's v-list-item active uses primary-ish but
    leaves the inactive items flat. Add a soft hover ring + an accent rail on
    the active item. Scoped to .cp-nav so we don't touch other v-list usages. */
 .cp-nav .v-list-item {
@@ -297,7 +315,7 @@ textarea.v-field__input::placeholder {
   font-weight: 600;
   position: relative;
 }
-/* Accent rail on the inline-start edge — the classic active-item marker in
+/* Accent rail on the inline-start edge - the classic active-item marker in
    desktop navigation panes. Logical inset keeps it correct under RTL. */
 .cp-nav .v-list-item--active::before {
   content: '';
@@ -305,7 +323,7 @@ textarea.v-field__input::placeholder {
   inset-block: 4px;
   inset-inline-start: 0;
   width: 3px;
-  border-radius: 0 2px 2px 0;
+  border-radius: 0 var(--cp-radius-sm) var(--cp-radius-sm) 0;
   background: var(--cp-primary);
 }
 .cp-nav .v-list-item--active .v-list-item__prepend > .v-icon {
@@ -325,108 +343,175 @@ textarea.v-field__input::placeholder {
   text-transform: uppercase;
 }
 
-/* When sidebar is rail-collapsed, hide group labels (they don't fit). */
-.v-navigation-drawer--rail .cp-nav-group-label {
-  display: none;
-}
-
-/* Brand block at the top of the drawer — compact, flat, aligned to the
-   toolbar height so the sidebar header lines up with the top bar. */
+/* Brand block at the head of the navigation pane - one row tall, aligned to the
+   command bar so the pane header and the chrome share a baseline. */
 .cp-brand {
   display: flex;
   align-items: center;
-  gap: 9px;
-  height: var(--cp-topbar-h);
-  padding: 0 14px;
+  gap: 8px;
+  height: var(--cp-commandbar-h);
+  padding: 0 10px;
+  flex: none;
   font-weight: 600;
+  font-size: 0.8rem;
   letter-spacing: -0.01em;
   color: var(--cp-text);
+  border-block-end: 1px solid var(--cp-border);
+  overflow: hidden;
+  white-space: nowrap;
 }
 .cp-brand-mark {
-  width: 26px;
-  height: 26px;
+  width: 20px;
+  height: 20px;
   border-radius: var(--cp-radius-sm);
   background: var(--cp-primary);
-  color: #fff;
+  color: #FFFFFF;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.85rem;
-}
-.v-navigation-drawer--rail .cp-brand-text { display: none; }
-
-/* Top bar — a solid application toolbar with a hairline underline. No glass
-   blur (that reads as "web header"); desktop toolbars are opaque and flat. */
-.cp-topbar {
-  background: var(--cp-surface) !important;
-  border-bottom: 1px solid var(--cp-border) !important;
-}
-
-/* Toolbar building blocks — quick-action clusters separated by thin rules,
-   the way native ribbons/toolbars group commands. */
-.cp-toolbar-sep {
-  width: 1px;
-  align-self: stretch;
-  margin-block: 8px;
-  margin-inline: 3px;
-  background: var(--cp-border);
-}
-/* Toolbar buttons: shrink Vuetify's small size a touch more + kill the wide
-   default gutters so quick-actions pack tightly like a real app toolbar. */
-.cp-topbar .v-btn {
-  min-width: 0 !important;
-}
-.cp-topbar .v-btn--size-small {
-  height: 28px;
-  --v-btn-height: 28px;
-  padding-inline: 8px;
-  font-size: 0.8rem;
-}
-.cp-topbar .v-btn--icon.v-btn--size-small {
-  width: 30px;
-  height: 30px;
-  padding: 0;
-}
-.cp-toolbar-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-
-/* ---------- status bar ----------
-   The bottom strip found in every desktop business app: connection state,
-   context, clock. Small, dense, quietly informative. */
-.cp-statusbar {
-  height: var(--cp-statusbar-h);
-  min-height: var(--cp-statusbar-h) !important;
-  background: var(--cp-surface) !important;
-  border-top: 1px solid var(--cp-border);
-  display: flex;
-  align-items: center;
-  gap: 0;
-  padding: 0 !important;
   font-size: 0.72rem;
-  color: var(--cp-text-muted);
+  flex: none;
 }
-.cp-statusbar-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 100%;
-  padding: 0 12px;
+.cp-sidenav--rail .cp-brand {
+  padding: 0;
+  justify-content: center;
+}
+.cp-sidenav--rail .cp-brand-text {
+  display: none;
+}
+
+/* Skeleton shimmer - Vuetify's default sometimes shows a hard grey. */
+.v-skeleton-loader__text {
+  border-radius: var(--cp-radius-md);
+}
+
+/* ---------- dense tables ----------
+   A ledger, not a list of cards. Rows are `--cp-row-h` tall, ruled with 1px
+   hairlines, headers are small and quiet, and every figure is tabular so columns
+   of money line up digit-for-digit. */
+.v-table > .v-table__wrapper > table > thead > tr > th {
+  height: var(--cp-header-h) !important;
+  padding: 0 8px !important;
+  font-size: 0.72rem !important;
+  font-weight: 600;
+  color: var(--cp-text-muted);
+  background: var(--cp-table-header);
+  border-block-end: 1px solid var(--cp-border) !important;
   white-space: nowrap;
 }
-.cp-statusbar-item + .cp-statusbar-item {
-  border-inline-start: 1px solid var(--cp-border);
+.v-table > .v-table__wrapper > table > tbody > tr > td {
+  height: var(--cp-row-h) !important;
+  padding: 0 8px !important;
+  font-size: 0.78rem !important;
+  border-block-end: 1px solid var(--cp-border) !important;
 }
-.cp-statusbar-item--tabular {
+.v-table > .v-table__wrapper > table > tbody > tr:hover > td {
+  background: var(--cp-surface-2);
+}
+.v-data-table-footer {
+  min-height: 32px;
+  padding: 2px 6px;
+  background: var(--cp-panel);
+  border-block-start: 1px solid var(--cp-border);
+  color: var(--cp-text-muted);
+  font-size: 0.7rem;
+}
+.v-data-table-footer .v-field {
+  min-height: 24px;
+  font-size: 0.7rem;
+}
+.v-data-table-footer .v-btn {
+  min-width: 24px;
+  min-height: 24px;
+}
+.cp-smart-table > .v-table__wrapper {
+  min-height: 0;
+}
+.cp-smart-table .v-table__wrapper > table {
+  table-layout: auto;
+}
+/* Numeric columns: `align="end"` is how the data tables mark a figure. */
+.v-table th[class*='text-end'],
+.v-table td[class*='text-end'] {
   font-variant-numeric: tabular-nums;
 }
 
-/* Skeleton shimmer — Vuetify's default sometimes shows a hard grey. */
-.v-skeleton-loader__text {
+/* ---------- workspace panes ----------
+   A view that owns its own scrolling (a grid, a split pane) fills the document
+   area exactly and never lets the workspace scroll underneath it. Everything is
+   a token, so retuning the chrome retunes every workspace at once. */
+.cp-fill {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: calc(
+    100vh - var(--cp-chrome-h) - var(--cp-statusbar-h) - (2 * var(--cp-gutter))
+  );
+}
+
+/* A pane: flat, hairline-bounded, with its own header strip and scroll body. */
+.cp-pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
   border-radius: var(--cp-radius-md);
+  overflow: hidden;
+}
+.cp-pane__toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 3px 6px;
+  background: var(--cp-surface-2);
+  border-block-end: 1px solid var(--cp-border);
+}
+.cp-pane__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.cp-pane__foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 2px 6px;
+  background: var(--cp-surface-2);
+  border-block-start: 1px solid var(--cp-border);
+  font-size: 0.72rem;
+  color: var(--cp-text-muted);
+}
+/* The split fills whatever `.cp-fill` gave it. */
+.cp-fill .cp-split {
+  flex: 1;
+  min-height: 0;
+}
+
+/* The selected row in a grid: a selection tint, never a saturated fill. */
+.v-table tbody tr.cp-row-selected > td {
+  background: var(--cp-primary-soft) !important;
+}
+
+/* ---------- window drag ----------
+   The window has no OS frame, so a surface without a drag region cannot be
+   moved. Any screen that renders outside AppLayout (login, the setup wizard)
+   must carry `.cp-drag` on a strip at its top edge. */
+.cp-drag {
+  -webkit-app-region: drag;
+}
+.cp-no-drag,
+.cp-drag button,
+.cp-drag a,
+.cp-drag input,
+.cp-drag select {
+  -webkit-app-region: no-drag;
 }
 
 /* ---------- dialogs ----------
@@ -470,7 +555,7 @@ textarea.v-field__input::placeholder {
    Create/edit forms render a `<v-card><v-form><v-card-text>` under `.v-main`.
    Dialogs teleport OUTSIDE `.v-main` (into `.v-overlay-container`), so this
    scoping keeps the dialog rules above untouched while nudging page-form body
-   gutters tighter — the same desktop-native density, on full-page forms too. */
+   gutters tighter - the same desktop-native density, on full-page forms too. */
 .v-main .v-form > .v-card-text {
   padding-block: 12px;
 }
@@ -499,11 +584,7 @@ textarea.v-field__input::placeholder {
     scroll-behavior: auto !important;
   }
 
-  /* The pulse ring is decoration — the orb's colour already carries health. */
-  .cp-orb--pulse::after {
-    display: none;
-  }
-
+  /* The pulse ring is decoration - the orb's colour already carries health. */
   /* Route swaps crossfade instead of sliding (translate is the vestibular part). */
   .cp-fade-enter-from {
     transform: none;

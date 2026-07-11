@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Global command palette (Ctrl/⌘+K). One box for everything: jump to any
 // screen, run a quick-create, search projects/contracts/customers/materials
-// live, or re-open something recent. Keyboard-first; the parent owns nothing —
+// live, or re-open something recent. Keyboard-first; the parent owns nothing -
 // it reads ui.paletteOpen and this component drives navigation + recents.
 import { computed, nextTick, ref, watch } from 'vue';
 import { watchDebounced } from '@vueuse/core';
@@ -34,7 +34,7 @@ const route = useRoute();
 const { canAccess } = useAccess();
 const { recent, pushRecent } = useRecent();
 
-// Always close the palette once navigation lands — covers the close on select
+// Always close the palette once navigation lands - covers the close on select
 // and any other route change while it's open.
 watch(() => route.fullPath, () => ui.closePalette());
 
@@ -326,7 +326,7 @@ watch(
   padding: 12px 16px;
 }
 .cp-pal-search-ic {
-  color: rgba(var(--v-theme-on-surface), 0.5);
+  color: var(--cp-text-muted);
 }
 .cp-pal-input {
   flex: 1;
@@ -334,7 +334,7 @@ watch(
   outline: none;
   background: transparent;
   font-size: 1.05rem;
-  color: rgb(var(--v-theme-on-surface));
+  color: var(--cp-text);
 }
 .cp-pal-results {
   max-height: 56vh;
@@ -344,7 +344,7 @@ watch(
 .cp-pal-group {
   font-size: 0.72rem;
   font-weight: 600;
-  color: rgba(var(--v-theme-on-surface), 0.5);
+  color: var(--cp-text-muted);
   padding: 10px 12px 4px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -357,14 +357,14 @@ watch(
   padding: 9px 12px;
   border-radius: var(--cp-radius-lg);
   text-align: start;
-  color: rgb(var(--v-theme-on-surface));
+  color: var(--cp-text);
   cursor: pointer;
 }
 .cp-pal-item.is-active {
-  background: rgba(var(--v-theme-primary), 0.12);
+  background: var(--cp-primary-soft);
 }
 .cp-pal-item-ic {
-  color: rgba(var(--v-theme-on-surface), 0.65);
+  color: var(--cp-text-muted);
   flex: 0 0 auto;
 }
 .cp-pal-item-label {
@@ -375,21 +375,21 @@ watch(
 }
 .cp-pal-item-sub {
   font-size: 0.75rem;
-  color: rgba(var(--v-theme-on-surface), 0.45);
+  color: var(--cp-text-muted);
   flex: 0 0 auto;
 }
 .cp-pal-state {
   display: flex;
   justify-content: center;
   padding: 28px;
-  color: rgba(var(--v-theme-on-surface), 0.5);
+  color: var(--cp-text-muted);
 }
 .cp-pal-foot {
   display: flex;
   gap: 18px;
   padding: 8px 14px;
   font-size: 0.75rem;
-  color: rgba(var(--v-theme-on-surface), 0.55);
+  color: var(--cp-text-muted);
 }
 .cp-pal-kbd {
   display: inline-block;
@@ -397,8 +397,8 @@ watch(
   padding: 1px 5px;
   margin-inline-end: 3px;
   border-radius: var(--cp-radius-sm);
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.2);
-  background: rgba(var(--v-theme-on-surface), 0.06);
+  border: 1px solid var(--cp-border);
+  background: var(--cp-surface-2);
   font-size: 0.7rem;
   text-align: center;
 }

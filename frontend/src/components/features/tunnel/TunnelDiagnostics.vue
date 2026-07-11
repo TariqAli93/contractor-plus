@@ -13,7 +13,7 @@ interface Row {
   status?: 'ok' | 'warn' | 'bad';
 }
 
-const placeholder = '—';
+const placeholder = '-';
 
 const rows = computed<Row[]>(() => {
   const s = store.status;
@@ -49,10 +49,10 @@ function statusColor(s?: Row['status']) {
 </script>
 
 <template>
-  <v-card variant="outlined" rounded="lg" class="pa-5">
-    <div class="text-subtitle-1 font-medium mb-3">
+  <section class="cp-panel cp-tunnel-diagnostics">
+    <h2 class="cp-tunnel-diagnostics__title">
       {{ t('tunnel.diagnostics.title') }}
-    </div>
+    </h2>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
       <div
@@ -88,5 +88,19 @@ function statusColor(s?: Row['status']) {
       </div>
       <pre class="text-caption text-error whitespace-pre-wrap break-words mb-0">{{ store.lastError }}</pre>
     </div>
-  </v-card>
+  </section>
 </template>
+
+<style scoped>
+.cp-tunnel-diagnostics { overflow: hidden; }
+.cp-tunnel-diagnostics__title {
+  margin: 0;
+  padding: 6px 8px;
+  color: var(--cp-text);
+  background: var(--cp-surface-2);
+  border-block-end: 1px solid var(--cp-border);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.cp-tunnel-diagnostics > div { padding-inline: 8px; }
+</style>

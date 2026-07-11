@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { t } from '@/i18n';
 import { templatesApi } from '@/services/api/templates.api';
 import { materialsApi } from '@/services/api/materials.api';
@@ -8,6 +8,7 @@ import type { TemplateItem } from '@/types/template';
 import type { Material } from '@/types/material';
 import ErrorState from '@/components/shared/ErrorState.vue';
 import EmptyState from '@/components/shared/EmptyState.vue';
+import SearchBar from '@/components/shared/SearchBar.vue';
 import TemplateMaterialRow from './TemplateMaterialRow.vue';
 
 const props = defineProps<{ templateId: string }>();
@@ -18,6 +19,40 @@ const materials = ref<Material[]>([]);
 const loading = ref(false);
 const error = ref<unknown>(null);
 const addingNew = ref(false);
+const searchInput = ref('');
+const sortKey = ref<'material' | 'quantity' | 'price'>('material');
+const sortDir = ref<'asc' | 'desc'>('asc');
+
+const visibleItems = computed(() => {
+  const query = searchInput.value.trim().toLocaleLowerCase('ar');
+  const rows = query
+    ? items.value.filter((item) =>
+      [item.material.name, item.material.unit, item.notes ?? ''].some((value) =>
+        value.toLocaleLowerCase('ar').includes(query),
+      ),
+    )
+    : items.value;
+  return [...rows].sort((a, b) => {
+    const left = sortKey.value === 'material'
+      ? a.material.name
+      : sortKey.value === 'quantity' ? Number(a.estimatedQuantity) : Number(a.estimatedPrice);
+    const right = sortKey.value === 'material'
+      ? b.material.name
+      : sortKey.value === 'quantity' ? Number(b.estimatedQuantity) : Number(b.estimatedPrice);
+    const result = typeof left === 'number' && typeof right === 'number'
+      ? left - right
+      : String(left).localeCompare(String(right), 'ar');
+    return sortDir.value === 'asc' ? result : -result;
+  });
+});
+
+function toggleSort(key: typeof sortKey.value) {
+  if (sortKey.value === key) sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
+  else {
+    sortKey.value = key;
+    sortDir.value = 'asc';
+  }
+}
 
 async function fetch() {
   loading.value = true;
@@ -54,12 +89,14 @@ function onCancelledNew() {
 </script>
 
 <template>
-  <div>
-    <div class="flex items-center justify-between mb-3">
-      <h2 class="text-h6">{{ t('templates.items.title') }}</h2>
+  <div class="cp-template-grid">
+    <div class="cp-template-grid__toolbar">
+      <h2 class="cp-template-grid__title">{{ t('templates.items.title') }}</h2>
+      <SearchBar v-model="searchInput" :placeholder="t('common.search')" class="cp-template-grid__search" />
       <v-btn
         color="primary"
-        variant="tonal"
+        size="small"
+        variant="flat"
         prepend-icon="mdi-plus"
         :disabled="addingNew || loading"
         @click="addingNew = true"
@@ -73,20 +110,29 @@ function onCancelledNew() {
     <v-progress-linear v-else-if="loading && items.length === 0" indeterminate />
 
     <template v-else>
-      <v-table density="comfortable" hover>
+      <v-table fixed-header hover class="cp-template-grid__table">
         <thead>
           <tr>
-            <th class="text-start">{{ t('templates.items.fields.material') }}</th>
+            <th class="text-start cp-template-grid__sort" @click="toggleSort('material')">
+              {{ t('templates.items.fields.material') }}
+              <v-icon v-if="sortKey === 'material'" size="14">{{ sortDir === 'asc' ? 'mdi-menu-up' : 'mdi-menu-down' }}</v-icon>
+            </th>
             <th class="text-start" style="width: 90px">{{ t('templates.items.fields.unit') }}</th>
-            <th class="text-end" style="width: 180px">{{ t('templates.items.fields.quantityPer100m2') }}</th>
-            <th class="text-end" style="width: 140px">{{ t('templates.items.fields.estimatedPrice') }}</th>
+            <th class="text-end cp-template-grid__sort" style="width: 180px" @click="toggleSort('quantity')">
+              {{ t('templates.items.fields.quantityPer100m2') }}
+              <v-icon v-if="sortKey === 'quantity'" size="14">{{ sortDir === 'asc' ? 'mdi-menu-up' : 'mdi-menu-down' }}</v-icon>
+            </th>
+            <th class="text-end cp-template-grid__sort" style="width: 140px" @click="toggleSort('price')">
+              {{ t('templates.items.fields.estimatedPrice') }}
+              <v-icon v-if="sortKey === 'price'" size="14">{{ sortDir === 'asc' ? 'mdi-menu-up' : 'mdi-menu-down' }}</v-icon>
+            </th>
             <th class="text-start">{{ t('templates.items.fields.notes') }}</th>
             <th class="text-end" style="width: 110px"></th>
           </tr>
         </thead>
         <tbody>
           <TemplateMaterialRow
-            v-for="item in items"
+            v-for="item in visibleItems"
             :key="item.id"
             :template-id="templateId"
             :materials="materials"
@@ -112,3 +158,12 @@ function onCancelledNew() {
     </template>
   </div>
 </template>
+
+<style scoped>
+.cp-template-grid { min-height: 0; }
+.cp-template-grid__toolbar { display: flex; align-items: center; gap: 6px; min-height: 30px; margin-bottom: 6px; }
+.cp-template-grid__title { margin: 0; color: var(--cp-text); font-size: 0.82rem; font-weight: 600; }
+.cp-template-grid__search { width: 220px; margin-inline-start: auto; }
+.cp-template-grid__table { max-height: 520px; }
+.cp-template-grid__sort { cursor: pointer; user-select: none; }
+</style>

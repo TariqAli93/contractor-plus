@@ -17,7 +17,7 @@ const label = computed(() => {
   return te(key) ? t(key) : props.name;
 });
 
-const color = computed(() => (props.isSystem ? 'primary' : 'teal'));
+const color = computed(() => (props.isSystem ? 'primary' : 'secondary'));
 </script>
 
 <template>

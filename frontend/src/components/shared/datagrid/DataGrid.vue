@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // Reusable Excel-like data grid built on Vuetify primitives (no third-party
-// grid, no license). It owns interaction — in-cell editing, keyboard
+// grid, no license). It owns interaction - in-cell editing, keyboard
 // navigation, clipboard copy/paste in Excel's TSV dialect, multi-row
-// selection, client-side sort/filter, pinned columns, column resize — and
+// selection, client-side sort/filter, pinned columns, column resize - and
 // emits semantic events. The PARENT owns the data and persistence: it reacts
 // to `cell-commit` / `new-commit` / `paste` / `delete-rows` by calling its API
 // and refreshing the `rows` prop.
@@ -27,7 +27,7 @@ const props = withDefaults(
     newRowFactory?: () => Record<string, unknown>;
     /** Show the checkbox column + multi-row delete affordance. */
     selectable?: boolean;
-    /** Per-row CSS class — used for status colouring. The grid ships reusable
+    /** Per-row CSS class - used for status colouring. The grid ships reusable
      *  `cp-row-success|error|warning|muted` classes for this. */
     rowClass?: (row: GridRow) => string | undefined;
     /** Right-click menu actions for a row (parent-supplied; e.g. delete/open).
@@ -75,7 +75,7 @@ const colByField = (field: string) => props.columns.find((c) => c.field === fiel
 
 function isCellEditable(col: GridColumn, row: GridRow): boolean {
   if (col.type == null) return false;
-  // Existing rows are gated by `editable`; the entry row by `showNewRow` — so a
+  // Existing rows are gated by `editable`; the entry row by `showNewRow` - so a
   // create-only user still gets the new row without being able to edit others.
   if (idOf(row) === NEW_ROW_ID) {
     if (!props.showNewRow) return false;
@@ -194,22 +194,22 @@ const navRowIds = computed<string[]>(() => {
 });
 
 // ---------------------------------------------------------------------------
-// Row virtualization (fixed 30px rows)
+// Row virtualization (fixed 26px rows)
 // Only rows overlapping the viewport (+ overscan) are painted; top/bottom
 // spacer <tr>s hold the full scroll height so the scrollbar stays honest. The
 // fixed row height keeps the window math exact, so a >1k-row grid (the
 // materials catalogue, a big project's costs) stays light. Every data
-// operation — sort, filter, select, copy, paste — runs on the full row model
+// operation - sort, filter, select, copy, paste - runs on the full row model
 // above; virtualization only trims what the DOM renders.
 // ---------------------------------------------------------------------------
-const ROW_H = 30;
+const ROW_H = 26;
 const OVERSCAN = 8;
 const scrollTop = ref(0);
 const viewportH = ref(600);
 const theadEl = ref<HTMLElement | null>(null);
 
 const vTotal = computed(() => renderRows.value.length);
-// Small grids (project tabs, short lists) render in full — the original, safe
+// Small grids (project tabs, short lists) render in full - the original, safe
 // path. Windowing only engages past this many rows, where it actually pays off
 // (the materials catalogue, a big project's costs), so a subtle windowing bug
 // can never regress the common small-grid cases.
@@ -269,7 +269,7 @@ onBeforeUnmount(() => {
 });
 
 // After the row set changes (filter/sort/refetch) the browser may clamp the
-// scroll position — resync so the window math matches the real scrollTop.
+// scroll position - resync so the window math matches the real scrollTop.
 watch(vTotal, () => {
   void nextTick(() => {
     if (gridEl.value) scrollTop.value = gridEl.value.scrollTop;
@@ -772,7 +772,7 @@ async function copyRow(row: GridRow) {
   try {
     await navigator.clipboard.writeText(tsv);
   } catch {
-    /* clipboard blocked — silently ignore */
+    /* clipboard blocked - silently ignore */
   }
 }
 
@@ -1046,7 +1046,7 @@ function runRowAction(a: GridRowAction) {
 <style scoped>
 .cp-grid {
   position: relative;
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border: 1px solid var(--cp-border);
   border-radius: var(--cp-radius-md);
   overflow: hidden;
 }
@@ -1056,7 +1056,7 @@ function runRowAction(a: GridRowAction) {
   gap: 8px;
   padding: 4px 8px;
   background: var(--cp-surface-2);
-  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-bottom: 1px solid var(--cp-border);
 }
 .cp-grid-scroll {
   overflow: auto;
@@ -1066,15 +1066,15 @@ function runRowAction(a: GridRowAction) {
   border-collapse: separate;
   border-spacing: 0;
   width: 100%;
-  font-size: 0.8125rem;
-  background: rgb(var(--v-theme-surface));
+  font-size: 0.78rem;
+  background: var(--cp-surface);
 }
 .cp-th,
 .cp-td {
-  border-inline-end: 1px solid rgba(var(--v-border-color), 0.5);
-  border-bottom: 1px solid rgba(var(--v-border-color), 0.5);
+  border-inline-end: 1px solid var(--cp-border);
+  border-bottom: 1px solid var(--cp-border);
   padding: 0 7px;
-  height: 30px;
+  height: 26px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1083,7 +1083,8 @@ function runRowAction(a: GridRowAction) {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: rgb(var(--v-theme-surface));
+  background: var(--cp-table-header);
+  color: var(--cp-text-muted);
   font-weight: 600;
   user-select: none;
   text-align: start;
@@ -1099,28 +1100,29 @@ function runRowAction(a: GridRowAction) {
 }
 /* Filter row sits below the header row; offset so it also stays pinned. */
 .cp-filter-row .cp-th {
-  top: 30px;
+  top: 26px;
   z-index: 2;
   height: 26px;
   font-weight: 400;
 }
 .cp-filter-input {
   width: 100%;
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border: 1px solid var(--cp-border);
   border-radius: var(--cp-radius-sm);
   padding: 1px 6px;
   font-size: 0.8rem;
-  background: rgb(var(--v-theme-surface));
-  color: rgb(var(--v-theme-on-surface));
+  background: var(--cp-surface);
+  color: var(--cp-text);
   outline: none;
 }
 .cp-pin {
   position: sticky;
   z-index: 3;
-  background: rgb(var(--v-theme-surface));
+  background: var(--cp-surface);
 }
 .cp-th.cp-pin {
   z-index: 4;
+  background: var(--cp-table-header);
 }
 .cp-check {
   text-align: center;
@@ -1131,23 +1133,23 @@ function runRowAction(a: GridRowAction) {
   justify-content: center;
 }
 .cp-tr:hover .cp-td {
-  background: rgba(var(--v-theme-on-surface), 0.03);
+  background: var(--cp-surface-2);
 }
 .cp-tr-sel .cp-td {
-  background: rgba(var(--v-theme-primary), 0.1);
+  background: var(--cp-primary-soft);
 }
 .cp-newrow .cp-td {
-  background: rgba(var(--v-theme-accent), 0.06);
+  background: var(--cp-primary-soft);
 }
-/* Reusable status row colours (pass via the rowClass prop). */
-.cp-row-success .cp-td {
-  background: rgba(var(--v-theme-success), 0.1);
+/* Reusable status rails keep financial meaning visible without tinting rows. */
+.cp-row-success .cp-td:first-child {
+  box-shadow: inset 3px 0 var(--cp-success);
 }
-.cp-row-error .cp-td {
-  background: rgba(var(--v-theme-error), 0.1);
+.cp-row-error .cp-td:first-child {
+  box-shadow: inset 3px 0 var(--cp-error);
 }
-.cp-row-warning .cp-td {
-  background: rgba(var(--v-theme-warning), 0.12);
+.cp-row-warning .cp-td:first-child {
+  box-shadow: inset 3px 0 var(--cp-warning);
 }
 .cp-row-muted {
   opacity: 0.6;
@@ -1159,16 +1161,16 @@ function runRowAction(a: GridRowAction) {
   cursor: cell;
 }
 .cp-active {
-  outline: 2px solid rgb(var(--v-theme-primary));
+  outline: 2px solid var(--cp-primary);
   outline-offset: -2px;
 }
 .cp-error {
-  background: rgba(var(--v-theme-error), 0.12) !important;
-  outline: 2px solid rgb(var(--v-theme-error));
+  background: var(--cp-surface-2) !important;
+  outline: 2px solid var(--cp-error);
   outline-offset: -2px;
 }
 .cp-ph {
-  color: rgba(var(--v-theme-on-surface), 0.38);
+  color: var(--cp-text-muted);
 }
 .cp-resize {
   position: absolute;
@@ -1183,13 +1185,13 @@ function runRowAction(a: GridRowAction) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(var(--v-theme-surface), 0.6);
+  background: rgba(255, 255, 255, 0.76);
 }
-/* Tighten the Vuetify editors so they sit flush inside a 30px cell. */
+/* Tighten the Vuetify editors so they sit flush inside a 26px cell. */
 .cp-editor :deep(.v-field__input) {
   padding: 0;
-  min-height: 28px;
-  font-size: 0.8125rem;
+  min-height: 24px;
+  font-size: 0.78rem;
 }
 .cp-editor :deep(.v-field) {
   padding-inline: 4px;

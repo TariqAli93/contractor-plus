@@ -20,7 +20,7 @@ import AccessGate from '@/components/shared/AccessGate.vue';
 //   - showing the generated-documents history for this contract
 //   - triggering an authenticated download of any past generation
 //
-// Server is the source of truth — no optimistic insertion of generated
+// Server is the source of truth - no optimistic insertion of generated
 // rows; on success we refetch the history.
 
 const props = defineProps<{ contractId: string }>();

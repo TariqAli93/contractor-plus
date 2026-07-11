@@ -73,7 +73,7 @@ async function onChanged() {
   emit('changed');
 }
 
-// Narrow refetches for the tab dialogs — only the side-panel summaries, no
+// Narrow refetches for the tab dialogs - only the side-panel summaries, no
 // full project refetch, no list refresh (cost/payment edits don't show there).
 async function refreshCostSummary() {
   if (!props.projectId) return;

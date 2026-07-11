@@ -9,7 +9,7 @@ export interface AccessSpec {
 
 // Centralized frontend access decisions. Mirrors the backend `requireAccess`
 // hybrid: OWNER always passes; otherwise permission-first with a legacy-role
-// fallback. UI only HIDES things — the backend remains authoritative.
+// fallback. UI only HIDES things - the backend remains authoritative.
 export function useAccess() {
   const auth = useAuthStore();
 

@@ -113,7 +113,7 @@ async function remove() {
       <td class="text-end">{{ step.sortOrder }}</td>
       <td>{{ step.name }}</td>
       <td class="text-end">{{ Number(step.percentage) }}%</td>
-      <td class="text-end">{{ step.estimatedDays ?? '—' }}</td>
+      <td class="text-end">{{ step.estimatedDays ?? '-' }}</td>
       <td class="text-end">
         <v-btn icon="mdi-pencil" size="small" variant="text" :aria-label="t('common.edit')" @click="startEdit" />
         <v-btn icon="mdi-delete-outline" size="small" variant="text" color="error" :aria-label="t('common.delete')" @click="remove" />

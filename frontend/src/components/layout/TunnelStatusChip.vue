@@ -6,7 +6,7 @@ import { useTunnel } from '@/composables/useTunnel';
 const store = useTunnelStore();
 const { toneLabel } = useTunnel();
 
-// Hidden by default — only present in the topbar once the user has ever
+// Hidden by default - only present in the topbar once the user has ever
 // interacted with the tunnel (initialized) AND there is something to say:
 // either the feature is in use or the last operation left an error.
 const visible = computed(

@@ -1,29 +1,33 @@
 <script setup lang="ts">
-// Dark, full-screen shell for the first-run setup wizard. Forces the dark
-// Vuetify theme regardless of the user's saved preference so the installer
-// experience always looks like a polished desktop setup.
+// Setup uses the same opaque, single light theme as the completed application.
 </script>
 
 <template>
   <v-app>
-    <v-theme-provider theme="contractorPlusDark" with-background>
-      <v-main>
-        <div class="setup-bg">
-          <div class="setup-center">
-            <router-view />
-          </div>
+    <div class="cp-drag setup-titlebar" />
+    <v-main>
+      <div class="setup-bg">
+        <div class="setup-center">
+          <router-view />
         </div>
-      </v-main>
-    </v-theme-provider>
+      </div>
+    </v-main>
   </v-app>
 </template>
 
 <style scoped>
+.setup-titlebar {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: var(--cp-titlebar-h);
+  z-index: 1;
+  background: var(--cp-surface);
+  border-block-end: 1px solid var(--cp-border);
+}
 .setup-bg {
   min-height: 100vh;
-  background:
-    radial-gradient(1100px 700px at 50% -15%, rgba(79, 155, 208, 0.18) 0%, transparent 55%),
-    linear-gradient(160deg, #0f172a 0%, #131c30 55%, #0b1220 100%);
+  background: var(--cp-bg);
 }
 .setup-center {
   min-height: 100vh;

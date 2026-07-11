@@ -27,9 +27,9 @@ export function formatMoney(
   amount: number | string | null | undefined,
   opts: FormatMoneyOptions = {},
 ): string {
-  if (amount === null || amount === undefined) return '—';
+  if (amount === null || amount === undefined) return '-';
   const n = typeof amount === 'string' ? Number(amount) : amount;
-  if (!Number.isFinite(n)) return '—';
+  if (!Number.isFinite(n)) return '-';
 
   const c = opts.currency;
   const precision = c?.decimalPrecision ?? FALLBACK_FORMAT.decimalPrecision;

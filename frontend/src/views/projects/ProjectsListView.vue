@@ -15,6 +15,7 @@ import ErrorState from '@/components/shared/ErrorState.vue';
 import RoleGate from '@/components/shared/RoleGate.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
+import DataTable from '@/components/shared/DataTable.vue';
 import ProjectStatusBadge from '@/components/features/project/ProjectStatusBadge.vue';
 import ProjectProgressBar from '@/components/features/project/ProjectProgressBar.vue';
 
@@ -163,7 +164,7 @@ async function handleDelete(project: ProjectWithContract) {
 
       <ErrorState v-if="error" :error="error" class="my-4" @retry="fetch" />
 
-      <v-data-table-server
+      <DataTable
         v-else
         :items="items"
         :items-length="total"
@@ -178,7 +179,7 @@ async function handleDelete(project: ProjectWithContract) {
         @click:row="onRowClick"
       >
         <template #[`item.customer`]="{ item }">
-          {{ item.contract?.customer.name ?? '—' }}
+          {{ item.contract?.customer.name ?? '-' }}
         </template>
         <template #[`item.status`]="{ item }">
           <ProjectStatusBadge :status="item.status" />
@@ -208,7 +209,7 @@ async function handleDelete(project: ProjectWithContract) {
             </RoleGate>
           </div>
         </template>
-      </v-data-table-server>
+      </DataTable>
     </v-card>
   </div>
 </template>

@@ -98,7 +98,7 @@ async function submit() {
     const created = await paymentsApi.create(payload);
 
     if (form.value.alreadyPaid) {
-      // Record the receipt now — same data the standalone mark-paid step needs.
+      // Record the receipt now - same data the standalone mark-paid step needs.
       const body: MarkPaidBody = { paymentDate: form.value.paymentDate };
       if (form.value.method) body.method = form.value.method;
       if (form.value.reference) body.reference = form.value.reference;

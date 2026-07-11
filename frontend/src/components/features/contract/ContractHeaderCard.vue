@@ -31,7 +31,7 @@ const router = useRouter();
         >
           {{ contract.template.name }}
         </button>
-        <div v-else class="text-subtitle-1 text-medium-emphasis">—</div>
+        <div v-else class="text-subtitle-1 text-medium-emphasis">-</div>
       </div>
       <div>
         <div class="text-medium-emphasis text-xs">{{ t('contracts.fields.signedAt') }}</div>

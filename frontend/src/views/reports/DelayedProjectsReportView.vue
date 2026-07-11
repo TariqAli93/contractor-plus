@@ -9,6 +9,7 @@ import EmptyState from '@/components/shared/EmptyState.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 import ProjectStatusBadge from '@/components/features/project/ProjectStatusBadge.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
+import DataTable from '@/components/shared/DataTable.vue';
 
 const rows = ref<DelayedProjectRow[]>([]);
 const loading = ref(false);
@@ -39,22 +40,29 @@ const headers = computed(() => [
 </script>
 
 <template>
-  <div>
+  <div class="cp-fill">
     <PageHeader :title="t('reports.delayed.title')" back="/reports">
       <v-btn variant="text" prepend-icon="mdi-refresh" :loading="loading" @click="fetch">
         {{ t('common.retry') }}
       </v-btn>
     </PageHeader>
 
-    <ErrorState v-if="error" :error="error" @retry="fetch" />
+    <ErrorState v-if="error" :error="error" class="ma-3" @retry="fetch" />
 
-    <v-card v-else>
-      <v-data-table
+    <section v-else class="cp-pane">
+      <div class="cp-pane__toolbar">
+        <span class="text-caption text-medium-emphasis">{{ t('reports.delayed.title') }}</span>
+      </div>
+      <div class="cp-pane__body">
+        <DataTable
         :items="rows"
+        :items-length="rows.length"
         :headers="headers"
         :loading="loading"
+        :items-per-page="-1"
+        :server="false"
         item-value="projectId"
-        hover
+        hide-default-footer
       >
         <template #[`item.name`]="{ item }">
           <RouterLink :to="`/projects/${item.projectId}`" class="text-primary">
@@ -65,7 +73,7 @@ const headers = computed(() => [
           </div>
         </template>
         <template #[`item.customerName`]="{ item }">
-          {{ item.customerName ?? '—' }}
+          {{ item.customerName ?? '-' }}
         </template>
         <template #[`item.status`]="{ item }">
           <ProjectStatusBadge :status="item.status" />
@@ -85,7 +93,8 @@ const headers = computed(() => [
             icon="mdi-check-circle-outline"
           />
         </template>
-      </v-data-table>
-    </v-card>
+        </DataTable>
+      </div>
+    </section>
   </div>
 </template>

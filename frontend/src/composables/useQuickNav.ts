@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router';
 // Gmail-style "g then key" quick navigation: press `g`, then a letter within
 // ~1.2s, to jump to a section. Ignored while typing in a field or when a
 // modifier is held (so it never fights Ctrl+K or browser shortcuts). Route
-// guards still enforce access — an unauthorized destination just redirects.
+// guards still enforce access - an unauthorized destination just redirects.
 const DESTINATIONS: Record<string, string> = {
   d: '/', // Dashboard
   p: '/projects',

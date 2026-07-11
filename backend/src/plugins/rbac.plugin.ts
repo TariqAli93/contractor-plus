@@ -45,6 +45,7 @@ const rbacPlugin: FastifyPluginAsync = async (fastify) => {
       if (request.user.role === RoleName.OWNER) return;
 
       // 2-3. Permission check.
+      let permissionCheckFailed = false;
       if (opts.permissions && opts.permissions.length > 0) {
         const perms = await permissionsFor(request);
         const mode = opts.mode ?? 'any';
@@ -53,10 +54,39 @@ const rbacPlugin: FastifyPluginAsync = async (fastify) => {
             ? opts.permissions.every((k) => perms.has(k))
             : opts.permissions.some((k) => perms.has(k));
         if (ok) return;
+        permissionCheckFailed = true;
       }
 
-      // 4. Legacy role fallback.
-      if (opts.roles && opts.roles.length > 0 && opts.roles.includes(request.user.role)) return;
+      // 4. Legacy role fallback (F-SEC-1 / B1) — KNOWN LIVE DEFECT.
+      //
+      // This grants access on a role match EVEN WHEN the permission check above
+      // failed, so it only ever widens access: a role in the list passes a route
+      // whose permission it was never granted. It is scheduled for removal as the
+      // first task of Phase 2 (seed equivalent permission grants, test every
+      // affected route, then delete this branch and make authorization
+      // permission-only except for the OWNER super-admin rule).
+      //
+      // Until then the defect must not be invisible: every grant that flows
+      // through here AFTER a failed permission check is logged as a structured
+      // warning, so it is auditable in production. See SECURITY.md F-SEC-1 and
+      // BACKEND.md §12.1.
+      if (opts.roles && opts.roles.length > 0 && opts.roles.includes(request.user.role)) {
+        if (permissionCheckFailed) {
+          request.log.warn(
+            {
+              event: 'rbac.legacy_role_fallback',
+              method: request.method,
+              url: request.url,
+              userId: request.user.id,
+              role: request.user.role,
+              requiredPermissions: opts.permissions,
+              mode: opts.mode ?? 'any',
+            },
+            'access granted via legacy role fallback after permission check failed (F-SEC-1; scheduled for removal in Phase 2)',
+          );
+        }
+        return;
+      }
 
       // 5. Deny.
       throw new ForbiddenError('Insufficient permissions', 'INSUFFICIENT_PERMISSION');

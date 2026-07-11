@@ -14,7 +14,7 @@ const color = computed(() => {
     case PaymentStatus.LATE:
       return 'error';
     case PaymentStatus.CANCELLED:
-      return 'grey';
+      return 'secondary';
     default:
       return undefined;
   }

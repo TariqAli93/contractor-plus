@@ -4,7 +4,7 @@ import { useCurrencyFormat } from '@/composables/useCurrencyFormat';
 
 const props = defineProps<{
   amount: number | string | null | undefined;
-  // Legacy override — when provided, this string is shown next to the
+  // Legacy override - when provided, this string is shown next to the
   // formatted number instead of the default currency symbol. Existing
   // call sites that pass a code (e.g. "USD") keep working unchanged.
   currency?: string;
@@ -15,7 +15,7 @@ const props = defineProps<{
 const { format } = useCurrencyFormat();
 
 // When the caller passed a manual `currency` string, render the number
-// without the default symbol and append the legacy chip in its own span —
+// without the default symbol and append the legacy chip in its own span -
 // preserving the visual contract of the previous component.
 const showLegacyChip = computed(() => Boolean(props.currency));
 

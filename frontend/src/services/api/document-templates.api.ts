@@ -8,8 +8,8 @@ import type {
 } from '@/types/document-template';
 
 // Lives at /api/v1/document-templates because /api/v1/templates is taken
-// by the building-templates module (estimation). Routes are otherwise
-// 1:1 with the Phase 3 spec.
+// by the building-templates module. Routes are otherwise 1:1 with the
+// Phase 3 spec.
 
 export const documentTemplatesApi = {
   list: (params: { category?: DocumentCategory; includeInactive?: boolean } = {}): Promise<{
@@ -54,7 +54,7 @@ export const documentTemplatesApi = {
   setDefault: (id: string): Promise<DocumentTemplate> =>
     apiPost(`/document-templates/${id}/set-default`),
 
-  // Downloads must carry the JWT — we fetch as a blob and trigger a
+  // Downloads must carry the JWT - we fetch as a blob and trigger a
   // client-side download to keep the authorization header intact.
   downloadTemplate: async (id: string, filename: string): Promise<void> => {
     const res = await apiClient.get<Blob>(`/document-templates/${id}/download`, {

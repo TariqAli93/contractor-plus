@@ -48,7 +48,7 @@ export class MaterialsService {
     return this.prisma.$transaction((tx) => this.createWithinTx(tx, data, actor));
   }
 
-  /** Tx-aware create — lets the AI command workflow create a material as one step
+  /** Tx-aware create — lets a caller create a material as one step
    *  of a larger all-or-nothing transaction. */
   async createWithinTx(
     tx: Prisma.TransactionClient,

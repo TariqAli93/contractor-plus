@@ -42,13 +42,13 @@ watch(
 </script>
 
 <template>
-  <v-card class="setup-card" elevation="12" rounded="xl">
+  <v-card class="setup-card">
     <!-- Brand header -->
     <div class="setup-head">
       <div class="brand">
-        <v-avatar size="40" color="primary" class="brand-badge">
+        <span class="brand-badge cp-icon-tile">
           <v-icon icon="mdi-office-building" size="24" />
-        </v-avatar>
+        </span>
         <div>
           <div class="brand-name">{{ APP_NAME }}</div>
           <div class="brand-sub">إعداد النظام لأول مرة</div>
@@ -100,16 +100,18 @@ watch(
 .setup-card {
   width: 100%;
   max-width: 600px;
-  background: rgba(23, 33, 53, 0.92);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  backdrop-filter: blur(6px);
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-md);
+  box-shadow: var(--cp-shadow-lg);
   overflow: hidden;
 }
 .setup-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px 16px;
+  padding: 12px 14px 10px;
+  border-block-end: 1px solid var(--cp-border);
 }
 .brand {
   display: flex;
@@ -117,7 +119,7 @@ watch(
   gap: 12px;
 }
 .brand-badge {
-  box-shadow: 0 6px 18px rgba(79, 155, 208, 0.35);
+  box-shadow: none;
 }
 .brand-name {
   font-size: 1.05rem;
@@ -126,17 +128,17 @@ watch(
 }
 .brand-sub {
   font-size: 0.78rem;
-  color: rgba(203, 213, 225, 0.7);
+  color: var(--cp-text-muted);
 }
 .version {
   font-size: 0.72rem;
-  color: rgba(148, 163, 184, 0.7);
+  color: var(--cp-text-muted);
 }
 
 .steps {
   display: flex;
   align-items: center;
-  padding: 8px 24px 18px;
+  padding: 8px 14px 10px;
   gap: 6px;
 }
 .step {
@@ -149,50 +151,48 @@ watch(
 .dot {
   width: 34px;
   height: 34px;
-  border-radius: var(--cp-radius-pill);
+  border-radius: var(--cp-radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
   font-size: 0.9rem;
-  background: rgba(148, 163, 184, 0.16);
-  color: rgba(203, 213, 225, 0.75);
-  border: 1px solid transparent;
-  transition: all 0.25s ease;
+  background: var(--cp-panel);
+  color: var(--cp-text-muted);
+  border: 1px solid var(--cp-border);
 }
 .step.active .dot {
-  background: rgb(var(--v-theme-primary));
-  color: #06121f;
-  box-shadow: 0 6px 16px rgba(79, 155, 208, 0.45);
+  background: var(--cp-primary);
+  color: #FFFFFF;
+  box-shadow: none;
 }
 .step.done .dot {
-  background: rgba(34, 197, 94, 0.2);
-  color: rgb(var(--v-theme-success));
-  border-color: rgba(34, 197, 94, 0.5);
+  background: var(--cp-surface);
+  color: var(--cp-success);
+  border-color: var(--cp-success);
 }
 .step-label {
   font-size: 0.72rem;
-  color: rgba(203, 213, 225, 0.6);
+  color: var(--cp-text-muted);
   white-space: nowrap;
 }
 .step.active .step-label {
-  color: rgba(226, 232, 240, 0.95);
+  color: var(--cp-primary);
   font-weight: 600;
 }
 .rail {
   flex: 1;
   height: 2px;
-  background: rgba(148, 163, 184, 0.18);
+  background: var(--cp-border);
   border-radius: var(--cp-radius-sm);
   margin-bottom: 22px;
-  transition: background 0.3s ease;
 }
 .rail.filled {
-  background: rgba(34, 197, 94, 0.5);
+  background: var(--cp-success);
 }
 
 .setup-body {
-  padding: 26px 28px 30px;
+  padding: 14px;
 }
 .setup-window {
   overflow: visible;

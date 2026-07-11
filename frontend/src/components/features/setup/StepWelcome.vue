@@ -16,7 +16,7 @@ const points = [
     <h2 class="title">مرحباً بك في {{ APP_NAME }}</h2>
     <p class="lead">
       سيرشدك هذا المعالج خلال خطوات بسيطة لتجهيز البرنامج للعمل لأول مرة. لا تحتاج إلى أي خبرة تقنية
-      — فقط اتبع الخطوات.
+      - فقط اتبع الخطوات.
     </p>
 
     <div class="points">
@@ -44,15 +44,15 @@ const points = [
   margin-bottom: 10px;
 }
 .lead {
-  color: rgba(203, 213, 225, 0.78);
-  line-height: 1.9;
+  color: var(--cp-text-muted);
+  line-height: 1.6;
   max-width: 460px;
   margin: 0 auto 22px;
 }
 .points {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
   text-align: start;
   max-width: 420px;
   margin: 0 auto 26px;
@@ -60,13 +60,13 @@ const points = [
 .point {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: rgba(148, 163, 184, 0.08);
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  border-radius: var(--cp-radius-xl);
-  padding: 12px 14px;
-  font-size: 0.92rem;
-  color: rgba(226, 232, 240, 0.9);
+  gap: 8px;
+  background: var(--cp-surface-2);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-md);
+  padding: 7px 8px;
+  font-size: 0.82rem;
+  color: var(--cp-text);
 }
 .actions {
   display: flex;

@@ -4,7 +4,7 @@ import { useAccess, type AccessSpec } from '@/composables/useAccess';
 
 // Hybrid visibility gate. Renders the slot when the user satisfies the access
 // spec (permission-first, legacy-role fallback, OWNER always). `mode="disable"`
-// keeps the slot visible but inert. UI-only — the backend still enforces.
+// keeps the slot visible but inert. UI-only - the backend still enforces.
 const props = defineProps<{
   permissions?: string[];
   roles?: string[];

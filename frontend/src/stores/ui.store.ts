@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
 
 const SIDEBAR_KEY = 'contractor-plus.sidebar-collapsed';
+const DETAILS_KEY = 'contractor-plus.details-open';
 
 function readSidebarCollapsed(): boolean {
   return globalThis.localStorage?.getItem(SIDEBAR_KEY) === 'true';
@@ -19,7 +20,7 @@ export const useUiStore = defineStore('ui', () => {
   }
 
   // Global command palette (Ctrl/⌘+K). Open state lives here so any component
-  // — the topbar button, a keyboard hook, a quick-action — can drive it.
+  // - the topbar button, a keyboard hook, a quick-action - can drive it.
   const paletteOpen = ref(false);
   // An optional initial search term (e.g. from the voice "ابحث عن …" command);
   // the palette seeds its input from this when it opens.
@@ -41,6 +42,23 @@ export const useUiStore = defineStore('ui', () => {
     helpOpen.value = !helpOpen.value;
   }
 
+  // The right-hand properties pane, toggled with F4 - the key Access, Visual
+  // Studio and every Windows property-sheet has used for decades. Persisted:
+  // a workspace that forgets its panes is a web page, not a tool.
+  const detailsOpen = ref<boolean>(globalThis.localStorage?.getItem(DETAILS_KEY) !== 'false');
+  watch(detailsOpen, (v) => {
+    globalThis.localStorage?.setItem(DETAILS_KEY, String(v));
+  });
+  function toggleDetails() {
+    detailsOpen.value = !detailsOpen.value;
+  }
+
+  // Help ▸ About.
+  const aboutOpen = ref(false);
+  function toggleAbout() {
+    aboutOpen.value = !aboutOpen.value;
+  }
+
   return {
     sidebarCollapsed,
     toggleSidebar,
@@ -51,5 +69,9 @@ export const useUiStore = defineStore('ui', () => {
     togglePalette,
     helpOpen,
     toggleHelp,
+    detailsOpen,
+    toggleDetails,
+    aboutOpen,
+    toggleAbout,
   };
 });

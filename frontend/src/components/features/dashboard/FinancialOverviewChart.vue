@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import VueApexCharts from 'vue3-apexcharts';
 import type { ApexOptions } from 'apexcharts';
 import { t } from '@/i18n';
 import type { DashboardSummary } from '@/types/dashboard';
 import { useCurrencyFormat } from '@/composables/useCurrencyFormat';
-import { useThemeStore } from '@/stores/theme.store';
 
 const props = defineProps<{
   summary: DashboardSummary | null;
@@ -13,31 +12,18 @@ const props = defineProps<{
 }>();
 
 const { format } = useCurrencyFormat();
-const theme = useThemeStore();
 
 // ApexCharts paints SVG presentation attributes, which do not resolve CSS
-// custom properties — so the palette has to be read out of the cascade as
-// concrete values. Reading it from our own element (rather than :root) picks up
-// `.v-theme--contractorPlusDark`, which is what re-themes the `--cp-*` scale.
+// custom properties - so the palette has to be read out of the cascade as
+// concrete values. Reading it from our own element keeps the chart aligned with
+// the same locked palette used by the surrounding workspace.
 const rootEl = ref<HTMLElement | null>(null);
-// Bumped after the theme class has actually landed in the DOM, so the reads
-// below never happen a frame early and latch the outgoing palette.
-const paletteEpoch = ref(0);
 
 function token(name: string, fallback: string): string {
-  void paletteEpoch.value;
   const host = rootEl.value;
   if (!host) return fallback;
   return getComputedStyle(host).getPropertyValue(name).trim() || fallback;
 }
-
-watch(
-  () => theme.isDark,
-  async () => {
-    await nextTick();
-    paletteEpoch.value++;
-  },
-);
 
 // Motion here is JS-driven inside Apex's SVG, so the global CSS
 // `prefers-reduced-motion` guard in main.css cannot reach it.
@@ -48,7 +34,6 @@ const onMotionChange = (e: MediaQueryListEvent) => {
 };
 
 onMounted(() => {
-  paletteEpoch.value++;
   motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
   reduceMotion.value = motionQuery.matches;
   motionQuery.addEventListener('change', onMotionChange);
@@ -81,13 +66,13 @@ const series = computed(() => [
 // Profit turns red when negative; the rest keep their semantic brand colors
 // (revenue=info, costs=warning, collected=primary, pending=accent).
 const colors = computed(() => [
-  token('--cp-info', '#0284c7'),
-  token('--cp-warning', '#f59e0b'),
+  token('--cp-info', '#234E70'),
+  token('--cp-warning', '#B7791F'),
   num(props.summary?.monthlyProfit) < 0
-    ? token('--cp-error', '#dc2626')
-    : token('--cp-success', '#16a34a'),
-  token('--cp-primary', '#1e5f8c'),
-  token('--cp-accent', '#d97706'),
+    ? token('--cp-error', '#C53030')
+    : token('--cp-success', '#2F855A'),
+  token('--cp-primary', '#234E70'),
+  token('--cp-accent', '#B7791F'),
 ]);
 
 const options = computed<ApexOptions>(() => ({
@@ -96,9 +81,8 @@ const options = computed<ApexOptions>(() => ({
     fontFamily: 'inherit',
     background: 'transparent',
     toolbar: { show: false },
-    animations: { enabled: !reduceMotion.value, speed: 400 },
+    animations: { enabled: !reduceMotion.value, speed: 180 },
   },
-  theme: { mode: theme.isDark ? 'dark' : 'light' },
   colors: colors.value,
   plotOptions: {
     // 3px == --cp-radius-sm; the crisp low radius the rest of the app uses.
@@ -107,7 +91,7 @@ const options = computed<ApexOptions>(() => ({
   dataLabels: { enabled: false },
   legend: { show: false },
   grid: {
-    borderColor: token('--cp-border', '#e3e8ef'),
+    borderColor: token('--cp-border', '#CBD5E0'),
     strokeDashArray: 4,
   },
   xaxis: {
@@ -127,10 +111,7 @@ const options = computed<ApexOptions>(() => ({
     opposite: true,
     labels: { formatter: (value: number) => format(value, { hideSymbol: true }) },
   },
-  tooltip: {
-    theme: theme.isDark ? 'dark' : 'light',
-    y: { formatter: (value: number) => format(value) },
-  },
+  tooltip: { y: { formatter: (value: number) => format(value) } },
   states: { hover: { filter: { type: 'lighten', value: 0.05 } } },
 }));
 </script>

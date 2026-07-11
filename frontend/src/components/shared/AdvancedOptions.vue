@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<{ label?: string; defaultOpen?: boolean }
 const open = ref(props.defaultOpen);
 
 // Data loads asynchronously on edit, so `default-open` may flip to true after
-// mount. Only ever auto-open — never override a user's manual choice to close.
+// mount. Only ever auto-open - never override a user's manual choice to close.
 watch(
   () => props.defaultOpen,
   (v) => {

@@ -142,21 +142,21 @@ const requiredRule = (v: unknown) => (!!v && String(v).trim().length > 0) || ' '
   margin-bottom: 4px;
 }
 .step-sub {
-  color: rgba(203, 213, 225, 0.72);
+  color: var(--cp-text-muted);
   font-size: 0.9rem;
-  margin-bottom: 18px;
-  line-height: 1.7;
+  margin-bottom: 12px;
+  line-height: 1.5;
 }
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 8px;
 }
 .test-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-top: 18px;
+  gap: 8px;
+  margin-top: 12px;
   flex-wrap: wrap;
 }
 .test-result {
@@ -174,6 +174,6 @@ const requiredRule = (v: unknown) => (!!v && String(v).trim().length > 0) || ' '
 .nav {
   display: flex;
   justify-content: space-between;
-  margin-top: 26px;
+  margin-top: 14px;
 }
 </style>

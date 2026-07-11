@@ -15,7 +15,7 @@ const store = useTunnelStore();
 
 // Refresh strategy: explicit Refresh button + on-mount + on-window-focus.
 // No polling. Tunnels rarely flap; if the user wants the latest, the chip
-// or the button is one click away — cheaper than burning CPU on every tab.
+// or the button is one click away - cheaper than burning CPU on every tab.
 onMounted(() => void refresh());
 onActivated(() => void refresh({ silent: true }));
 
@@ -28,8 +28,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <!-- Header -->
+  <div class="cp-fill">
     <PageHeader :title="t('tunnel.page.title')" :subtitle="t('tunnel.page.subtitle')" icon="mdi-tunnel">
       <v-btn
         variant="text"
@@ -42,15 +41,29 @@ onUnmounted(() => {
       </v-btn>
     </PageHeader>
 
-    <!-- First-load skeleton. Once we have ever loaded data, we keep it
-         visible during refreshes (preserve last-known state). -->
-    <v-skeleton-loader v-if="!store.initialized" type="card, article, list-item-three-line" />
+    <section v-if="!store.initialized" class="cp-pane cp-tunnel__loading">
+      <v-skeleton-loader type="list-item-two-line, list-item-two-line, list-item-two-line" />
+    </section>
 
-    <template v-else>
-      <TunnelStatusHero />
-      <TunnelErrorGuidance />
-      <TunnelActionPanel />
+    <section v-else class="cp-tunnel__workspace">
+      <div class="cp-tunnel__primary">
+        <TunnelStatusHero />
+        <TunnelErrorGuidance />
+        <TunnelActionPanel />
+      </div>
       <TunnelDiagnostics />
-    </template>
+    </section>
   </div>
 </template>
+
+<style scoped>
+.cp-tunnel__loading { padding: 8px; }
+.cp-tunnel__workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.7fr);
+  gap: 6px;
+  min-height: 0;
+  overflow: auto;
+}
+.cp-tunnel__primary { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+</style>

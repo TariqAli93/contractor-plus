@@ -27,7 +27,7 @@ function enableErrorMessage(e: unknown): string | null {
 
 // Single entrypoint every tunnel UI shares. Owns the fetch/enable/disable
 // calls, in-flight flags, derived labels, and the disable confirmation.
-// Optimistic state changes are intentionally avoided — every transition
+// Optimistic state changes are intentionally avoided - every transition
 // comes from the response of the call that caused it.
 
 export type TunnelFailureKind =
@@ -132,7 +132,7 @@ export function useTunnel() {
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 
-  // What failure mode should we surface to the user? At most one — picked
+  // What failure mode should we surface to the user? At most one - picked
   // by severity (broken before transient) so the guidance panel doesn't
   // flood the page with messages that all point at the same root cause.
   const failureKind = computed<TunnelFailureKind>(() => {

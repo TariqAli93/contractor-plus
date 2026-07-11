@@ -22,7 +22,7 @@ export const projectsApi = {
 
   remove: (id: string): Promise<void> => apiDelete(`/projects/${id}`),
 
-  // Lifecycle actions — bodyless except /cancel
+  // Lifecycle actions - bodyless except /cancel
   start: (id: string): Promise<Project> => apiPost(`/projects/${id}/start`),
   pause: (id: string): Promise<Project> => apiPost(`/projects/${id}/pause`),
   resume: (id: string): Promise<Project> => apiPost(`/projects/${id}/resume`),

@@ -1,11 +1,6 @@
 <script setup lang="ts">
-// Master-detail contracts workspace (roadmap Phase 2, "single screen"): a
-// compact searchable contract list on the start side; the selected contract's
-// full detail on the other — no page hop. Narrow screens fall back to the
-// full-page detail. Selection is mirrored to ?p= for refresh/shareable links.
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useDisplay } from 'vuetify';
 import { t } from '@/i18n';
 import { useContracts } from '@/composables/useContracts';
 import { ContractStatus, RoleName } from '@/types/enums';
@@ -15,49 +10,73 @@ import PageHeader from '@/components/shared/PageHeader.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
 import RoleGate from '@/components/shared/RoleGate.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
+import DateDisplay from '@/components/shared/DateDisplay.vue';
 import ContractStatusBadge from '@/components/features/contract/ContractStatusBadge.vue';
 import ContractDetailPanel from '@/components/features/contract/ContractDetailPanel.vue';
+import WorkspaceSplit from '@/components/shared/workspace/WorkspaceSplit.vue';
+import DetailsPane from '@/components/shared/workspace/DetailsPane.vue';
+import DataTable from '@/components/shared/DataTable.vue';
 
-// The list join carries the customer object at runtime (typed as Contract).
 type ContractRow = Contract & { customer?: { name: string } };
 
 const route = useRoute();
 const router = useRouter();
-// Match the Tailwind `lg:` (1024px) split layout below.
-const { width } = useDisplay();
-const isSplit = computed(() => width.value >= 1024);
-
-const { items, total, loading, error, page, pageSize, searchInput, status, fetch, setStatusFilter } =
-  useContracts();
-
+const splitActive = ref(true);
+const { items, total, loading, error, page, pageSize, searchInput, status, sortBy, sortDir, fetch, setStatusFilter } = useContracts();
 const WRITE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ACCOUNTANT];
 const WRITE_PERMS = ['contracts.create', 'contracts.update', 'contracts.delete'];
-
 const selectedId = ref<string | undefined>(
   typeof route.query.p === 'string' ? route.query.p : undefined,
 );
-
 const statusFilter = computed<'all' | ContractStatus>(() => status.value ?? 'all');
-function onStatusChange(v: 'all' | ContractStatus) {
-  setStatusFilter(v === 'all' ? undefined : v);
+const selectedNumber = computed(
+  () => (items.value as ContractRow[]).find((contract) => contract.id === selectedId.value)?.contractNumber ?? null,
+);
+
+function onStatusChange(value: 'all' | ContractStatus) {
+  setStatusFilter(value === 'all' ? undefined : value);
 }
 
-function select(c: Contract) {
-  if (isSplit.value) {
-    selectedId.value = c.id;
-    void router.replace({ query: { ...route.query, p: c.id } });
-  } else {
-    void router.push(`/contracts/${c.id}`);
+function select(contract: Contract) {
+  if (!splitActive.value) {
+    void router.push(`/contracts/${contract.id}`);
+    return;
+  }
+  selectedId.value = contract.id;
+  void router.replace({ query: { ...route.query, p: contract.id } });
+}
+
+const columns = computed(() => [
+  { key: 'contractNumber', title: t('contracts.fields.contractNumber'), sortable: true },
+  { key: 'customer', title: t('contracts.fields.customer'), sortable: false },
+  { key: 'status', title: t('contracts.fields.status'), sortable: false, width: 120 },
+  { key: 'totalPrice', title: t('contracts.fields.totalPrice'), sortable: true, width: 150, align: 'end' as const },
+  { key: 'signedAt', title: t('contracts.fields.signedAt'), sortable: false, width: 135 },
+]);
+
+function onTableUpdate(opts: {
+  page: number;
+  itemsPerPage: number;
+  sortBy: Array<{ key: string; order: 'asc' | 'desc' }>;
+}) {
+  page.value = opts.page;
+  pageSize.value = opts.itemsPerPage;
+  const first = opts.sortBy[0];
+  if (first && (first.key === 'contractNumber' || first.key === 'totalPrice')) {
+    sortBy.value = first.key;
+    sortDir.value = first.order;
   }
 }
 
-const pageCount = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)));
+function rowProps({ item }: { item: Contract }) {
+  return item.id === selectedId.value ? { class: 'cp-row-selected' } : {};
+}
 
 onMounted(fetch);
 </script>
 
 <template>
-  <div>
+  <div class="cp-fill">
     <PageHeader :title="t('nav.contracts')" :count="total || null" icon="mdi-file-sign" :hint="t('help.contracts')">
       <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
         <v-btn color="primary" prepend-icon="mdi-plus" to="/contracts/new">
@@ -66,135 +85,76 @@ onMounted(fetch);
       </RoleGate>
     </PageHeader>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-      <!-- Master -->
-      <div class="lg:col-span-4">
-        <v-card>
-          <v-card-text class="pb-2">
-            <SearchBar v-model="searchInput" :placeholder="t('contracts.searchPlaceholder')" />
-            <v-chip-group
-              :model-value="statusFilter"
-              mandatory
-              selected-class="bg-primary text-white"
-              class="mt-1"
-              @update:model-value="onStatusChange"
-            >
-              <v-chip value="all" size="x-small">{{ t('contracts.filter.all') }}</v-chip>
-              <v-chip :value="ContractStatus.DRAFT" size="x-small">{{ t('contracts.status.DRAFT') }}</v-chip>
-              <v-chip :value="ContractStatus.APPROVED" size="x-small">{{ t('contracts.status.APPROVED') }}</v-chip>
-              <v-chip :value="ContractStatus.CANCELLED" size="x-small">{{ t('contracts.status.CANCELLED') }}</v-chip>
-            </v-chip-group>
-          </v-card-text>
+    <WorkspaceSplit
+      storage-key="contracts"
+      :default-width="580"
+      :min-master="430"
+      :min-details="360"
+      @update:show-details="splitActive = $event"
+    >
+      <div class="cp-pane">
+        <div class="cp-pane__toolbar cp-contracts__filters">
+          <SearchBar v-model="searchInput" :placeholder="t('contracts.searchPlaceholder')" />
+          <v-chip-group :model-value="statusFilter" mandatory @update:model-value="onStatusChange">
+            <v-chip value="all">{{ t('contracts.filter.all') }}</v-chip>
+            <v-chip :value="ContractStatus.DRAFT">{{ t('contracts.status.DRAFT') }}</v-chip>
+            <v-chip :value="ContractStatus.APPROVED">{{ t('contracts.status.APPROVED') }}</v-chip>
+            <v-chip :value="ContractStatus.CANCELLED">{{ t('contracts.status.CANCELLED') }}</v-chip>
+          </v-chip-group>
+        </div>
 
-          <v-divider />
-
-          <ErrorState v-if="error" :error="error" class="my-4" @retry="fetch" />
-          <template v-else>
-            <v-progress-linear v-if="loading" indeterminate />
-            <div class="cp-master-list">
-              <button
-                v-for="c in (items as ContractRow[])"
-                :key="c.id"
-                type="button"
-                class="cp-master-item"
-                :class="{ 'is-active': c.id === selectedId }"
-                @click="select(c)"
-              >
-                <div class="flex items-center justify-between gap-2">
-                  <span class="cp-master-name">{{ c.contractNumber }}</span>
-                  <ContractStatusBadge :status="c.status" />
-                </div>
-                <div class="text-caption text-medium-emphasis">{{ c.customer?.name ?? '—' }}</div>
-                <div class="text-caption font-medium mt-1"><MoneyDisplay :amount="c.totalPrice" /></div>
-              </button>
-              <div v-if="!loading && items.length === 0" class="cp-master-empty">
-                {{ t('common.empty') }}
-              </div>
-            </div>
-
-            <template v-if="pageCount > 1">
-              <v-divider />
-              <div class="pa-2 d-flex justify-center">
-                <v-pagination v-model="page" :length="pageCount" :total-visible="4" density="comfortable" />
-              </div>
-            </template>
-          </template>
-        </v-card>
+        <ErrorState v-if="error" :error="error" class="ma-2" @retry="fetch" />
+        <div v-else class="cp-pane__body">
+          <DataTable
+            :items="items as ContractRow[]"
+            :items-length="total"
+            :headers="columns"
+            :loading="loading"
+            :page="page"
+            :items-per-page="pageSize"
+            :row-props="rowProps"
+            item-value="id"
+            @update:options="onTableUpdate"
+            @click:row="(_event, row) => select(row.item)"
+            @dblclick:row="(_event, row) => router.push(`/contracts/${row.item.id}`)"
+          >
+            <template #[`item.contractNumber`]="{ item }"><span class="cp-contracts-table__number">{{ item.contractNumber }}</span></template>
+            <template #[`item.customer`]="{ item }">{{ item.customer?.name ?? '-' }}</template>
+            <template #[`item.status`]="{ item }"><ContractStatusBadge :status="item.status" /></template>
+            <template #[`item.totalPrice`]="{ item }"><span class="cp-contracts-table__amount"><MoneyDisplay :amount="item.totalPrice" /></span></template>
+            <template #[`item.signedAt`]="{ item }"><DateDisplay :value="item.signedAt" /></template>
+            <template #no-data><span class="cp-contracts-table__empty">{{ t('common.empty') }}</span></template>
+          </DataTable>
+        </div>
       </div>
 
-      <!-- Detail -->
-      <div class="lg:col-span-8">
-        <template v-if="selectedId">
-          <div class="d-flex justify-end mb-2">
-            <v-btn
-              variant="text"
-              size="small"
-              prepend-icon="mdi-open-in-new"
-              :to="`/contracts/${selectedId}`"
-            >
+      <template #details>
+        <DetailsPane :title="selectedNumber ?? t('nav.contracts')" icon="mdi-file-sign" :selected="Boolean(selectedId)">
+          <ContractDetailPanel v-if="selectedId" :contract-id="selectedId" @changed="fetch" />
+          <template #actions>
+            <v-btn size="x-small" variant="text" prepend-icon="mdi-open-in-new" :to="`/contracts/${selectedId}`">
               {{ t('contracts.openFull') }}
             </v-btn>
-          </div>
-          <ContractDetailPanel :contract-id="selectedId" @changed="fetch" />
-        </template>
-        <v-card v-else class="cp-detail-empty">
-          <div class="text-center text-medium-emphasis pa-12">
-            <v-icon size="48" class="mb-3 d-block mx-auto">mdi-gesture-tap</v-icon>
-            {{ t('contracts.workspace.selectHint') }}
-          </div>
-        </v-card>
-      </div>
-    </div>
+          </template>
+        </DetailsPane>
+      </template>
+    </WorkspaceSplit>
   </div>
 </template>
 
 <style scoped>
-.cp-master-list {
-  max-height: calc(100vh - 300px);
-  min-height: 200px;
-  overflow-y: auto;
+.cp-contracts__filters {
+  flex-wrap: wrap;
+  row-gap: 2px;
 }
-.cp-master-item {
-  display: block;
-  width: 100%;
-  text-align: start;
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(var(--v-border-color), 0.4);
-  cursor: pointer;
-}
-.cp-master-item:hover {
-  background: rgba(var(--v-theme-on-surface), 0.03);
-}
-/* Active-item rail, drawn the way .cp-nav draws it: an overlaid pseudo-element
-   rather than a border that only exists when selected (which shifted the row
-   3px on click). Logical inset keeps it on the correct edge under RTL. */
-.cp-master-item.is-active {
-  position: relative;
-  background: rgba(var(--v-theme-primary), 0.1);
-}
-.cp-master-item.is-active::before {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 0;
-  width: 3px;
-  background: rgb(var(--v-theme-primary));
-}
-.cp-master-name {
+.cp-contracts-table__number,
+.cp-contracts-table__amount {
+  font-variant-numeric: tabular-nums;
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
-.cp-master-empty {
-  padding: 36px;
-  text-align: center;
-  color: rgba(var(--v-theme-on-surface), 0.5);
-}
-.cp-detail-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 320px;
+.cp-contracts-table__empty {
+  display: block;
+  padding: 16px;
+  color: var(--cp-text-muted);
 }
 </style>

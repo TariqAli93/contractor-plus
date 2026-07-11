@@ -65,7 +65,7 @@ export interface ListTemplatesQuery {
 
 export interface CreateTemplateItemInput {
   materialId: string;
-  // Legacy/internal — the backend auto-generates this from estimatedQuantity.
+  // Legacy/internal - the backend auto-generates this from estimatedQuantity.
   // The UI no longer collects it.
   quantityFormula?: string;
   estimatedQuantity: number;

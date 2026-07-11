@@ -20,7 +20,6 @@ const pct = computed(() => {
     :model-value="pct"
     :height="height ?? 8"
     :color="color ?? 'primary'"
-    rounded
   >
     <template v-if="showLabel" #default>
       <span class="text-caption font-medium">{{ pct }}%</span>

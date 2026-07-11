@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Guided project creation (roadmap Phase 3 / prompt 6). A multi-step wizard
 // over what the backend actually supports for a Project (name, optional linked
-// contract, dates, notes) — materials/costs/payments are added afterwards from
+// contract, dates, notes) - materials/costs/payments are added afterwards from
 // the project's own tabs. "Save as draft" persists the half-filled wizard to
 // localStorage (no backend DRAFT status needed) and offers to resume it.
 import { computed, onMounted, reactive, ref, watch } from 'vue';
@@ -63,7 +63,7 @@ function persist() {
   try {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(wizard));
   } catch {
-    /* storage unavailable — draft is best-effort */
+    /* storage unavailable - draft is best-effort */
   }
 }
 watch(wizard, persist, { deep: true });
@@ -157,7 +157,7 @@ const requiredRule = (v: unknown) => !!v || t('errors.required');
 </script>
 
 <template>
-  <div class="mx-auto" style="max-width: 900px">
+  <div class="cp-fill cp-wizard">
     <PageHeader :title="t('projects.wizard.title')" back="/projects" icon="mdi-folder-plus-outline" />
 
     <v-alert
@@ -165,7 +165,7 @@ const requiredRule = (v: unknown) => !!v || t('errors.required');
       type="info"
       variant="tonal"
       icon="mdi-content-save-edit-outline"
-      class="mb-4"
+      class="cp-wizard__resume"
       closable
       @click:close="resumed = false"
     >
@@ -177,7 +177,7 @@ const requiredRule = (v: unknown) => !!v || t('errors.required');
       </div>
     </v-alert>
 
-    <v-card>
+    <section class="cp-pane cp-wizard__pane">
       <v-stepper v-model="step" flat editable>
         <v-stepper-header>
           <template v-for="(title, i) in stepTitles" :key="i">
@@ -189,7 +189,7 @@ const requiredRule = (v: unknown) => !!v || t('errors.required');
         <v-stepper-window>
           <!-- 1. Basics -->
           <v-stepper-window-item :value="1">
-            <div class="grid grid-cols-1 gap-4 pa-2">
+            <div class="grid grid-cols-1 gap-2 pa-2">
               <v-text-field
                 v-model="wizard.name"
                 :label="t('projects.fields.name')"
@@ -227,7 +227,7 @@ const requiredRule = (v: unknown) => !!v || t('errors.required');
 
           <!-- 3. Duration -->
           <v-stepper-window-item :value="3">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pa-2">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 pa-2">
               <v-text-field
                 v-model="wizard.startDate"
                 :label="t('projects.fields.startDate')"
@@ -244,8 +244,8 @@ const requiredRule = (v: unknown) => !!v || t('errors.required');
           <!-- 4. Review -->
           <v-stepper-window-item :value="4">
             <div class="pa-2">
-              <v-list class="rounded-lg border">
-                <v-list-item :title="t('projects.fields.name')" :subtitle="wizard.name || '—'" />
+              <v-list class="border">
+                <v-list-item :title="t('projects.fields.name')" :subtitle="wizard.name || '-'" />
                 <v-divider />
                 <v-list-item
                   :title="t('projects.wizard.linkContract')"
@@ -254,15 +254,15 @@ const requiredRule = (v: unknown) => !!v || t('errors.required');
                 <v-divider />
                 <v-list-item
                   :title="t('projects.fields.startDate')"
-                  :subtitle="wizard.startDate || '—'"
+                  :subtitle="wizard.startDate || '-'"
                 />
                 <v-divider />
                 <v-list-item
                   :title="t('projects.fields.deliveryDate')"
-                  :subtitle="wizard.deliveryDate || '—'"
+                  :subtitle="wizard.deliveryDate || '-'"
                 />
                 <v-divider />
-                <v-list-item :title="t('projects.fields.notes')" :subtitle="wizard.notes || '—'" />
+                <v-list-item :title="t('projects.fields.notes')" :subtitle="wizard.notes || '-'" />
               </v-list>
               <v-alert type="info" variant="tonal" density="comfortable" class="mt-4">
                 {{ t('projects.wizard.reviewHint') }}
@@ -272,8 +272,7 @@ const requiredRule = (v: unknown) => !!v || t('errors.required');
         </v-stepper-window>
       </v-stepper>
 
-      <v-divider />
-      <div class="flex items-center gap-2 pa-4 flex-wrap">
+      <div class="cp-pane__foot cp-wizard__actions">
         <v-btn variant="text" prepend-icon="mdi-content-save-outline" @click="saveDraftAndExit">
           {{ t('projects.wizard.saveDraft') }}
         </v-btn>
@@ -301,6 +300,16 @@ const requiredRule = (v: unknown) => !!v || t('errors.required');
           {{ t('projects.wizard.create') }}
         </v-btn>
       </div>
-    </v-card>
+    </section>
   </div>
 </template>
+
+<style scoped>
+.cp-wizard { align-items: center; }
+.cp-wizard > :not(.cp-page-header) { width: min(920px, 100%); }
+.cp-wizard__resume { margin-bottom: 6px; }
+.cp-wizard__pane { flex: 1; min-height: 0; overflow: auto; }
+.cp-wizard__pane :deep(.v-stepper) { min-height: 0; }
+.cp-wizard__actions { justify-content: flex-end; }
+.cp-wizard__actions > :first-child { margin-inline-end: auto; }
+</style>

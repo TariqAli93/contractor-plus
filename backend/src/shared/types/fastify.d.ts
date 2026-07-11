@@ -1,12 +1,15 @@
 import 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import type { RequireAccessOptions } from '../../plugins/rbac.plugin.js';
+import type { Container } from '../../composition/container.js';
 
 type Guard = (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
 
 declare module 'fastify' {
   interface FastifyInstance {
     prisma: PrismaClient;
+    // The composition root (BACKEND.md §9.3). Later phases read use cases from here.
+    container: Container;
     authenticate: Guard;
     // Legacy role guard. `roles` are role-name strings (system or custom).
     authorize: (roles: readonly string[]) => Guard;

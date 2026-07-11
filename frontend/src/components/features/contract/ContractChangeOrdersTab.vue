@@ -362,7 +362,7 @@ async function remove(co: ChangeOrder) {
 }
 .cp-co-stat__label {
   font-size: 0.7rem;
-  color: rgba(var(--v-theme-on-surface), 0.6);
+  color: var(--cp-text-muted);
 }
 .cp-co-stat__value {
   font-weight: 700;
@@ -373,7 +373,7 @@ async function remove(co: ChangeOrder) {
 }
 .cp-co-stat--revised .cp-co-stat__value {
   font-size: 1.1rem;
-  color: rgb(var(--v-theme-primary));
+  color: var(--cp-primary);
 }
 .cp-co-list {
   display: flex;
@@ -394,7 +394,7 @@ async function remove(co: ChangeOrder) {
 }
 .cp-co-row__num {
   font-weight: 700;
-  color: rgba(var(--v-theme-on-surface), 0.5);
+  color: var(--cp-text-muted);
   flex-shrink: 0;
 }
 .cp-co-row__amount {

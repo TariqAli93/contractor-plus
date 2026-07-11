@@ -23,7 +23,7 @@ export function useCustomers() {
   const sortBy = ref<'name' | 'createdAt'>('createdAt');
   const sortDir = ref<'asc' | 'desc'>('desc');
 
-  // Internal debounced search input — bound by the view's SearchBar.
+  // Internal debounced search input - bound by the view's SearchBar.
   const searchInput = ref('');
   const updateSearch = useDebounceFn((v: string) => {
     if (v === search.value) return;

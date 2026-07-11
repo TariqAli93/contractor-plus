@@ -18,7 +18,7 @@ const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } =
 
 useSaveShortcut(submit, { enabled: () => !submitting.value });
 
-// Lightweight pickers — both endpoints are cheap to call once and small
+// Lightweight pickers - both endpoints are cheap to call once and small
 // enough that we don't need autocomplete-with-fetch.
 const projects = ref<ProjectWithContract[]>([]);
 const projectsLoading = ref(false);
@@ -29,7 +29,7 @@ async function loadPickers() {
   projectsLoading.value = true;
   materialsLoading.value = true;
   try {
-    // Backend caps pageSize at 100 — pageSize: 200 returns 400. Both pickers
+    // Backend caps pageSize at 100 - pageSize: 200 returns 400. Both pickers
     // populate dropdowns only; the dedicated /materials and /projects pages
     // remain the place for paging through the full lists.
     const [p, m] = await Promise.all([
@@ -60,7 +60,7 @@ const projectOptions = computed(() =>
   projects.value.map((p) => ({
     value: p.id,
     title: p.contract?.contractNumber
-      ? `${p.name} — ${p.contract.contractNumber}`
+      ? `${p.name} - ${p.contract.contractNumber}`
       : p.name,
   })),
 );

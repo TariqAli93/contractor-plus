@@ -4,7 +4,6 @@ import App from "./App.vue";
 import { router } from "./router";
 import { vuetify } from "./plugins/vuetify";
 import { useAuthStore } from "./stores/auth.store";
-import { useThemeStore } from "./stores/theme.store";
 import { registerAuthBindings } from "./services/api/client";
 
 // Self-hosted Arabic UI font (Arabic + Latin subsets only). @fontsource ships
@@ -25,6 +24,13 @@ async function bootstrap() {
   const app = createApp(App);
   const pinia = createPinia();
 
+  // Keep a component failure diagnosable in a desktop deployment. Without an
+  // application error handler Vue can leave a routed workspace blank while the
+  // underlying exception is difficult to find from the renderer shell.
+  app.config.errorHandler = (error, _instance, info) => {
+    console.error('[ContractorPlus UI]', info, error);
+  };
+
   // 1. Pinia must be installed before any store is used.
   app.use(pinia);
 
@@ -35,9 +41,6 @@ async function bootstrap() {
 
   // 3. Plugins.
   app.use(vuetify);
-
-  // 3b. Apply the persisted/system theme and start watching OS changes.
-  useThemeStore().initializeTheme();
 
   // 4. Wire the axios client to the auth store (avoids circular import).
   const auth = useAuthStore();
@@ -59,7 +62,7 @@ async function bootstrap() {
   await auth.initialize();
 
   // 5b. If the session restored, prime app-wide settings (currency + logo)
-  //     so the first paint already has the branded layout. Soft fail —
+  //     so the first paint already has the branded layout. Soft fail -
   //     non-admins simply see the fallback app icon, that's expected.
   if (auth.isAuthenticated) {
     const { useSettingsStore } = await import('./stores/settings.store');

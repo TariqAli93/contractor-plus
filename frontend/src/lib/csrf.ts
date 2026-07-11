@@ -2,7 +2,7 @@
 // refresh cookie. Its value is echoed back in the X-XSRF-TOKEN header so the
 // server can complete the CSRF double-submit check on the cookie-authenticated
 // endpoints (/auth/refresh, /auth/logout). Its presence also serves as the
-// "might have an active session" signal on app boot — the refresh token itself
+// "might have an active session" signal on app boot - the refresh token itself
 // is HttpOnly and deliberately unreadable from JS.
 
 const XSRF_COOKIE = 'XSRF-TOKEN';

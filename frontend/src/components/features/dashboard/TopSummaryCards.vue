@@ -19,7 +19,7 @@ const overdueTone = computed<'neutral' | 'urgent'>(() =>
 </script>
 
 <template>
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-1">
     <SummaryMetricCard
       :title="t('dashboard.metrics.activeProjects')"
       :value="summary?.activeProjects"

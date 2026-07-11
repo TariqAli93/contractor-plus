@@ -1,22 +1,20 @@
 <script setup lang="ts">
-// Bottom application status bar — the strip every desktop business app carries:
-// connection/ready state on the inline-start, current section in the middle,
-// signed-in user + a live clock on the inline-end. Dense, quiet, always-on.
+// The bottom status strip every desktop business application carries. It reports
+// what the program is bound to right now: service state, database, sync, whose
+// books are open, who is signed in, and which build is running.
+//
+// Every segment is bound to something real. Where a fact is unavailable - no
+// desktop bridge on the web build, a role that cannot read the company profile -
+// the segment is omitted rather than filled with a plausible-looking placeholder.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
 import { t, te } from '@/i18n';
 import { useAuthStore } from '@/stores/auth.store';
+import { useShellStore } from '@/stores/shell.store';
+import { useTunnelStore } from '@/stores/tunnel.store';
 
-const route = useRoute();
 const auth = useAuthStore();
-
-// Section label from the first path segment, reusing the nav i18n keys.
-const sectionKey = computed(() => {
-  const seg = route.path.split('/').filter(Boolean)[0];
-  if (!seg) return 'nav.dashboard';
-  return `nav.${seg}`;
-});
-const sectionLabel = computed(() => (te(sectionKey.value) ? t(sectionKey.value) : ''));
+const shell = useShellStore();
+const tunnel = useTunnelStore();
 
 const roleLabel = computed(() => {
   const r = auth.user?.role;
@@ -24,7 +22,27 @@ const roleLabel = computed(() => {
   return te(`roles.${r}`) ? t(`roles.${r}`) : (auth.user?.roleDisplayName ?? r);
 });
 
-// Live clock — ticks once a minute (HH:MM granularity), Arabic weekday/date.
+// Sync state reuses the tunnel store's single source of truth for the dot
+// semantic, so the strip can never disagree with the tunnel view. The store
+// speaks in colours; the orb speaks in roles - translate rather than add
+// colour-named classes to the design system.
+const ORB_BY_TONE = {
+  green: 'cp-orb--success',
+  yellow: 'cp-orb--warning',
+  red: 'cp-orb--error',
+  gray: '',
+} as const;
+const syncOrbClass = computed(() => ORB_BY_TONE[tunnel.tone]);
+
+const syncLabel = computed(() => {
+  if (!tunnel.status) return t('statusbar.sync.unknown');
+  if (tunnel.lastError) return t('statusbar.sync.error');
+  if (!tunnel.enabled) return t('statusbar.sync.off');
+  if (tunnel.running) return t('statusbar.sync.on');
+  return t('statusbar.sync.starting');
+});
+
+// Live clock - ticks once a minute (HH:MM granularity), Arabic weekday/date.
 const now = ref(new Date());
 let timer: ReturnType<typeof setInterval> | undefined;
 onMounted(() => {
@@ -35,43 +53,126 @@ onBeforeUnmount(() => {
 });
 
 const timeFmt = new Intl.DateTimeFormat('ar', { hour: '2-digit', minute: '2-digit' });
-const dateFmt = new Intl.DateTimeFormat('ar', { weekday: 'long', day: 'numeric', month: 'long' });
 const timeStr = computed(() => timeFmt.format(now.value));
-const dateStr = computed(() => dateFmt.format(now.value));
 </script>
 
 <template>
-  <v-footer app class="cp-statusbar" tag="footer">
-    <div class="cp-statusbar-item">
+  <footer class="cp-statusbar">
+    <!-- Service -->
+    <div class="cp-sb-item">
       <span class="cp-orb cp-orb--success" />
       <span>{{ t('statusbar.ready') }}</span>
     </div>
 
-    <div v-if="sectionLabel" class="cp-statusbar-item">
-      {{ sectionLabel }}
+    <!-- Database -->
+    <div class="cp-sb-item cp-sb-item--tabular" :title="shell.database ?? t('statusbar.unavailable')">
+      <v-icon size="12" icon="mdi-database-outline" />
+      <span>{{ t('statusbar.database') }}:</span>
+      <span class="cp-sb-truncate">{{ shell.database ?? t('statusbar.unavailable') }}</span>
     </div>
 
-    <v-spacer />
+    <!-- Sync -->
+    <div class="cp-sb-item">
+      <span class="cp-orb" :class="syncOrbClass" />
+      <span>{{ t('statusbar.sync.label') }}: {{ syncLabel }}</span>
+    </div>
 
-    <div v-if="auth.user" class="cp-statusbar-item">
-      <v-icon size="13">mdi-account-circle-outline</v-icon>
+    <span class="cp-sb-spacer" />
+
+    <div class="cp-sb-item" :title="shell.companyName ?? t('statusbar.unavailable')">
+      <v-icon size="12" icon="mdi-domain" />
+      <span>{{ t('statusbar.branch') }}:</span>
+      <span class="cp-sb-truncate">{{ shell.companyName ?? t('statusbar.unavailable') }}</span>
+    </div>
+
+    <!-- User -->
+    <div v-if="auth.user" class="cp-sb-item">
+      <v-icon size="12" icon="mdi-account-circle-outline" />
       <span>{{ auth.user.fullName }}</span>
-      <span v-if="roleLabel" class="cp-statusbar-role">· {{ roleLabel }}</span>
+      <span v-if="roleLabel" class="cp-sb-role">· {{ roleLabel }}</span>
     </div>
 
-    <div class="cp-statusbar-item cp-statusbar-item--tabular">
-      <v-icon size="13">mdi-calendar-blank-outline</v-icon>
-      <span>{{ dateStr }}</span>
+    <div class="cp-sb-item">
+      <v-icon size="12" icon="mdi-certificate-outline" />
+      <span>{{ t('statusbar.license') }}: {{ t('statusbar.unavailable') }}</span>
     </div>
-    <div class="cp-statusbar-item cp-statusbar-item--tabular">
-      <v-icon size="13">mdi-clock-outline</v-icon>
+
+    <div class="cp-sb-item">
+      <v-icon size="12" icon="mdi-backup-restore" />
+      <span>{{ t('statusbar.lastBackup') }}: {{ t('statusbar.unavailable') }}</span>
+    </div>
+
+    <!-- Clock -->
+    <div class="cp-sb-item cp-sb-item--tabular">
+      <v-icon size="12" icon="mdi-clock-outline" />
       <span>{{ timeStr }}</span>
     </div>
-  </v-footer>
+
+    <!-- Build -->
+    <div v-if="shell.appVersion" class="cp-sb-item cp-sb-item--tabular">
+      <span>v{{ shell.appVersion }}</span>
+    </div>
+  </footer>
 </template>
 
 <style scoped>
-.cp-statusbar-role {
+.cp-statusbar {
+  display: flex;
+  align-items: stretch;
+  flex: none;
+  height: var(--cp-statusbar-h);
+  background: var(--cp-surface);
+  border-block-start: 1px solid var(--cp-border);
+  font-size: 0.7rem;
+  color: var(--cp-text-muted);
+  user-select: none;
+  overflow: hidden;
+}
+
+.cp-sb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+  padding-inline: 9px;
+  white-space: nowrap;
+  min-width: 0;
+}
+/* Hairline rules between segments - the classic Win32 status-bar panel edge. */
+.cp-sb-item + .cp-sb-item {
+  border-inline-start: 1px solid var(--cp-border);
+}
+.cp-sb-item--tabular {
+  font-variant-numeric: tabular-nums;
+}
+/* The 10px orb is sized for panels; in a 24px strip it reads as a bullet. */
+.cp-statusbar .cp-orb {
+  width: 8px;
+  height: 8px;
+}
+.cp-sb-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 22ch;
+}
+.cp-sb-role {
   color: var(--cp-text-subtle);
+  border-inline-start: 1px solid var(--cp-border);
+  padding-inline-start: 5px;
+}
+.cp-sb-spacer {
+  flex: 1;
+}
+
+/* The spacer breaks the sibling chain, so the first segment after it needs its
+   own leading rule to stay separated from the space. */
+.cp-sb-spacer + .cp-sb-item {
+  border-inline-start: 1px solid var(--cp-border);
+}
+
+@media (max-width: 1000px) {
+  .cp-sb-truncate {
+    max-width: 12ch;
+  }
 }
 </style>

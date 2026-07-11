@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Compact, reusable page header — the backbone of the desktop sweep. Every
+// Compact, reusable page header - the backbone of the desktop sweep. Every
 // screen gets the same dense title row: a small title, an optional record
 // count, and an inline-end cluster of quick-actions (the default slot). This
 // replaces the ad-hoc `text-h5 + mb-4 + big v-btn` headers with one tight,
@@ -13,11 +13,11 @@ withDefaults(
     subtitle?: string | null;
     /** Optional leading icon (mdi-*). */
     icon?: string | null;
-    /** Optional back-navigation target — renders a back button before the
+    /** Optional back-navigation target - renders a back button before the
      *  title (replaces the old ad-hoc back-arrow + heading rows). */
     back?: string | null;
     /** Optional plain-language "what to do here" line rendered muted under the
-     *  header — the simplification layer for non-technical users. */
+     *  header - the simplification layer for non-technical users. */
     hint?: string | null;
   }>(),
   { count: null, subtitle: null, icon: null, back: null, hint: null },
@@ -51,20 +51,25 @@ withDefaults(
 </template>
 
 <style scoped>
+/* A document caption strip, not a page masthead. The window title bar already
+   names the section, so this row exists for the record count and the view's own
+   commands - it stays one line tall and gives its height back to the grid. */
 .cp-page-header-wrap {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .cp-page-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 32px;
+  gap: 8px;
+  min-height: 26px;
   flex-wrap: wrap;
 }
+/* The one concession to the non-technical owner (PRODUCT.md: "calm under
+   density"): a single plain-language line. Never a paragraph, never a preamble. */
 .cp-page-hint {
-  margin: 3px 0 0;
-  font-size: 0.78rem;
-  line-height: 1.45;
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.4;
   color: var(--cp-text-muted);
   max-width: 68ch;
 }
@@ -82,8 +87,8 @@ withDefaults(
   color: var(--cp-text-muted);
 }
 .cp-page-header-title {
-  font-size: 0.98rem;
-  font-weight: 700;
+  font-size: 0.86rem;
+  font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--cp-text);
   margin: 0;
@@ -95,8 +100,10 @@ withDefaults(
   color: var(--cp-text-muted);
   background: var(--cp-surface);
   border: 1px solid var(--cp-border);
-  border-radius: var(--cp-radius-pill);
-  padding: 1px 8px;
+  /* A count is a boxy control, not round chrome - the pill radius is reserved
+     for status orbs and icon halos. */
+  border-radius: var(--cp-radius-sm);
+  padding: 0 5px;
 }
 .cp-page-header-sub {
   font-size: 0.78rem;

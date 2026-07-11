@@ -21,7 +21,7 @@ async function copyCredentials(): Promise<void> {
       copied.value = false;
     }, 2000);
   } catch {
-    /* clipboard blocked — user can still read the values on screen */
+    /* clipboard blocked - user can still read the values on screen */
   }
 }
 
@@ -52,9 +52,9 @@ async function goToLogin(): Promise<void> {
 <template>
   <div v-if="setup.credentials" class="success">
     <div class="hero">
-      <v-avatar size="56" color="success" class="mb-2">
+      <span class="cp-icon-tile cp-icon-tile--success mb-2" style="width: 40px; height: 40px">
         <v-icon icon="mdi-check-bold" size="32" />
-      </v-avatar>
+      </span>
       <h2 class="title">تم الإعداد بنجاح</h2>
       <p class="lead">تم تجهيز النظام وإنشاء حسابك. هذه بيانات الدخول الخاصة بك.</p>
     </div>
@@ -77,7 +77,7 @@ async function goToLogin(): Promise<void> {
       density="comfortable"
       class="mt-3"
       icon="mdi-alert"
-      text="احفظ هذه البيانات الآن في مكان آمن — لن يظهر الرمز السري مرة أخرى."
+      text="احفظ هذه البيانات الآن في مكان آمن - لن يظهر الرمز السري مرة أخرى."
     />
 
     <div class="tools">
@@ -129,39 +129,39 @@ async function goToLogin(): Promise<void> {
   font-weight: 700;
 }
 .lead {
-  color: rgba(203, 213, 225, 0.78);
+  color: var(--cp-text-muted);
   font-size: 0.92rem;
   margin-top: 4px;
 }
 .creds {
-  background: rgba(148, 163, 184, 0.08);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: var(--cp-radius-xl);
-  padding: 4px 18px;
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-md);
+  padding: 2px 10px;
   text-align: start;
 }
 .cred-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 0;
+  padding: 8px 0;
 }
 .cred-label {
-  color: rgba(203, 213, 225, 0.72);
-  font-size: 0.9rem;
+  color: var(--cp-text-muted);
+  font-size: 0.78rem;
 }
 .cred-value {
   font-family: var(--cp-font-mono);
-  font-size: 1.15rem;
+  font-size: 0.9rem;
   font-weight: 700;
   letter-spacing: 1px;
-  color: #fff;
+  color: var(--cp-text);
 }
 .tools {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px;
   justify-content: center;
-  margin-top: 16px;
+  margin-top: 10px;
 }
 </style>

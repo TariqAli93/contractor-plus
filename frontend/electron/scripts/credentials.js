@@ -37,12 +37,12 @@ function credentialHtml(cred) {
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
   return `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
 <style>
-  body{font-family:'Segoe UI',Tahoma,sans-serif;margin:48px;color:#1a1a1a}
+  body{font-family:'Segoe UI',Tahoma,sans-serif;margin:48px;color:#1A202C;background:#F3F5F7}
   h1{font-size:22px;margin-bottom:24px}
   table{border-collapse:collapse;font-size:16px}
-  td{padding:8px 16px;border:1px solid #ccc}
-  .k{background:#f4f4f4;font-weight:600}
-  .note{margin-top:32px;color:#a00;font-size:13px}
+  td{padding:8px 16px;border:1px solid #CBD5E0;background:#FFFFFF}
+  .k{background:#E2E8F0;font-weight:600}
+  .note{margin-top:32px;color:#C53030;font-size:13px}
 </style></head><body>
   <h1>${esc(cred.appName)} — بيانات الدخول</h1>
   <table>

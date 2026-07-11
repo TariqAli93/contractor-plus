@@ -11,7 +11,7 @@ import { ApiError } from '@/types/api';
 //   - in-flight progress + abort
 //   - structured error state the UI can render inline
 //
-// It does NOT mutate any persistent state on its own — the host component
+// It does NOT mutate any persistent state on its own - the host component
 // decides what to do with the result (typically refresh the parent record).
 
 export interface UseFileUploadOptions<TResult> {

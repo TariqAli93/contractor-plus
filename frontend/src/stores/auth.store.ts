@@ -39,7 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout(): Promise<void> {
     try {
       // The cookie carries the refresh token; the server revokes it and clears
-      // all auth cookies. Best-effort — we clear local state regardless.
+      // all auth cookies. Best-effort - we clear local state regardless.
       await authApi.logout();
     } catch {
       /* ignore */

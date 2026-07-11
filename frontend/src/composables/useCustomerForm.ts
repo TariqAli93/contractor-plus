@@ -7,7 +7,7 @@ import { useToast } from './useToast';
 import type { CreateCustomerInput } from '@/types/customer';
 
 // Owns the form state for the customer create/edit view. The form's shape
-// equals CreateCustomerInput byte-for-byte — no DTO translation, the body
+// equals CreateCustomerInput byte-for-byte - no DTO translation, the body
 // is passed straight to the API.
 export function useCustomerForm(id?: string) {
   const router = useRouter();

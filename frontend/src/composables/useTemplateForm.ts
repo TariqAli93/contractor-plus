@@ -6,7 +6,7 @@ import { useApiError } from './useApiError';
 import { useToast } from './useToast';
 import type { CreateTemplateInput } from '@/types/template';
 
-// Owns the top-level template's general fields only — name, description,
+// Owns the top-level template's general fields only - name, description,
 // duration, margin, isActive. Items and steps live in their own tabs and
 // own their own state.
 //

@@ -20,7 +20,7 @@ const props = defineProps<{
   kind: 'logo' | 'stamp';
   /** URL of the currently-stored asset, or null when nothing is uploaded. */
   currentUrl: string | null;
-  /** Visual hint — square box for logos, rectangular for stamps. */
+  /** Visual hint - square box for logos, rectangular for stamps. */
   shape?: 'square' | 'rect';
   /** Sub-label shown beneath the title (e.g. "PNG or JPG, up to 5 MB"). */
   hint?: string;
@@ -244,14 +244,8 @@ const acceptedAttr = ACCEPTED.join(',');
   max-height: 100%;
   object-fit: contain;
   /* Checkerboard background for transparent stamps. Generated with two
-     45° gradients — no asset dependency. */
-  background-image:
-    linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
-    linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
-    linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
-  background-size: 16px 16px;
-  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+     45° gradients - no asset dependency. */
+  background: var(--cp-panel);
 }
 .cp-uploader__empty {
   display: flex;
@@ -272,8 +266,7 @@ const acceptedAttr = ACCEPTED.join(',');
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(2px);
+  background: var(--cp-surface);
 }
 .cp-uploader__hint {
   font-size: 0.75rem;

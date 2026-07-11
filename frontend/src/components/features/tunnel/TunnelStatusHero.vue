@@ -4,25 +4,11 @@ import { t } from '@/i18n';
 import { useTunnel } from '@/composables/useTunnel';
 import { useTunnelStore } from '@/stores/tunnel.store';
 
-// Big colored panel that headlines the page. Reads tone from the store and
-// maps it to a Vuetify color + an Arabic/English description that matches
-// the dot. The actual buttons live next door in TunnelActionPanel.
+// Compact status strip. Meaning is carried by the dot, never a large coloured
+// surface, so it remains consistent with the rest of the desktop workspace.
 
 const { toneLabel, copyPublicUrl, openPublicUrl } = useTunnel();
 const store = useTunnelStore();
-
-const surfaceColor = computed(() => {
-  switch (store.tone) {
-    case 'green':
-      return 'success';
-    case 'yellow':
-      return 'warning';
-    case 'red':
-      return 'error';
-    default:
-      return 'surface-variant';
-  }
-});
 
 const dotColor = computed(() => {
   switch (store.tone) {
@@ -33,7 +19,7 @@ const dotColor = computed(() => {
     case 'red':
       return 'error';
     default:
-      return 'grey';
+      return 'secondary';
   }
 });
 
@@ -54,7 +40,7 @@ const description = computed(() => {
 </script>
 
 <template>
-  <v-card :color="surfaceColor" variant="tonal" rounded="lg" class="pa-5">
+  <section class="cp-panel cp-tunnel-status">
     <div class="flex items-start gap-4">
       <v-icon :color="dotColor" icon="mdi-circle" size="20" class="mt-1" />
       <div class="flex-1 min-w-0">
@@ -102,5 +88,9 @@ const description = computed(() => {
         </div>
       </div>
     </div>
-  </v-card>
+  </section>
 </template>
+
+<style scoped>
+.cp-tunnel-status { padding: 8px; }
+</style>

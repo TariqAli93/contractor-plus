@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { t } from '@/i18n';
 import { useTemplates } from '@/composables/useTemplates';
@@ -15,6 +15,11 @@ import ErrorState from '@/components/shared/ErrorState.vue';
 import RoleGate from '@/components/shared/RoleGate.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
+import DataTable from '@/components/shared/DataTable.vue';
+import WorkspaceSplit from '@/components/shared/workspace/WorkspaceSplit.vue';
+import DetailsPane from '@/components/shared/workspace/DetailsPane.vue';
+import PropertyGrid from '@/components/shared/workspace/PropertyGrid.vue';
+import type { PropertyRow } from '@/components/shared/workspace/types';
 
 const router = useRouter();
 const toast = useToast();
@@ -76,9 +81,43 @@ function openEdit(template: BuildingTemplate) {
   void router.push(`/templates/${template.id}`);
 }
 
+const selectedId = ref<string | null>(null);
+const selected = computed<BuildingTemplate | null>(
+  () => items.value.find((template) => template.id === selectedId.value) ?? null,
+);
+const splitActive = ref(true);
+
+function select(template: BuildingTemplate) {
+  if (!splitActive.value) {
+    openEdit(template);
+    return;
+  }
+  selectedId.value = template.id;
+}
+
 function onRowClick(_e: unknown, row: { item: BuildingTemplate }) {
+  select(row.item);
+}
+function onRowDblClick(_e: unknown, row: { item: BuildingTemplate }) {
   openEdit(row.item);
 }
+
+function rowProps({ item }: { item: BuildingTemplate }) {
+  return item.id === selectedId.value ? { class: 'cp-row-selected' } : {};
+}
+
+const rows = computed<PropertyRow[]>(() => {
+  const template = selected.value;
+  if (!template) return [];
+  return [
+    { key: 'name', label: t('templates.fields.name'), value: template.name },
+    { key: 'description', label: t('templates.fields.description'), value: template.description },
+    { key: 'estimatedDurationDays', label: t('templates.fields.estimatedDurationDays'), value: template.estimatedDurationDays, tabular: true },
+    { key: 'suggestedProfitMargin', label: t('templates.fields.suggestedProfitMargin'), value: template.suggestedProfitMargin, tabular: true },
+    { key: 'isActive', label: t('templates.fields.isActive') },
+    { key: 'createdAt', label: t('templates.fields.createdAt') },
+  ];
+});
 
 async function handleDelete(template: BuildingTemplate) {
   const ok = await confirm({
@@ -99,17 +138,18 @@ async function handleDelete(template: BuildingTemplate) {
 </script>
 
 <template>
-  <div>
+  <div class="cp-fill">
     <PageHeader :title="t('nav.templates')" icon="mdi-file-document-multiple-outline" :count="total || null" :hint="t('help.templates')">
       <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
-        <v-btn color="primary" prepend-icon="mdi-plus" to="/templates/new">
+        <v-btn color="primary" size="small" variant="flat" prepend-icon="mdi-plus" to="/templates/new">
           {{ t('templates.new') }}
         </v-btn>
       </RoleGate>
     </PageHeader>
 
-    <v-card>
-      <v-card-text class="flex flex-wrap items-center gap-3">
+    <WorkspaceSplit storage-key="templates" @update:show-details="splitActive = $event">
+      <div class="cp-pane">
+      <div class="cp-pane__toolbar flex flex-wrap items-center gap-3">
         <div class="flex-1 min-w-[240px]">
           <SearchBar v-model="searchInput" :placeholder="t('templates.searchPlaceholder')" />
         </div>
@@ -123,14 +163,12 @@ async function handleDelete(template: BuildingTemplate) {
           <v-chip value="active" size="small">{{ t('templates.filter.active') }}</v-chip>
           <v-chip value="inactive" size="small">{{ t('templates.filter.inactive') }}</v-chip>
         </v-chip-group>
-      </v-card-text>
+      </div>
 
-      <v-divider />
+      <ErrorState v-if="error" :error="error" class="ma-3" @retry="fetch" />
 
-      <ErrorState v-if="error" :error="error" class="my-4" @retry="fetch" />
-
-      <v-data-table-server
-        v-else
+      <div v-else class="cp-pane__body">
+        <DataTable
         :items="items"
         :items-length="total"
         :headers="columns"
@@ -139,15 +177,16 @@ async function handleDelete(template: BuildingTemplate) {
         :items-per-page="pageSize"
         :items-per-page-options="[10, 20, 50, 100]"
         item-value="id"
-        hover
+        :row-props="rowProps"
         @update:options="onTableUpdate"
         @click:row="onRowClick"
+        @dblclick:row="onRowDblClick"
       >
         <template #[`item.estimatedDurationDays`]="{ item }">
-          {{ item.estimatedDurationDays ?? '—' }}
+          {{ item.estimatedDurationDays ?? '-' }}
         </template>
         <template #[`item.suggestedProfitMargin`]="{ item }">
-          {{ item.suggestedProfitMargin !== null ? `${item.suggestedProfitMargin}%` : '—' }}
+          {{ item.suggestedProfitMargin !== null ? `${item.suggestedProfitMargin}%` : '-' }}
         </template>
         <template #[`item.isActive`]="{ item }">
           <v-chip
@@ -181,7 +220,32 @@ async function handleDelete(template: BuildingTemplate) {
             </RoleGate>
           </div>
         </template>
-      </v-data-table-server>
-    </v-card>
+        </DataTable>
+      </div>
+      </div>
+
+      <template #details>
+        <DetailsPane :title="selected?.name ?? t('details.title')" icon="mdi-file-document-outline" :selected="Boolean(selected)">
+          <PropertyGrid :rows="rows">
+            <template #isActive>
+              <v-chip v-if="selected" size="x-small" :color="selected.isActive ? 'success' : undefined" variant="tonal">
+                {{ selected.isActive ? t('templates.status.active') : t('templates.status.inactive') }}
+              </v-chip>
+            </template>
+            <template #createdAt><DateDisplay :value="selected?.createdAt" /></template>
+          </PropertyGrid>
+          <template #actions>
+            <RoleGate :permissions="WRITE_PERMS" :roles="WRITE_ROLES">
+              <v-btn size="x-small" variant="flat" color="primary" prepend-icon="mdi-pencil" @click="selected && openEdit(selected)">
+                {{ t('common.edit') }}
+              </v-btn>
+              <v-btn size="x-small" variant="text" color="error" prepend-icon="mdi-delete-outline" @click="selected && handleDelete(selected)">
+                {{ t('common.delete') }}
+              </v-btn>
+            </RoleGate>
+          </template>
+        </DetailsPane>
+      </template>
+    </WorkspaceSplit>
   </div>
 </template>

@@ -41,11 +41,10 @@ async function submit() {
 </script>
 
 <template>
-  <v-card>
-    <v-card-title class="text-h6">{{ t('profile.editTitle') }}</v-card-title>
-    <v-divider />
+  <section class="cp-panel cp-profile-form">
+    <h2 class="cp-profile-form__title">{{ t('profile.editTitle') }}</h2>
     <v-form @submit.prevent="submit">
-      <v-card-text class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div class="cp-profile-form__body">
         <v-text-field
           v-model="form.fullName"
           :label="t('users.fields.fullName')"
@@ -65,14 +64,28 @@ async function submit() {
           :label="t('users.fields.phone')"
           :error-messages="fieldErrors.phone"
         />
-      </v-card-text>
-      <v-divider />
-      <v-card-actions class="px-4 py-3">
+      </div>
+      <div class="cp-profile-form__actions">
         <v-spacer />
         <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
           {{ t('common.saveChanges') }}
         </v-btn>
-      </v-card-actions>
+      </div>
     </v-form>
-  </v-card>
+  </section>
 </template>
+
+<style scoped>
+.cp-profile-form { overflow: hidden; }
+.cp-profile-form__title {
+  margin: 0;
+  padding: 6px 8px;
+  color: var(--cp-text);
+  background: var(--cp-surface-2);
+  border-block-end: 1px solid var(--cp-border);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.cp-profile-form__body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 8px; }
+.cp-profile-form__actions { display: flex; padding: 6px 8px; background: var(--cp-surface-2); border-block-start: 1px solid var(--cp-border); }
+</style>

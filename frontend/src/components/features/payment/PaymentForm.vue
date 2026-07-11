@@ -42,7 +42,7 @@ const projectOptions = computed(() =>
   projects.value.map((p) => ({
     value: p.id,
     title: p.contract?.contractNumber
-      ? `${p.name} — ${p.contract.contractNumber}`
+      ? `${p.name} - ${p.contract.contractNumber}`
       : p.name,
   })),
 );

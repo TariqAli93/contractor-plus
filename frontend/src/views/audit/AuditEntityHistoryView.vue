@@ -9,6 +9,7 @@ import ErrorState from '@/components/shared/ErrorState.vue';
 import EmptyState from '@/components/shared/EmptyState.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
+import DataTable from '@/components/shared/DataTable.vue';
 import AuditActionBadge from '@/components/features/audit/AuditActionBadge.vue';
 import AuditDiffPanel from '@/components/features/audit/AuditDiffPanel.vue';
 
@@ -69,17 +70,17 @@ const expanded = ref<string[]>([]);
 </script>
 
 <template>
-  <div>
+  <div class="cp-fill">
     <PageHeader :title="t('audit.entity.title')" back="/audit" />
     <p class="text-body-2 text-medium-emphasis mb-4">
       {{ entity }} · <span class="font-mono">{{ entityId }}</span>
     </p>
 
-    <v-card>
-      <ErrorState v-if="error" :error="error" class="my-4" @retry="fetch" />
+    <section class="cp-pane">
+      <ErrorState v-if="error" :error="error" class="ma-3" @retry="fetch" />
 
-      <v-data-table-server
-        v-else
+      <div v-else class="cp-pane__body">
+        <DataTable
         v-model:expanded="expanded"
         :items="items"
         :items-length="total"
@@ -107,7 +108,7 @@ const expanded = ref<string[]>([]);
           <AuditActionBadge :action="item.action" />
         </template>
         <template #[`item.ipAddress`]="{ item }">
-          {{ item.ipAddress ?? '—' }}
+          {{ item.ipAddress ?? '-' }}
         </template>
         <template #expanded-row="{ columns: cols, item }">
           <tr>
@@ -119,7 +120,8 @@ const expanded = ref<string[]>([]);
         <template #no-data>
           <EmptyState :title="t('audit.entity.empty')" icon="mdi-history" />
         </template>
-      </v-data-table-server>
-    </v-card>
+        </DataTable>
+      </div>
+    </section>
   </div>
 </template>

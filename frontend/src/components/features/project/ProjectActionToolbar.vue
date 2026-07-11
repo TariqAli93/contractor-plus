@@ -184,7 +184,7 @@ async function performCancel() {
           </v-btn>
         </template>
 
-        <!-- Cancel button — present in every non-terminal status -->
+        <!-- Cancel button - present in every non-terminal status -->
         <v-btn
           v-if="canCancel"
           color="error"

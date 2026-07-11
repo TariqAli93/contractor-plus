@@ -5,134 +5,120 @@ import GeneralSettingsTab from '@/components/features/settings/GeneralSettingsTa
 import CompanyProfileTab from '@/components/features/settings/CompanyProfileTab.vue';
 import CurrencyTab from '@/components/features/settings/CurrencyTab.vue';
 import ContractTemplatesTab from '@/components/features/settings/ContractTemplatesTab.vue';
-import AppearanceSettingsTab from '@/components/features/settings/AppearanceSettingsTab.vue';
-import AiCommandSettingsTab from '@/components/features/settings/AiCommandSettingsTab.vue';
-import CompanyLogo from '@/components/shared/CompanyLogo.vue';
+import PageHeader from '@/components/shared/PageHeader.vue';
 
-const activeTab = ref<
-  'general' | 'appearance' | 'company' | 'currency' | 'contractTemplates' | 'ai' | 'links'
->('general');
+const activeTab = ref<'general' | 'company' | 'currency' | 'contractTemplates' | 'links'>('general');
+
+const tabs = [
+  { value: 'general', icon: 'mdi-tune' },
+  { value: 'currency', icon: 'mdi-currency-usd' },
+  { value: 'company', icon: 'mdi-domain' },
+  { value: 'contractTemplates', icon: 'mdi-file-document-outline' },
+  { value: 'links', icon: 'mdi-link-variant' },
+] as const;
 </script>
 
 <template>
-  <div class="cp-settings">
-    <header class="cp-settings__header">
-      <div class="flex items-center gap-3 min-w-0">
-        <CompanyLogo variant="compact" icon-only :size="40" />
-        <div class="min-w-0">
-          <p class="cp-eyebrow mb-1">{{ t('nav.settings') }}</p>
-          <h1 class="cp-settings__title">{{ t('settings.tabs.' + activeTab) }}</h1>
-          <p class="text-medium-emphasis text-sm mt-1">{{ t('settings.subtitle') }}</p>
-        </div>
-      </div>
-    </header>
+  <div class="cp-settings cp-fill">
+    <PageHeader :title="t('nav.settings')" icon="mdi-cog-outline" :hint="t('settings.subtitle')" />
+    <section class="cp-settings__workspace">
+      <v-tabs v-model="activeTab" direction="vertical" color="primary" class="cp-settings__tabs">
+        <v-tab v-for="tab in tabs" :key="tab.value" :value="tab.value" :prepend-icon="tab.icon">
+          {{ t(`settings.tabs.${tab.value}`) }}
+        </v-tab>
+      </v-tabs>
 
-    <v-tabs
-      v-model="activeTab"
-      color="primary"
-      density="comfortable"
-      grow
-      class="cp-settings__tabs mb-5"
-      :show-arrows="true"
-    >
-      <v-tab value="general" prepend-icon="mdi-tune">
-        {{ t('settings.tabs.general') }}
-      </v-tab>
-      <v-tab value="appearance" prepend-icon="mdi-palette-outline">
-        {{ t('settings.tabs.appearance') }}
-      </v-tab>
-      <v-tab value="currency" prepend-icon="mdi-currency-usd">
-        {{ t('settings.tabs.currency') }}
-      </v-tab>
-      <v-tab value="company" prepend-icon="mdi-domain">
-        {{ t('settings.tabs.company') }}
-      </v-tab>
-      <v-tab value="contractTemplates" prepend-icon="mdi-file-document-outline">
-        {{ t('settings.tabs.contractTemplates') }}
-      </v-tab>
-      <v-tab value="ai" prepend-icon="mdi-robot-outline">
-        {{ t('settings.tabs.ai') }}
-      </v-tab>
-      <v-tab value="links" prepend-icon="mdi-link-variant">
-        {{ t('settings.tabs.links') }}
-      </v-tab>
-    </v-tabs>
-
-    <v-window v-model="activeTab" class="cp-settings__window">
-      <v-window-item value="general">
-        <GeneralSettingsTab />
-      </v-window-item>
-
-      <v-window-item value="appearance">
-        <AppearanceSettingsTab />
-      </v-window-item>
-
-      <v-window-item value="currency">
-        <CurrencyTab />
-      </v-window-item>
-
-      <v-window-item value="company">
-        <CompanyProfileTab />
-      </v-window-item>
-
-      <v-window-item value="contractTemplates">
-        <ContractTemplatesTab />
-      </v-window-item>
-
-      <v-window-item value="ai">
-        <AiCommandSettingsTab />
-      </v-window-item>
-
-      <v-window-item value="links">
-        <div class="cp-panel">
-          <div class="p-4">
-            <v-list density="comfortable" class="!bg-transparent">
-              <v-list-item
-                to="/tunnel"
-                prepend-icon="mdi-tunnel"
-                :title="t('settings.links.tunnel')"
-                :subtitle="t('settings.links.tunnelDesc')"
-                append-icon="mdi-arrow-left"
-                class="!rounded-lg"
-              />
-              <v-list-item
-                to="/audit"
-                prepend-icon="mdi-history"
-                :title="t('settings.links.audit')"
-                :subtitle="t('settings.links.auditDesc')"
-                append-icon="mdi-arrow-left"
-                class="!rounded-lg"
-              />
-            </v-list>
-            <v-alert
-              type="info"
-              variant="tonal"
-              density="comfortable"
-              class="mt-4 text-sm"
-            >
-              {{ t('settings.phase2Note') }}
-            </v-alert>
-          </div>
-        </div>
-      </v-window-item>
-    </v-window>
+      <v-window v-model="activeTab" class="cp-settings__content">
+        <v-window-item value="general"><GeneralSettingsTab /></v-window-item>
+        <v-window-item value="currency"><CurrencyTab /></v-window-item>
+        <v-window-item value="company"><CompanyProfileTab /></v-window-item>
+        <v-window-item value="contractTemplates"><ContractTemplatesTab /></v-window-item>
+        <v-window-item value="links">
+          <section class="cp-panel cp-settings__links">
+            <RouterLink to="/tunnel" class="cp-settings__link">
+              <v-icon icon="mdi-tunnel" size="17" />
+              <span>{{ t('settings.links.tunnel') }}</span>
+              <small>{{ t('settings.links.tunnelDesc') }}</small>
+              <v-icon icon="mdi-arrow-left" size="16" />
+            </RouterLink>
+            <RouterLink to="/audit" class="cp-settings__link">
+              <v-icon icon="mdi-history" size="17" />
+              <span>{{ t('settings.links.audit') }}</span>
+              <small>{{ t('settings.links.auditDesc') }}</small>
+              <v-icon icon="mdi-arrow-left" size="16" />
+            </RouterLink>
+            <div class="cp-settings__note">{{ t('settings.phase2Note') }}</div>
+          </section>
+        </v-window-item>
+      </v-window>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.cp-settings__header {
-  margin-bottom: 20px;
-}
-.cp-settings__title {
-  font-size: 1.6rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--cp-text);
+.cp-settings__workspace {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 178px minmax(0, 1fr);
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-md);
+  overflow: hidden;
 }
 .cp-settings__tabs {
-  border-bottom: 1px solid var(--cp-border);
+  align-self: stretch;
+  padding: 4px;
+  background: var(--cp-panel);
+  border-inline-end: 1px solid var(--cp-border);
 }
-.cp-settings__window {
-  background: transparent;
+.cp-settings__tabs :deep(.v-tab) {
+  justify-content: flex-start;
+  min-width: 0;
+  margin: 1px 0;
+  padding-inline: 8px;
+}
+.cp-settings__content {
+  min-width: 0;
+  overflow: auto;
+  padding: 8px;
+  background: var(--cp-bg);
+}
+.cp-settings__links {
+  overflow: hidden;
+}
+.cp-settings__link {
+  display: grid;
+  grid-template-columns: auto minmax(110px, max-content) 1fr auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 5px 8px;
+  color: var(--cp-primary);
+  text-decoration: none;
+  border-block-end: 1px solid var(--cp-border);
+  font-size: 0.78rem;
+}
+.cp-settings__link:hover {
+  background: var(--cp-primary-soft);
+}
+.cp-settings__link small {
+  color: var(--cp-text-muted);
+  font-size: 0.72rem;
+}
+.cp-settings__note {
+  padding: 7px 8px;
+  color: var(--cp-text-muted);
+  background: var(--cp-surface-2);
+  font-size: 0.76rem;
+}
+@media (max-width: 760px) {
+  .cp-settings__workspace {
+    grid-template-columns: 1fr;
+  }
+  .cp-settings__tabs {
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--cp-border);
+  }
 }
 </style>

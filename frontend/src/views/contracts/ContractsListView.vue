@@ -15,6 +15,7 @@ import ErrorState from '@/components/shared/ErrorState.vue';
 import RoleGate from '@/components/shared/RoleGate.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
+import DataTable from '@/components/shared/DataTable.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import ContractStatusBadge from '@/components/features/contract/ContractStatusBadge.vue';
 
@@ -140,7 +141,7 @@ async function handleDelete(contract: Contract) {
 
       <ErrorState v-if="error" :error="error" class="my-4" @retry="fetch" />
 
-      <v-data-table-server
+      <DataTable
         v-else
         :items="items"
         :items-length="total"
@@ -155,7 +156,7 @@ async function handleDelete(contract: Contract) {
         @click:row="onRowClick"
       >
         <template #[`item.customer`]="{ item }">
-          {{ (item as ContractRow).customer?.name ?? '—' }}
+          {{ (item as ContractRow).customer?.name ?? '-' }}
         </template>
         <template #[`item.totalPrice`]="{ item }">
           <MoneyDisplay :amount="item.totalPrice" />
@@ -180,7 +181,7 @@ async function handleDelete(contract: Contract) {
             </RoleGate>
           </div>
         </template>
-      </v-data-table-server>
+      </DataTable>
     </v-card>
   </div>
 </template>

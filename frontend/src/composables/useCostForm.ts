@@ -78,7 +78,7 @@ export function useCostForm(id?: string, initialProjectId?: string) {
     try {
       // Backend computes totalAmount from qty*unitPrice when both are set
       // and the field is omitted. We only forward totalAmount when the user
-      // typed it explicitly (non-null and non-zero — zero means "free").
+      // typed it explicitly (non-null and non-zero - zero means "free").
       const payload: CreateCostInput = {
         projectId: form.value.projectId,
         category: form.value.category,

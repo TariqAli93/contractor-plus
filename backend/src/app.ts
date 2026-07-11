@@ -14,7 +14,9 @@ import { PROTOCOL_VERSION } from '@contractor-plus/shared';
 import { env } from './config/env.js';
 import { prisma } from './lib/prisma.js';
 import { getStorage } from './lib/storage/storage.service.js';
-import { checkEncryptionKeyConfig } from './lib/crypto.js';
+import { loggerOptions } from './lib/logger.js';
+import { buildContainer } from './composition/container.js';
+import type { Logger } from './application/ports/logger.js';
 
 /** Backend package version, read once from package.json next to dist/. */
 const APP_VERSION: string = (() => {
@@ -42,7 +44,6 @@ import rbacRoutes from './modules/rbac/rbac.routes.js';
 import customersRoutes from './modules/customers/customers.routes.js';
 import materialsRoutes from './modules/materials/materials.routes.js';
 import templatesRoutes from './modules/templates/templates.routes.js';
-import estimationTemplatesRoutes from './modules/estimation-templates/estimation-templates.routes.js';
 import contractsRoutes from './modules/contracts/contracts.routes.js';
 import projectsRoutes from './modules/projects/projects.routes.js';
 import { costsRoutes, projectCostsRoutes } from './modules/costs/costs.routes.js';
@@ -56,8 +57,6 @@ import {
 } from './modules/payments/payments.routes.js';
 import reportsRoutes from './modules/reports/reports.routes.js';
 import auditRoutes from './modules/audit/audit.routes.js';
-import aiCommandRoutes from './modules/ai-command-workflow/ai-command-workflow.routes.js';
-import assistantRoutes from './modules/ai-assistant/assistant.routes.js';
 import tunnelRoutes from './modules/tunnel/tunnel.routes.js';
 import settingsRoutes from './modules/settings/settings.routes.js';
 import uploadsRoutes from './modules/uploads/uploads.routes.js';
@@ -69,19 +68,17 @@ import {
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: {
-      level: env.NODE_ENV === 'development' ? 'info' : 'warn',
-      transport:
-        env.NODE_ENV === 'development'
-          ? { target: 'pino-pretty', options: { translateTime: 'HH:MM:ss', ignore: 'pid,hostname' } }
-          : undefined,
-    },
+    // One logging policy for the whole app (level, deep redaction, request
+    // provenance), shared with the standalone logger — see lib/logger.ts.
+    logger: loggerOptions,
     trustProxy: true,
   });
 
-  // Surface an at-rest-encryption misconfiguration at boot (prod: error-level;
-  // dev: info) — see lib/crypto. Non-fatal: the app falls back to the JWT secret.
-  checkEncryptionKeyConfig();
+  // Composition root (fixes B4: dependency construction was scattered across
+  // route plugins). Later phases register repositories and use cases here and
+  // routes resolve them from `app.container`. The Fastify logger satisfies the
+  // narrow `Logger` port structurally; the cast is the adapter at the boundary.
+  app.decorate('container', buildContainer({ logger: app.log as unknown as Logger }));
 
   // Helmet — relax cross-origin resource policy so the SPA on a different
   // origin (vite dev: localhost:5173) can <img src="/uploads/..."> the
@@ -231,7 +228,6 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(customersRoutes, { prefix: '/api/v1/customers' });
   await app.register(materialsRoutes, { prefix: '/api/v1/materials' });
   await app.register(templatesRoutes, { prefix: '/api/v1/templates' });
-  await app.register(estimationTemplatesRoutes, { prefix: '/api/v1/estimation-templates' });
   await app.register(contractsRoutes, { prefix: '/api/v1/contracts' });
   await app.register(contractChangeOrdersRoutes, { prefix: '/api/v1/contracts' });
   await app.register(projectsRoutes, { prefix: '/api/v1/projects' });
@@ -242,14 +238,12 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(changeOrdersRoutes, { prefix: '/api/v1/change-orders' });
   await app.register(reportsRoutes, { prefix: '/api/v1/reports' });
   await app.register(auditRoutes, { prefix: '/api/v1/audit' });
-  await app.register(aiCommandRoutes, { prefix: '/api/v1/ai-command' });
-  await app.register(assistantRoutes, { prefix: '/api/v1/ai' });
   await app.register(tunnelRoutes, { prefix: '/api/v1/tunnel' });
   await app.register(settingsRoutes, { prefix: '/api/v1/settings' });
   await app.register(uploadsRoutes, { prefix: '/api/v1/uploads' });
-  // /api/v1/templates is already taken by the building-templates module
-  // (used for estimation). Document templates therefore mount under
-  // /api/v1/document-templates so neither module needs to be renamed.
+  // /api/v1/templates is already taken by the building-templates module.
+  // Document templates therefore mount under /api/v1/document-templates so
+  // neither module needs to be renamed.
   await app.register(documentTemplatesRoutes, { prefix: '/api/v1/document-templates' });
   await app.register(contractDocxRoutes, { prefix: '/api/v1/contracts' });
   await app.register(generatedDocumentsRoutes, { prefix: '/api/v1/generated-documents' });
