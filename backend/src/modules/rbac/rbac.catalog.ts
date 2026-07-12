@@ -27,6 +27,7 @@ export const PERMISSION_MODULES = [
   'payments',
   'change_orders',
   'reports',
+  'ai',
   'audit',
   'tunnel',
   'settings',
@@ -98,6 +99,14 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
 
   p('reports.read', 'reports', 'read', 'عرض التقارير'),
 
+  // ai-assistant — keys are fixed by the module spec (hyphenated actions).
+  p('ai.use', 'ai', 'use', 'استخدام المساعد الذكي'),
+  p('ai.view-recommendations', 'ai', 'view-recommendations', 'عرض التوصيات الذكية'),
+  p('ai.generate-reports', 'ai', 'generate-reports', 'توليد التقارير الذكية'),
+  p('ai.apply-suggestions', 'ai', 'apply-suggestions', 'تطبيق الاقتراحات الذكية'),
+  p('ai.manage-settings', 'ai', 'manage-settings', 'إدارة إعدادات الذكاء الاصطناعي'),
+  p('ai.sync-material-prices', 'ai', 'sync-material-prices', 'مزامنة أسعار المواد'),
+
   p('audit.read', 'audit', 'read', 'عرض سجل التدقيق'),
 
   p('tunnel.manage', 'tunnel', 'manage', 'إدارة النفق'),
@@ -148,6 +157,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'payments.read', 'payments.create', 'payments.update', 'payments.delete', 'payments.mark_paid', 'payments.cancel',
     'change_orders.read', 'change_orders.create', 'change_orders.update', 'change_orders.approve', 'change_orders.delete',
     'reports.read',
+    'ai.use', 'ai.view-recommendations', 'ai.generate-reports', 'ai.apply-suggestions', 'ai.manage-settings', 'ai.sync-material-prices',
     'audit.read',
     'tunnel.manage',
     'settings.read', 'settings.manage', 'settings.company.manage', 'settings.currency.manage', 'settings.contract_templates.manage',
@@ -164,6 +174,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'payments.read', 'payments.create', 'payments.update', 'payments.delete', 'payments.mark_paid', 'payments.cancel',
     'change_orders.read', 'change_orders.create', 'change_orders.update', 'change_orders.approve', 'change_orders.delete',
     'reports.read',
+    // AI: read/insight surfaces only — applying suggestions or managing
+    // settings stays with OWNER/ADMIN (or explicit grants via the matrix).
+    'ai.use', 'ai.view-recommendations', 'ai.generate-reports',
     ...PROFILE,
   ],
   [RoleName.ENGINEER]: [
@@ -177,6 +190,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     'payments.read',
     'change_orders.read',
     'reports.read',
+    'ai.use', 'ai.view-recommendations', 'ai.generate-reports',
     ...PROFILE,
   ],
   [RoleName.VIEWER]: [

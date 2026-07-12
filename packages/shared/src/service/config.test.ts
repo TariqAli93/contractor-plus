@@ -197,6 +197,71 @@ test('serviceConfigPresence: present vs missing', () => {
   }
 });
 
+// ── ai block (compat-first: entirely optional) ───────────────────────────────
+
+test('ai: absent block → resolved.ai is undefined and nothing else changes', () => {
+  const home = makeHome(validBody());
+  try {
+    const r = loadServiceConfig({ home });
+    assert.equal(r.ai, undefined);
+  } finally {
+    cleanup(home);
+  }
+});
+
+test('ai: present block passes through all fields', () => {
+  const home = makeHome(
+    validBody({
+      ai: {
+        openrouterApiKey: 'sk-or-test',
+        openrouterBaseUrl: 'https://openrouter.ai/api/v1',
+        modelDefault: 'anthropic/claude-sonnet-4.6',
+        modelHeavy: 'anthropic/claude-opus-4.8',
+        appUrl: 'https://contractor.example',
+        appTitle: 'Contractor Plus',
+        requestTimeoutMs: 30000,
+        monthlyTokenBudget: 2000000,
+      },
+    }),
+  );
+  try {
+    const r = loadServiceConfig({ home });
+    assert.equal(r.ai?.openrouterApiKey, 'sk-or-test');
+    assert.equal(r.ai?.modelDefault, 'anthropic/claude-sonnet-4.6');
+    assert.equal(r.ai?.modelHeavy, 'anthropic/claude-opus-4.8');
+    assert.equal(r.ai?.requestTimeoutMs, 30000);
+    assert.equal(r.ai?.monthlyTokenBudget, 2000000);
+  } finally {
+    cleanup(home);
+  }
+});
+
+test('ai: keyless block stays valid (AI simply disabled) — partial fields ok', () => {
+  const home = makeHome(validBody({ ai: { modelDefault: 'anthropic/claude-sonnet-4.6' } }));
+  try {
+    const r = loadServiceConfig({ home });
+    assert.equal(r.ai?.openrouterApiKey, undefined);
+    assert.equal(r.ai?.modelDefault, 'anthropic/claude-sonnet-4.6');
+  } finally {
+    cleanup(home);
+  }
+});
+
+test('ai: non-integer requestTimeoutMs → SERVICE_CONFIG_INVALID_SCHEMA keyPath ai.requestTimeoutMs', () => {
+  const home = makeHome(validBody({ ai: { requestTimeoutMs: 'soon' } }));
+  try {
+    assert.throws(
+      () => loadServiceConfig({ home }),
+      (err: unknown) =>
+        err instanceof ConfigError &&
+        err.code === 'SERVICE_CONFIG_INVALID_SCHEMA' &&
+        err.keyPath === 'ai.requestTimeoutMs',
+    );
+  } finally {
+    cleanup(home);
+  }
+});
+
 // Regression for the "setup success + الإعداد لم يكتمل بعد" contradiction: a file
 // that EXISTS but whose dir is ACL-locked to SYSTEM+Administrators (exactly what
 // the packaged provision does) must report 'locked', NEVER 'missing'. A

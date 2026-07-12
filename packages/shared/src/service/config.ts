@@ -81,6 +81,31 @@ export interface ServiceDbConfig {
 }
 
 /**
+ * Optional AI block inside service.json. ENTIRELY optional — compat-first: a
+ * service.json without it (every existing install) stays valid, and the backend
+ * treats a missing/keyless block as "AI features disabled" rather than an error.
+ * Model names are OpenRouter slugs and live only here / in dev .env — never in
+ * code.
+ */
+export interface ServiceAiConfig {
+  /** OpenRouter secret key. Absent → AI features are safely disabled. */
+  openrouterApiKey?: string;
+  /** Defaults to https://openrouter.ai/api/v1 when omitted. */
+  openrouterBaseUrl?: string;
+  /** OpenRouter slug for everyday operations, e.g. "anthropic/claude-sonnet-4.6". */
+  modelDefault?: string;
+  /** OpenRouter slug for heavy analyses; falls back to modelDefault when omitted. */
+  modelHeavy?: string;
+  /** Sent as HTTP-Referer for OpenRouter app rankings (optional). */
+  appUrl?: string;
+  /** Sent as X-Title (optional). */
+  appTitle?: string;
+  requestTimeoutMs?: number;
+  /** Monthly token ceiling for governance; unlimited when omitted. */
+  monthlyTokenBudget?: number;
+}
+
+/**
  * Normalised `service.json` shape. The on-disk file (written by the setup
  * wizard) uses `port` + `db.database`; the canonical fields here are
  * `backendPort` + `db.database`, and the legacy/alias keys `port` / `db.name`
@@ -96,6 +121,7 @@ export interface ServiceConfig {
   db: ServiceDbConfig;
   jwtSecret: string;
   corsOrigin?: string;
+  ai?: ServiceAiConfig;
 }
 
 /** Fully resolved runtime configuration consumed by the backend. */
@@ -117,6 +143,8 @@ export interface ResolvedServiceConfig {
   corsOrigin: string;
   /** Absolute path to the SPA dist the service serves, if configured. */
   frontendDist?: string;
+  /** Optional AI block, passed through as-is (absence → AI disabled). */
+  ai?: ServiceAiConfig;
 }
 
 /** Options for {@link loadServiceConfig} — overrides exist for tests only. */
@@ -305,6 +333,26 @@ function requireInt(
   return num;
 }
 
+/** Accept a positive-integer number or numeric string when present. */
+function optionalInt(
+  obj: Record<string, unknown>,
+  key: string,
+  keyPath: string,
+  configPath: string | undefined,
+): number | undefined {
+  const raw = obj[key];
+  if (raw === undefined || raw === null) return undefined;
+  const num = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN;
+  if (!Number.isInteger(num) || num <= 0) {
+    throw new ConfigError(
+      'SERVICE_CONFIG_INVALID_SCHEMA',
+      `Key "${keyPath}" must be a positive integer when present.`,
+      { keyPath, configPath },
+    );
+  }
+  return num;
+}
+
 function optionalString(
   obj: Record<string, unknown>,
   keys: [string, ...string[]],
@@ -359,6 +407,23 @@ export const ServiceConfigSchema = {
       password: requireString(dbRaw, 'password', 'db.password', configPath, { allowEmpty: true }),
     };
 
+    // Optional AI block — validated only when present (compat-first: existing
+    // installs without it must keep parsing unchanged).
+    let ai: ServiceAiConfig | undefined;
+    if (root.ai !== undefined && root.ai !== null) {
+      const aiRaw = asRecord(root.ai, 'ai', configPath);
+      ai = {
+        openrouterApiKey: optionalString(aiRaw, ['openrouterApiKey'], 'ai.openrouterApiKey', configPath),
+        openrouterBaseUrl: optionalString(aiRaw, ['openrouterBaseUrl'], 'ai.openrouterBaseUrl', configPath),
+        modelDefault: optionalString(aiRaw, ['modelDefault'], 'ai.modelDefault', configPath),
+        modelHeavy: optionalString(aiRaw, ['modelHeavy'], 'ai.modelHeavy', configPath),
+        appUrl: optionalString(aiRaw, ['appUrl'], 'ai.appUrl', configPath),
+        appTitle: optionalString(aiRaw, ['appTitle'], 'ai.appTitle', configPath),
+        requestTimeoutMs: optionalInt(aiRaw, 'requestTimeoutMs', 'ai.requestTimeoutMs', configPath),
+        monthlyTokenBudget: optionalInt(aiRaw, 'monthlyTokenBudget', 'ai.monthlyTokenBudget', configPath),
+      };
+    }
+
     return {
       appName: optionalString(root, ['appName'], 'appName', configPath),
       // `version` / `protocolVersion` are informational and tolerant: the real
@@ -372,6 +437,7 @@ export const ServiceConfigSchema = {
       db,
       jwtSecret: requireString(root, 'jwtSecret', 'jwtSecret', configPath, { minLength: 32 }),
       corsOrigin: optionalString(root, ['corsOrigin'], 'corsOrigin', configPath),
+      ai,
     };
   },
 };
@@ -464,6 +530,7 @@ export function loadServiceConfig(options: LoadServiceConfigOptions = {}): Resol
     jwtSecret: cfg.jwtSecret,
     corsOrigin,
     frontendDist: cfg.frontendDist,
+    ai: cfg.ai,
   };
 }
 

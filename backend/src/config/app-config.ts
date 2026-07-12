@@ -27,4 +27,22 @@ export interface AppConfig {
   FRONTEND_DIST?: string;
   /** Database name the runtime expects — arms the prisma single-source guard. */
   CONTRACTOR_PLUS_EXPECTED_DB?: string;
+
+  // ---- AI (OpenRouter — the ONLY provider) ----
+  // Absence of the key (or of a default model slug) disables AI features
+  // safely at boot; nothing here is ever required for the app to start.
+  /** OpenRouter secret key. Absent → AI features disabled. */
+  OPENROUTER_API_KEY?: string;
+  OPENROUTER_BASE_URL: string;
+  /** OpenRouter model slug for everyday operations — env-supplied, never hardcoded. */
+  AI_MODEL_DEFAULT?: string;
+  /** OpenRouter model slug for heavy analyses; falls back to AI_MODEL_DEFAULT. */
+  AI_MODEL_HEAVY?: string;
+  /** Sent as HTTP-Referer to OpenRouter (optional, app-ranking attribution). */
+  AI_APP_URL?: string;
+  /** Sent as X-Title to OpenRouter (optional). */
+  AI_APP_TITLE?: string;
+  AI_REQUEST_TIMEOUT_MS: number;
+  /** Monthly token ceiling for governance; unlimited when unset. */
+  AI_MONTHLY_TOKEN_BUDGET?: number;
 }

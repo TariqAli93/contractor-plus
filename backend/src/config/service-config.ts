@@ -34,6 +34,12 @@ const APP_CONSTANTS = {
   MANAGEMENT_API_URL: 'https://manage.codelapps.com',
   MANAGEMENT_API_TIMEOUT_MS: 15_000,
   MAX_UPLOAD_SIZE_MB: 5,
+  // AI endpoint + timeout are application constants (overridable per install
+  // via the optional service.json `ai` block). Model SLUGS are deliberately
+  // NOT constants — they change on openrouter.ai and come only from config.
+  OPENROUTER_BASE_URL: 'https://openrouter.ai/api/v1',
+  AI_APP_TITLE: 'Contractor Plus',
+  AI_REQUEST_TIMEOUT_MS: 30_000,
 } as const;
 
 /**
@@ -63,5 +69,15 @@ export function buildServiceModeConfig(): AppConfig {
     MAX_UPLOAD_SIZE_MB: APP_CONSTANTS.MAX_UPLOAD_SIZE_MB,
     FRONTEND_DIST: cfg.frontendDist,
     CONTRACTOR_PLUS_EXPECTED_DB: cfg.expectedDbName,
+    // Optional `ai` block — absence (every existing install) means the AI
+    // features are disabled; nothing about it can fail the boot.
+    OPENROUTER_API_KEY: cfg.ai?.openrouterApiKey,
+    OPENROUTER_BASE_URL: cfg.ai?.openrouterBaseUrl ?? APP_CONSTANTS.OPENROUTER_BASE_URL,
+    AI_MODEL_DEFAULT: cfg.ai?.modelDefault,
+    AI_MODEL_HEAVY: cfg.ai?.modelHeavy,
+    AI_APP_URL: cfg.ai?.appUrl,
+    AI_APP_TITLE: cfg.ai?.appTitle ?? APP_CONSTANTS.AI_APP_TITLE,
+    AI_REQUEST_TIMEOUT_MS: cfg.ai?.requestTimeoutMs ?? APP_CONSTANTS.AI_REQUEST_TIMEOUT_MS,
+    AI_MONTHLY_TOKEN_BUDGET: cfg.ai?.monthlyTokenBudget,
   };
 }

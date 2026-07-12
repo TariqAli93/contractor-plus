@@ -1,0 +1,9 @@
+export const AiOperationType = {
+  REPORT_NARRATIVE: 'REPORT_NARRATIVE',
+  DUPLICATE_DETECTION: 'DUPLICATE_DETECTION',
+  SAVE_GUARD: 'SAVE_GUARD',
+  RECOMMENDATION: 'RECOMMENDATION',
+  NL_REPORT_QUERY: 'NL_REPORT_QUERY',
+  MATERIAL_PRICE_SYNC: 'MATERIAL_PRICE_SYNC',
+} as const;
+export type AiOperationType = (typeof AiOperationType)[keyof typeof AiOperationType];

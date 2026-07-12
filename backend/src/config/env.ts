@@ -55,6 +55,13 @@ export const IS_SERVICE_MODE: boolean = (() => {
 })();
 
 // ── dev / test only: legacy dotenv + process.env schema (unchanged behavior) ──
+
+// `KEY=` (empty value) in .env means "unset" for the optional AI fields — the
+// documented off state — so normalize '' to undefined before url()/number()
+// validation rejects it.
+const emptyAsUndefined = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((v) => (typeof v === 'string' && v.trim() === '' ? undefined : v), schema);
+
 const DevEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
@@ -69,6 +76,17 @@ const DevEnvSchema = z.object({
   MANAGEMENT_API_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
   UPLOAD_ROOT: z.string().optional(),
   MAX_UPLOAD_SIZE_MB: z.coerce.number().int().positive().max(50).default(5),
+  // AI (OpenRouter only). All optional — absence disables AI features safely.
+  // Model slugs come EXCLUSIVELY from env (openrouter.ai/models changes often;
+  // nothing is pinned in code).
+  OPENROUTER_API_KEY: emptyAsUndefined(z.string().optional()),
+  OPENROUTER_BASE_URL: z.string().url().default('https://openrouter.ai/api/v1'),
+  AI_MODEL_DEFAULT: emptyAsUndefined(z.string().optional()),
+  AI_MODEL_HEAVY: emptyAsUndefined(z.string().optional()),
+  AI_APP_URL: emptyAsUndefined(z.string().url().optional()),
+  AI_APP_TITLE: emptyAsUndefined(z.string().optional()),
+  AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
+  AI_MONTHLY_TOKEN_BUDGET: emptyAsUndefined(z.coerce.number().int().positive().optional()),
 });
 
 function buildDevConfig(): AppConfig {
@@ -97,6 +115,14 @@ function buildDevConfig(): AppConfig {
     // In dev these are injected by the Electron launcher (process.env), not .env.
     FRONTEND_DIST: process.env.FRONTEND_DIST?.trim() || undefined,
     CONTRACTOR_PLUS_EXPECTED_DB: process.env.CONTRACTOR_PLUS_EXPECTED_DB?.trim() || undefined,
+    OPENROUTER_API_KEY: e.OPENROUTER_API_KEY,
+    OPENROUTER_BASE_URL: e.OPENROUTER_BASE_URL,
+    AI_MODEL_DEFAULT: e.AI_MODEL_DEFAULT,
+    AI_MODEL_HEAVY: e.AI_MODEL_HEAVY,
+    AI_APP_URL: e.AI_APP_URL,
+    AI_APP_TITLE: e.AI_APP_TITLE,
+    AI_REQUEST_TIMEOUT_MS: e.AI_REQUEST_TIMEOUT_MS,
+    AI_MONTHLY_TOKEN_BUDGET: e.AI_MONTHLY_TOKEN_BUDGET,
   };
 }
 

@@ -13,6 +13,7 @@ import { PROTOCOL_VERSION } from '@contractor-plus/shared';
 
 import { env } from './config/env.js';
 import { prisma } from './lib/prisma.js';
+import { resolveAiRuntime } from './lib/ai/ai-config.js';
 import { getStorage } from './lib/storage/storage.service.js';
 import { loggerOptions } from './lib/logger.js';
 import { buildContainer } from './composition/container.js';
@@ -56,6 +57,7 @@ import {
   projectPaymentsRoutes,
 } from './modules/payments/payments.routes.js';
 import reportsRoutes from './modules/reports/reports.routes.js';
+import aiAssistantRoutes from './modules/ai-assistant/ai-assistant.routes.js';
 import auditRoutes from './modules/audit/audit.routes.js';
 import tunnelRoutes from './modules/tunnel/tunnel.routes.js';
 import settingsRoutes from './modules/settings/settings.routes.js';
@@ -187,6 +189,22 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(rbacPlugin);
   await app.register(tunnelPlugin);
 
+  // AI availability surfaced on boot — a missing OPENROUTER_API_KEY is a
+  // NORMAL state (features disabled, /ai/status says why), never a boot error.
+  const aiRuntime = resolveAiRuntime(env);
+  if (aiRuntime.enabled) {
+    app.log.info(
+      {
+        baseUrl: aiRuntime.config.baseUrl,
+        modelDefault: aiRuntime.config.modelDefault,
+        modelHeavy: aiRuntime.config.modelHeavy,
+      },
+      '[ai] OpenRouter provider enabled',
+    );
+  } else {
+    app.log.info({ reason: aiRuntime.reason }, '[ai] AI features disabled');
+  }
+
   app.get('/health', async () => {
     const health = await getStorage().checkHealth();
     return {
@@ -237,6 +255,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(paymentsRoutes, { prefix: '/api/v1/payments' });
   await app.register(changeOrdersRoutes, { prefix: '/api/v1/change-orders' });
   await app.register(reportsRoutes, { prefix: '/api/v1/reports' });
+  await app.register(aiAssistantRoutes, { prefix: '/api/v1/ai' });
   await app.register(auditRoutes, { prefix: '/api/v1/audit' });
   await app.register(tunnelRoutes, { prefix: '/api/v1/tunnel' });
   await app.register(settingsRoutes, { prefix: '/api/v1/settings' });

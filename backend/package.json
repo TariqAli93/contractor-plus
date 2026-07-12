@@ -11,6 +11,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
     "prisma:studio": "prisma studio",
+    "rbac:seed": "tsx scripts/seed-rbac.ts",
+    "ai:smoke": "tsx scripts/ai-smoke-test.ts",
     "typecheck": "tsc --noEmit",
     "depcruise": "depcruise src/domain src/application src/infrastructure src/composition --config .dependency-cruiser.cjs",
     "test": "node --import tsx --test --test-concurrency=1 \"test/**/*.test.ts\"",

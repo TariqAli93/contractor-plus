@@ -90,6 +90,27 @@ enum DocumentCategory {
   REPORT
 }
 
+// ai-assistant — the operation kinds a request to the AI provider can serve.
+// Mirrored in @contractor-plus/shared (AiOperationType) for API payloads.
+enum AiOperationType {
+  REPORT_NARRATIVE
+  DUPLICATE_DETECTION
+  SAVE_GUARD
+  RECOMMENDATION
+  NL_REPORT_QUERY
+  MATERIAL_PRICE_SYNC
+}
+
+// ai-assistant — approval lifecycle of an AI suggestion. NONE for read-only
+// operations (narratives, queries); PENDING→APPROVED/REJECTED for suggestions
+// that require the explicit apply endpoint.
+enum AiApprovalState {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // ============================================================
 // Auth & RBAC
 // ============================================================
@@ -168,6 +189,7 @@ model User {
   role          Role           @relation(fields: [roleId], references: [id])
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]
+  aiRequestLogs AiRequestLog[]
   documentTemplatesCreated DocumentTemplate[] @relation("DocumentTemplateCreator")
   documentsGenerated       GeneratedDocument[] @relation("GeneratedDocumentCreator")
   createdAt     DateTime       @default(now())
@@ -235,6 +257,7 @@ model Material {
   contractItems ContractItem[]
   templateItems BuildingTemplateItem[]
   projectCosts  ProjectCost[]
+  referencePrices MaterialReferencePrice[]
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
   deletedAt     DateTime?
@@ -653,4 +676,58 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ============================================================
+// AI Assistant (modules/ai-assistant — accessed ONLY via its repository)
+// ============================================================
+
+// External reference prices for materials — append-only history (D4). New
+// syncs INSERT a row; nothing is overwritten, so price evolution is queryable.
+// Kept separate from Material on purpose: no columns are added there.
+model MaterialReferencePrice {
+  id                 String   @id @default(uuid()) @db.Uuid
+  materialId         String   @db.Uuid
+  material           Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  referencePrice     Decimal  @db.Decimal(14, 2)
+  // Price is stored in its ORIGINAL currency — never converted before the
+  // currency service does so explicitly (binding rule #5).
+  referenceCurrency  String
+  referenceSource    String
+  referenceRegion    String?
+  // When the SOURCE last updated the price (distinct from createdAt = when we
+  // fetched it) — shown in the UI so offline staleness is visible.
+  referenceUpdatedAt DateTime
+  createdAt          DateTime @default(now())
+
+  @@index([materialId, referenceUpdatedAt])
+  @@map("material_reference_prices")
+}
+
+// Governance log of every AI provider call (D5) — SUMMARY ONLY. Deliberately
+// has no column for the full prompt or response text: sensitive content and
+// whole contracts must never be persisted here (binding rule #4).
+model AiRequestLog {
+  id               String          @id @default(uuid()) @db.Uuid
+  userId           String          @db.Uuid
+  user             User            @relation(fields: [userId], references: [id])
+  operationType    AiOperationType
+  // OpenRouter model slug actually used (from env — never hardcoded).
+  modelUsed        String
+  // Which modules' PUBLIC services fed the context (e.g. ["reports"]).
+  sourceModules    String[]
+  // Ids of the records involved, for traceability without storing content.
+  recordIds        String[]
+  tokensPrompt     Int
+  tokensCompletion Int
+  // USD cost when known; OpenRouter usage only reports tokens in this batch.
+  costUsd          Decimal?        @db.Decimal(12, 6)
+  outputSummary    String
+  approvalState    AiApprovalState @default(NONE)
+  createdAt        DateTime        @default(now())
+
+  @@index([userId])
+  @@index([operationType, createdAt])
+  @@index([createdAt])
+  @@map("ai_request_logs")
 }
