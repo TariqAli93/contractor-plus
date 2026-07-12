@@ -137,6 +137,11 @@ export class SettingsService {
     return this.repo.listCurrencies();
   }
 
+  /** Public read used by other modules (ai-assistant) — never Prisma directly. */
+  async getDefaultCurrency(): Promise<Currency | null> {
+    return this.repo.findDefaultCurrency();
+  }
+
   async createCurrency(input: CreateCurrencyInput, actor: AuditActor): Promise<Currency> {
     return this.prisma.$transaction(async (tx) => {
       const dup = await this.repo.findCurrencyByCode(input.code, tx);

@@ -10,6 +10,7 @@ import DateDisplay from '@/components/shared/DateDisplay.vue';
 import ProjectStatusBadge from '@/components/features/project/ProjectStatusBadge.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
 import DataTable from '@/components/shared/DataTable.vue';
+import AiNarrativeCard from '@/components/features/reports/AiNarrativeCard.vue';
 
 const rows = ref<DelayedProjectRow[]>([]);
 const loading = ref(false);
@@ -96,5 +97,7 @@ const headers = computed(() => [
         </DataTable>
       </div>
     </section>
+
+    <AiNarrativeCard v-if="!error" report-type="delayed-projects" />
   </div>
 </template>

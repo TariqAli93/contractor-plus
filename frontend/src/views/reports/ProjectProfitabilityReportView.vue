@@ -12,6 +12,7 @@ import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import ProjectStatusBadge from '@/components/features/project/ProjectStatusBadge.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
 import DataTable from '@/components/shared/DataTable.vue';
+import AiNarrativeCard from '@/components/features/reports/AiNarrativeCard.vue';
 
 const router = useRouter();
 
@@ -48,6 +49,13 @@ async function fetch() {
 
 watch([page, pageSize, statusFilter, sortBy, sortDir], () => void fetch());
 onMounted(fetch);
+
+// Narrative covers the same slice the table shows (filter + sort).
+const narrativeFilters = computed(() => ({
+  ...(statusFilter.value ? { status: statusFilter.value } : {}),
+  sortBy: sortBy.value,
+  sortDir: sortDir.value,
+}));
 
 const columns = computed(() => [
   { key: 'name', title: t('reports.profitability.columns.project'), sortable: true },
@@ -195,5 +203,7 @@ function profitClass(p: string | null) {
         </DataTable>
       </div>
     </section>
+
+    <AiNarrativeCard v-if="!error" report-type="project-profitability" :filters="narrativeFilters" />
   </div>
 </template>

@@ -1,18 +1,23 @@
-import type { PrismaClient } from '@prisma/client';
+import type { AiRequestLog, PrismaClient } from '@prisma/client';
 import { env } from '../../config/env.js';
 import { resolveAiRuntime, type AiRuntime } from '../../lib/ai/ai-config.js';
+import { OpenRouterProvider } from '../../lib/ai/openrouter.provider.js';
+import type { AiProvider } from '../../lib/ai/ai-provider.interface.js';
+import { AuditService } from '../audit/audit.service.js';
+import { ReportsService } from '../reports/reports.service.js';
+import { SettingsService } from '../settings/settings.service.js';
 import { AiAssistantRepository } from './ai-assistant.repository.js';
 import { AiContextService } from './services/ai-context.service.js';
 import { AiReportService } from './services/ai-report.service.js';
 import { AiRecommendationService } from './services/ai-recommendation.service.js';
 import { AiMaterialPricesService } from './services/ai-material-prices.service.js';
 import { AiValidationService } from './services/ai-validation.service.js';
-import type { AiRequestLog } from '@prisma/client';
 import type { AiStatusDto, CreateAiRequestLogInput } from './ai-assistant.types.js';
 
 // Facade of the ai-assistant module. Data access rules (non-negotiable):
 //   - own tables only via AiAssistantRepository;
-//   - other modules' data only via THEIR public services (wired per phase);
+//   - other modules' data only via THEIR public services (ReportsService,
+//     SettingsService, …);
 //   - every provider call goes through lib/ai (OpenRouter exclusively) and is
 //     summarised into AiRequestLog + the audit module.
 export class AiAssistantService {
@@ -28,8 +33,20 @@ export class AiAssistantService {
   constructor(prisma: PrismaClient, runtime: AiRuntime = resolveAiRuntime(env)) {
     this.repo = new AiAssistantRepository(prisma);
     this.runtime = runtime;
-    this.context = new AiContextService();
-    this.reports = new AiReportService();
+
+    // OpenRouter is the ONLY provider; null exactly when AI is disabled.
+    const provider: AiProvider | null = runtime.enabled
+      ? new OpenRouterProvider(runtime.config)
+      : null;
+
+    this.context = new AiContextService(new ReportsService(prisma), new SettingsService(prisma));
+    this.reports = new AiReportService({
+      runtime,
+      provider,
+      context: this.context,
+      repo: this.repo,
+      audit: new AuditService(prisma),
+    });
     this.recommendations = new AiRecommendationService();
     this.materialPrices = new AiMaterialPricesService();
     this.validation = new AiValidationService();

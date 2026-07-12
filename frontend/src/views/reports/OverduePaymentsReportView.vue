@@ -10,6 +10,7 @@ import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
 import DataTable from '@/components/shared/DataTable.vue';
+import AiNarrativeCard from '@/components/features/reports/AiNarrativeCard.vue';
 
 const groups = ref<OverduePaymentsByProject[]>([]);
 const loading = ref(false);
@@ -104,6 +105,8 @@ const headers = computed(() => [
         </DataTable>
       </div>
     </section>
+
+    <AiNarrativeCard v-if="!error" report-type="overdue-payments" />
   </div>
 </template>
 

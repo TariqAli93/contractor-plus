@@ -8,6 +8,7 @@ import ErrorState from '@/components/shared/ErrorState.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import DateDisplay from '@/components/shared/DateDisplay.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
+import AiNarrativeCard from '@/components/features/reports/AiNarrativeCard.vue';
 
 const data = ref<CashFlowReport | null>(null);
 const loading = ref(false);
@@ -34,6 +35,13 @@ const netClass = computed(() => {
   const n = Number(data.value?.netCashFlow ?? 0);
   return n > 0 ? 'text-success' : n < 0 ? 'text-error' : '';
 });
+
+// Same filters the numeric report is showing — empty strings are dropped so
+// the narrative endpoint's date coercion never sees them.
+const narrativeFilters = computed(() => ({
+  ...(dateFrom.value ? { dateFrom: dateFrom.value } : {}),
+  ...(dateTo.value ? { dateTo: dateTo.value } : {}),
+}));
 
 const metrics = computed(() => [
   { key: 'revenue', label: t('reports.cashFlow.totalRevenue'), icon: 'mdi-cash-multiple', amount: data.value?.totalRevenue ?? 0 },
@@ -105,6 +113,8 @@ const metrics = computed(() => [
         </div>
       </div>
     </section>
+
+    <AiNarrativeCard v-if="!error" report-type="cash-flow" :filters="narrativeFilters" />
   </div>
 </template>
 
