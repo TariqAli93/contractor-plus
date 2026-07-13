@@ -5,7 +5,6 @@ import { AiAssistantController } from './ai-assistant.controller.js';
 // AI routes are permission-only (no legacy-role fallback): the module is new,
 // so there are no un-migrated clients to keep compatible. Feature endpoints
 // register phase by phase:
-//   Phase 3: POST /reports/query                   (ai.generate-reports)
 //   Phase 4: POST /guard/cost|payment, GET /recommendations,
 //            POST /suggestions/:id/apply           (ai.apply-suggestions)
 //   Phase 5: POST /materials/sync-prices           (ai.sync-material-prices)
@@ -26,6 +25,8 @@ const aiAssistantRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/status', use, controller.status);
   // Phase 2 — read-only narrative over the numeric reports.
   fastify.post('/reports/:reportType/narrative', generateReports, controller.reportNarrative);
+  // Phase 3 — NL text → constrained query → validation gate → ReportsService.
+  fastify.post('/reports/query', generateReports, controller.nlReportQuery);
 };
 
 export default aiAssistantRoutes;

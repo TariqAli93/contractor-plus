@@ -3,6 +3,7 @@ import { UnauthorizedError } from '../../shared/errors/unauthorized.error.js';
 import type { AuditActor } from '../audit/audit.service.js';
 import type { AiAssistantService } from './ai-assistant.service.js';
 import { narrativeBodySchemas, narrativeParamsSchema } from './ai-assistant.schemas.js';
+import { nlQueryBodySchema } from './ai-query.schema.js';
 
 export class AiAssistantController {
   constructor(private readonly service: AiAssistantService) {}
@@ -16,6 +17,16 @@ export class AiAssistantController {
     // Body carries the SAME filters as the numeric report (whitelist per type).
     const query = narrativeBodySchemas[reportType].parse(request.body ?? {});
     const result = await this.service.reports.narrative(reportType, query, this.actor(request));
+    return reply.code(200).send(result);
+  };
+
+  nlReportQuery = async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = nlQueryBodySchema.parse(request.body ?? {});
+    const result = await this.service.reports.queryFromText(
+      body.text,
+      body.narrate,
+      this.actor(request),
+    );
     return reply.code(200).send(result);
   };
 

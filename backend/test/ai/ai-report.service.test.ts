@@ -9,6 +9,7 @@ import test from 'node:test';
 
 import { AiReportService } from '../../src/modules/ai-assistant/services/ai-report.service.js';
 import { AiContextService } from '../../src/modules/ai-assistant/services/ai-context.service.js';
+import { AiValidationService } from '../../src/modules/ai-assistant/services/ai-validation.service.js';
 import type { AiAssistantRepository } from '../../src/modules/ai-assistant/ai-assistant.repository.js';
 import type { CreateAiRequestLogInput } from '../../src/modules/ai-assistant/ai-assistant.types.js';
 import type { AuditActor, AuditLogInput, AuditService } from '../../src/modules/audit/audit.service.js';
@@ -45,14 +46,41 @@ const GOOD_OUTPUT = JSON.stringify({
 
 class FakeProvider implements AiProvider {
   calls: AiCompletionInput[] = [];
+  private readonly contents: string[];
   constructor(
-    private readonly content: string,
+    content: string | string[],
     private readonly usage = { promptTokens: 100, completionTokens: 50 },
-  ) {}
+  ) {
+    this.contents = Array.isArray(content) ? content : [content];
+  }
   async complete(input: AiCompletionInput): Promise<AiCompletionResult> {
     this.calls.push(input);
-    return { content: this.content, modelUsed: input.model, usage: this.usage };
+    const content = this.contents[Math.min(this.calls.length - 1, this.contents.length - 1)]!;
+    return { content, modelUsed: input.model, usage: this.usage };
   }
+}
+
+function fakeReportsService() {
+  const calls: Array<{ method: string; args: unknown }> = [];
+  const reports = {
+    getCashFlow: async (args: unknown) => {
+      calls.push({ method: 'getCashFlow', args });
+      return { totalRevenue: '15000.00', netCashFlow: '3000.00' };
+    },
+    getDelayedProjects: async (args: unknown) => {
+      calls.push({ method: 'getDelayedProjects', args });
+      return [];
+    },
+    getOverduePayments: async (args: unknown) => {
+      calls.push({ method: 'getOverduePayments', args });
+      return [];
+    },
+    listProjectProfitability: async (args: unknown) => {
+      calls.push({ method: 'listProjectProfitability', args });
+      return { items: [], page: 1, pageSize: 20, total: 0, totalPages: 0 };
+    },
+  } as unknown as ReportsService;
+  return { reports, calls };
 }
 
 function fakeRepo() {
@@ -111,14 +139,17 @@ function makeService(opts: {
 }) {
   const { repo, created } = fakeRepo();
   const { audit, logged } = fakeAudit();
+  const { reports, calls: reportsCalls } = fakeReportsService();
   const service = new AiReportService({
     runtime: opts.runtime ?? RUNTIME_ENABLED,
     provider: opts.provider ?? new FakeProvider(GOOD_OUTPUT),
     context: opts.context ?? fakeContextDeps(),
     repo,
     audit,
+    reports,
+    validation: new AiValidationService(),
   });
-  return { service, created, logged };
+  return { service, created, logged, reportsCalls };
 }
 
 // ---------- AiReportService ----------
@@ -176,15 +207,17 @@ test('JSON preceded by chatter is tolerated, still schema-gated', async () => {
   assert.deepEqual(result.factors, ['تحصيل 80% من الإيراد', 'مصاريف مستقرة']);
 });
 
-test('non-JSON model output → AI_PROVIDER_BAD_RESPONSE, nothing logged', async () => {
+test('non-JSON model output → AI_PROVIDER_BAD_RESPONSE, call still governed (rule #4)', async () => {
   const provider = new FakeProvider('التقرير يبدو جيدًا بشكل عام.');
   const { service, created, logged } = makeService({ provider });
   await assert.rejects(
     service.narrative('cash-flow', {}, ACTOR),
     (err: unknown) => err instanceof UpstreamError && err.code === 'AI_PROVIDER_BAD_RESPONSE',
   );
-  assert.equal(created.length, 0);
-  assert.equal(logged.length, 0);
+  // Tokens were spent — the rejected call is still recorded, summary-only.
+  assert.equal(created.length, 1);
+  assert.match(created[0]!.outputSummary, /rejected/);
+  assert.equal(logged.length, 1);
 });
 
 test('schema-violating JSON (wrong keys) → AI_PROVIDER_BAD_RESPONSE', async () => {
@@ -209,6 +242,131 @@ test('disabled runtime → 503 AI_DISABLED before any provider/report work', asy
   );
   assert.equal(provider.calls.length, 0);
   assert.equal(created.length, 0);
+});
+
+// ---------- Phase 3: queryFromText (NL → gate → ReportsService) ----------
+
+const NL_QUERY_JSON = JSON.stringify({
+  reportType: 'cash-flow',
+  filters: { dateFrom: '2026-07-01', dateTo: '2026-07-31' },
+});
+
+test('nl-query happy path: validated query executes and is governed', async () => {
+  const provider = new FakeProvider(NL_QUERY_JSON);
+  const { service, created, logged, reportsCalls } = makeService({ provider });
+
+  const out = await service.queryFromText('كم صافي التدفق النقدي لهذا الشهر؟', false, ACTOR);
+
+  // Query understood + typed (dates coerced by the gate).
+  assert.equal(out.query.reportType, 'cash-flow');
+  assert.equal(out.modelUsed, 'test/default-model');
+  assert.deepEqual(out.result, { totalRevenue: '15000.00', netCashFlow: '3000.00' });
+
+  // The report executed through the PUBLIC ReportsService with Date args.
+  assert.equal(reportsCalls.length, 1);
+  assert.equal(reportsCalls[0]!.method, 'getCashFlow');
+  const args = reportsCalls[0]!.args as { dateFrom: Date; dateTo: Date };
+  assert.ok(args.dateFrom instanceof Date);
+
+  // Governance: NL_REPORT_QUERY row + audit entry.
+  assert.equal(created.length, 1);
+  assert.equal(created[0]!.operationType, 'NL_REPORT_QUERY');
+  assert.match(created[0]!.outputSummary, /nl-query: cash-flow/);
+  assert.equal(logged.length, 1);
+});
+
+test('nl-query: out-of-scope refusal → 422, NO report executed, call still logged', async () => {
+  const provider = new FakeProvider(
+    JSON.stringify({ outOfScope: true, reason: 'طلب حذف بيانات' }),
+  );
+  const { service, created, reportsCalls } = makeService({ provider });
+
+  await assert.rejects(
+    service.queryFromText('احذف كل العملاء', false, ACTOR),
+    (err: unknown) => err instanceof AppError && err.code === 'AI_QUERY_OUT_OF_SCOPE',
+  );
+  assert.equal(reportsCalls.length, 0);
+  assert.equal(created.length, 1);
+  assert.match(created[0]!.outputSummary, /rejected: AI_QUERY_OUT_OF_SCOPE/);
+});
+
+test('nl-query: hallucinated non-whitelist query → 422, nothing reaches ReportsService', async () => {
+  const provider = new FakeProvider(
+    JSON.stringify({
+      reportType: 'project-financial-risk',
+      filters: { budgetExceeded: true, noPaymentsForDays: 30 },
+      groupBy: 'project',
+      sortBy: 'riskScore',
+    }),
+  );
+  const { service, created, reportsCalls } = makeService({ provider });
+
+  await assert.rejects(
+    service.queryFromText('أي المشاريع الأخطر ماليًا؟', false, ACTOR),
+    (err: unknown) => err instanceof AppError && err.code === 'AI_QUERY_REJECTED',
+  );
+  assert.equal(reportsCalls.length, 0);
+  assert.equal(created.length, 1);
+  assert.match(created[0]!.outputSummary, /rejected: AI_QUERY_REJECTED/);
+});
+
+test('nl-query: non-JSON model output → gentle bad-response error, logged, no execution', async () => {
+  const provider = new FakeProvider('يمكنك رؤية التدفق النقدي من صفحة التقارير.');
+  const { service, created, reportsCalls } = makeService({ provider });
+
+  await assert.rejects(
+    service.queryFromText('وين أشوف الفلوس؟', false, ACTOR),
+    (err: unknown) => err instanceof UpstreamError && err.code === 'AI_PROVIDER_BAD_RESPONSE',
+  );
+  assert.equal(reportsCalls.length, 0);
+  assert.equal(created.length, 1);
+});
+
+test('nl-query: fenced JSON tolerated; profitability maps sort + fixed paging', async () => {
+  const provider = new FakeProvider(
+    '```json\n' +
+      JSON.stringify({
+        reportType: 'project-profitability',
+        filters: { status: 'IN_PROGRESS' },
+        sortBy: 'name',
+        sortDir: 'asc',
+      }) +
+      '\n```',
+  );
+  const { service, reportsCalls } = makeService({ provider });
+
+  const out = await service.queryFromText('ربحية مشاريع قيد التنفيذ بالاسم', false, ACTOR);
+  assert.equal(out.query.reportType, 'project-profitability');
+  assert.deepEqual(reportsCalls[0]!.args, {
+    page: 1,
+    pageSize: 20,
+    status: 'IN_PROGRESS',
+    sortBy: 'name',
+    sortDir: 'asc',
+  });
+});
+
+test('nl-query narrate=true chains the Phase-2 narrative (two governed calls)', async () => {
+  const provider = new FakeProvider([NL_QUERY_JSON, GOOD_OUTPUT]);
+  const { service, created } = makeService({ provider });
+
+  const out = await service.queryFromText('التدفق النقدي لهذا الشهر مع تفسير', true, ACTOR);
+  assert.ok(out.narrative);
+  assert.match(out.narrative!.narrative, /صافي التدفق/);
+  assert.equal(provider.calls.length, 2);
+  assert.deepEqual(
+    created.map((c) => c.operationType),
+    ['NL_REPORT_QUERY', 'REPORT_NARRATIVE'],
+  );
+});
+
+test('nl-query narrate=true: narrative failure never voids the query result', async () => {
+  const provider = new FakeProvider([NL_QUERY_JSON, 'ليس JSON']);
+  const { service } = makeService({ provider });
+
+  const out = await service.queryFromText('التدفق النقدي مع تفسير', true, ACTOR);
+  assert.equal(out.query.reportType, 'cash-flow');
+  assert.equal(out.narrative, undefined);
 });
 
 // ---------- AiContextService (the safe-DTO layer) ----------

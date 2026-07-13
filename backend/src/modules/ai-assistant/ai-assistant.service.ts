@@ -39,17 +39,20 @@ export class AiAssistantService {
       ? new OpenRouterProvider(runtime.config)
       : null;
 
-    this.context = new AiContextService(new ReportsService(prisma), new SettingsService(prisma));
+    const reportsService = new ReportsService(prisma);
+    this.context = new AiContextService(reportsService, new SettingsService(prisma));
+    this.validation = new AiValidationService();
     this.reports = new AiReportService({
       runtime,
       provider,
       context: this.context,
       repo: this.repo,
       audit: new AuditService(prisma),
+      reports: reportsService,
+      validation: this.validation,
     });
     this.recommendations = new AiRecommendationService();
     this.materialPrices = new AiMaterialPricesService();
-    this.validation = new AiValidationService();
   }
 
   /**
