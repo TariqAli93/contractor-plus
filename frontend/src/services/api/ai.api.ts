@@ -4,8 +4,11 @@ import type {
   AiStatus,
   ApplySuggestionResult,
   GuardResult,
+  MaterialPriceChange,
   RecommendationsResult,
+  ReferencePrice,
   ReportNarrative,
+  SyncPricesResult,
 } from '@/types/ai';
 
 // Model round-trips can exceed the client's default 15s (backend allows 30s
@@ -39,4 +42,14 @@ export const aiApi = {
 
   rejectSuggestion: (id: string): Promise<{ suggestionId: string; approvalState: string }> =>
     apiPost(`/ai/suggestions/${id}/reject`),
+
+  materialReferencePrice: (materialId: string): Promise<ReferencePrice | null> =>
+    apiGet(`/ai/materials/${materialId}/reference-price`),
+
+  materialPriceChanges: (): Promise<{ items: MaterialPriceChange[] }> =>
+    apiGet('/ai/materials/price-changes'),
+
+  // Fetch loop can be slow (multiple external sources) — allow generous time.
+  syncMaterialPrices: (): Promise<SyncPricesResult> =>
+    apiPost('/ai/materials/sync-prices', undefined, { timeout: 90_000 }),
 };

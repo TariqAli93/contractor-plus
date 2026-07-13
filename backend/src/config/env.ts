@@ -21,7 +21,7 @@
 import { config as loadDotenv } from 'dotenv';
 import { z } from 'zod';
 import { ConfigError, formatConfigError } from '@contractor-plus/shared/service-config';
-import type { AppConfig } from './app-config.js';
+import type { AppConfig, MaterialPriceSource } from './app-config.js';
 import { buildServiceModeConfig } from './service-config.js';
 
 export type { AppConfig } from './app-config.js';
@@ -87,7 +87,38 @@ const DevEnvSchema = z.object({
   AI_APP_TITLE: emptyAsUndefined(z.string().optional()),
   AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
   AI_MONTHLY_TOKEN_BUDGET: emptyAsUndefined(z.coerce.number().int().positive().optional()),
+  // Phase 5 — material-price sources as a JSON array string in dev .env; the
+  // service.json `ai.materialPriceSources` array is the production source.
+  AI_MATERIAL_PRICE_SOURCES: emptyAsUndefined(z.string().optional()),
+  AI_MATERIAL_PRICE_SYNC_INTERVAL_HOURS: emptyAsUndefined(
+    z.coerce.number().int().positive().optional(),
+  ),
 });
+
+/** One material-price source, shared by dev-env parsing and service config. */
+const materialPriceSourceSchema = z.object({
+  name: z.string().trim().min(1),
+  url: z.string().url(),
+  region: z.string().trim().min(1).optional(),
+});
+
+/** Parse the dev-env JSON string into validated sources; '' / bad JSON → []. */
+function parseDevMaterialSources(raw: string | undefined): MaterialPriceSource[] {
+  if (!raw) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    console.error('[config] AI_MATERIAL_PRICE_SOURCES is not valid JSON — ignoring');
+    return [];
+  }
+  const result = z.array(materialPriceSourceSchema).safeParse(parsed);
+  if (!result.success) {
+    console.error('[config] AI_MATERIAL_PRICE_SOURCES failed validation — ignoring');
+    return [];
+  }
+  return result.data;
+}
 
 function buildDevConfig(): AppConfig {
   // dotenv is invoked ONLY in dev/test — never in the production runtime path.
@@ -123,6 +154,8 @@ function buildDevConfig(): AppConfig {
     AI_APP_TITLE: e.AI_APP_TITLE,
     AI_REQUEST_TIMEOUT_MS: e.AI_REQUEST_TIMEOUT_MS,
     AI_MONTHLY_TOKEN_BUDGET: e.AI_MONTHLY_TOKEN_BUDGET,
+    AI_MATERIAL_PRICE_SOURCES: parseDevMaterialSources(e.AI_MATERIAL_PRICE_SOURCES),
+    AI_MATERIAL_PRICE_SYNC_INTERVAL_HOURS: e.AI_MATERIAL_PRICE_SYNC_INTERVAL_HOURS,
   };
 }
 

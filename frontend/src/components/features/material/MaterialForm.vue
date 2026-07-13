@@ -3,6 +3,7 @@ import { computed, onMounted } from 'vue';
 import { t } from '@/i18n';
 import { useMaterialForm } from '@/composables/useMaterialForm';
 import AdvancedOptions from '@/components/shared/AdvancedOptions.vue';
+import MaterialReferencePricePanel from './MaterialReferencePricePanel.vue';
 
 const props = defineProps<{ id?: string }>();
 const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } =
@@ -51,6 +52,9 @@ const hasAdvanced = computed(() => form.value.isActive === false || !!form.value
           :rules="[nonNegativeRule]"
           :error-messages="fieldErrors.defaultPrice"
         />
+        <!-- Latest external reference price (edit only; renders nothing when
+             absent or the user lacks ai.use). -->
+        <MaterialReferencePricePanel v-if="isEdit" :material-id="props.id" />
         <AdvancedOptions :default-open="hasAdvanced">
           <div class="flex items-center">
             <v-switch

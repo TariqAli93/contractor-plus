@@ -81,6 +81,21 @@ export interface ServiceDbConfig {
 }
 
 /**
+ * One external material-price source (Phase 5). A source exposes a JSON
+ * document the sync job fetches, validates, and appends as reference-price
+ * history. Sources are configuration, never hardcoded — an install with none
+ * simply has the sync as a safe no-op.
+ */
+export interface ServiceMaterialPriceSource {
+  /** Human label, shown as the price's provenance in the UI. */
+  name: string;
+  /** HTTP(S) URL returning the expected `{ prices: [...] }` JSON. */
+  url: string;
+  /** Optional region tag stored on each row (e.g. "IQ", "Baghdad"). */
+  region?: string;
+}
+
+/**
  * Optional AI block inside service.json. ENTIRELY optional — compat-first: a
  * service.json without it (every existing install) stays valid, and the backend
  * treats a missing/keyless block as "AI features disabled" rather than an error.
@@ -103,6 +118,10 @@ export interface ServiceAiConfig {
   requestTimeoutMs?: number;
   /** Monthly token ceiling for governance; unlimited when omitted. */
   monthlyTokenBudget?: number;
+  /** Phase 5 — external material-price sources; empty/absent → sync no-ops. */
+  materialPriceSources?: ServiceMaterialPriceSource[];
+  /** Phase 5 — scheduled sync cadence (hours). Absent → manual sync only. */
+  materialPriceSyncIntervalHours?: number;
 }
 
 /**
@@ -333,6 +352,42 @@ function requireInt(
   return num;
 }
 
+/**
+ * Validate the optional `ai.materialPriceSources` array (Phase 5). Absent →
+ * undefined; present must be an array of `{ name, url, region? }`, each with an
+ * http(s) url. Precise key paths so a bad source is easy to fix.
+ */
+function parseMaterialPriceSources(
+  raw: unknown,
+  configPath: string | undefined,
+): ServiceMaterialPriceSource[] | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  if (!Array.isArray(raw)) {
+    throw new ConfigError(
+      'SERVICE_CONFIG_INVALID_SCHEMA',
+      'Key "ai.materialPriceSources" must be an array when present.',
+      { keyPath: 'ai.materialPriceSources', configPath },
+    );
+  }
+  return raw.map((entry, i) => {
+    const base = `ai.materialPriceSources[${i}]`;
+    const obj = asRecord(entry, base, configPath);
+    const url = requireString(obj, 'url', `${base}.url`, configPath);
+    if (!/^https?:\/\//i.test(url)) {
+      throw new ConfigError(
+        'SERVICE_CONFIG_INVALID_SCHEMA',
+        `Key "${base}.url" must be an http(s) URL.`,
+        { keyPath: `${base}.url`, configPath },
+      );
+    }
+    return {
+      name: requireString(obj, 'name', `${base}.name`, configPath),
+      url,
+      region: optionalString(obj, ['region'], `${base}.region`, configPath),
+    };
+  });
+}
+
 /** Accept a positive-integer number or numeric string when present. */
 function optionalInt(
   obj: Record<string, unknown>,
@@ -421,6 +476,13 @@ export const ServiceConfigSchema = {
         appTitle: optionalString(aiRaw, ['appTitle'], 'ai.appTitle', configPath),
         requestTimeoutMs: optionalInt(aiRaw, 'requestTimeoutMs', 'ai.requestTimeoutMs', configPath),
         monthlyTokenBudget: optionalInt(aiRaw, 'monthlyTokenBudget', 'ai.monthlyTokenBudget', configPath),
+        materialPriceSources: parseMaterialPriceSources(aiRaw.materialPriceSources, configPath),
+        materialPriceSyncIntervalHours: optionalInt(
+          aiRaw,
+          'materialPriceSyncIntervalHours',
+          'ai.materialPriceSyncIntervalHours',
+          configPath,
+        ),
       };
     }
 

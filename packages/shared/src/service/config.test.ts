@@ -262,6 +262,63 @@ test('ai: non-integer requestTimeoutMs → SERVICE_CONFIG_INVALID_SCHEMA keyPath
   }
 });
 
+// ── ai.materialPriceSources (Phase 5, compat-first) ──────────────────────────
+
+test('ai: valid materialPriceSources array passes through', () => {
+  const home = makeHome(
+    validBody({
+      ai: {
+        materialPriceSources: [
+          { name: 'مصدر', url: 'https://prices.example/x.json', region: 'IQ' },
+          { name: 'source2', url: 'http://127.0.0.1:8899/y.json' },
+        ],
+        materialPriceSyncIntervalHours: 24,
+      },
+    }),
+  );
+  try {
+    const r = loadServiceConfig({ home });
+    assert.equal(r.ai?.materialPriceSources?.length, 2);
+    assert.equal(r.ai?.materialPriceSources?.[0]?.name, 'مصدر');
+    assert.equal(r.ai?.materialPriceSources?.[1]?.region, undefined);
+    assert.equal(r.ai?.materialPriceSyncIntervalHours, 24);
+  } finally {
+    cleanup(home);
+  }
+});
+
+test('ai: materialPriceSources not an array → SERVICE_CONFIG_INVALID_SCHEMA', () => {
+  const home = makeHome(validBody({ ai: { materialPriceSources: 'nope' } }));
+  try {
+    assert.throws(
+      () => loadServiceConfig({ home }),
+      (err: unknown) =>
+        err instanceof ConfigError &&
+        err.code === 'SERVICE_CONFIG_INVALID_SCHEMA' &&
+        err.keyPath === 'ai.materialPriceSources',
+    );
+  } finally {
+    cleanup(home);
+  }
+});
+
+test('ai: a source with a non-http url → SERVICE_CONFIG_INVALID_SCHEMA with the item key path', () => {
+  const home = makeHome(
+    validBody({ ai: { materialPriceSources: [{ name: 'x', url: 'ftp://bad/host' }] } }),
+  );
+  try {
+    assert.throws(
+      () => loadServiceConfig({ home }),
+      (err: unknown) =>
+        err instanceof ConfigError &&
+        err.code === 'SERVICE_CONFIG_INVALID_SCHEMA' &&
+        err.keyPath === 'ai.materialPriceSources[0].url',
+    );
+  } finally {
+    cleanup(home);
+  }
+});
+
 // Regression for the "setup success + الإعداد لم يكتمل بعد" contradiction: a file
 // that EXISTS but whose dir is ACL-locked to SYSTEM+Administrators (exactly what
 // the packaged provision does) must report 'locked', NEVER 'missing'. A

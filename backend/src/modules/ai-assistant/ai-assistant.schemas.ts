@@ -88,3 +88,7 @@ export const recommendationEnrichmentSchema = z.object({
 });
 
 export const suggestionIdParamSchema = z.object({ id: uuidSchema });
+
+// ----- Phase 5: material reference prices -----
+
+export const materialIdParamSchema = z.object({ materialId: uuidSchema });

@@ -9,6 +9,13 @@
  * This type lives in its own file to keep `env.ts` and `service-config.ts` free
  * of an import cycle.
  */
+/** One external material-price source (Phase 5) — see ai-material-prices. */
+export interface MaterialPriceSource {
+  name: string;
+  url: string;
+  region?: string;
+}
+
 export interface AppConfig {
   NODE_ENV: 'development' | 'test' | 'production';
   PORT: number;
@@ -45,4 +52,8 @@ export interface AppConfig {
   AI_REQUEST_TIMEOUT_MS: number;
   /** Monthly token ceiling for governance; unlimited when unset. */
   AI_MONTHLY_TOKEN_BUDGET?: number;
+  /** Phase 5 — external material-price sources; empty → sync is a no-op. */
+  AI_MATERIAL_PRICE_SOURCES: MaterialPriceSource[];
+  /** Phase 5 — scheduled sync cadence (hours); unset → manual sync only. */
+  AI_MATERIAL_PRICE_SYNC_INTERVAL_HOURS?: number;
 }

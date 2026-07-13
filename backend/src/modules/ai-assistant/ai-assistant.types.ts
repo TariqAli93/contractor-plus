@@ -101,3 +101,61 @@ export interface ApplySuggestionResult {
   approvalState: AiApprovalState;
   changeOrder: { id: string; number: number; amount: string };
 }
+
+// ----- Phase 5: material reference prices -----
+
+/** One row appended to MaterialReferencePrice (repository input). */
+export interface InsertReferencePriceInput {
+  materialId: string;
+  /** Stored in the source's ORIGINAL currency — never pre-converted (rule #5). */
+  referencePrice: string;
+  referenceCurrency: string;
+  referenceSource: string;
+  referenceRegion?: string | null;
+  referenceUpdatedAt: Date;
+}
+
+/** Latest reference price for a material — form/column display DTO. */
+export interface ReferencePriceDto {
+  materialId: string;
+  price: string;
+  currency: string;
+  source: string;
+  region: string | null;
+  /** When the SOURCE last updated it (drives the staleness hint). */
+  referenceUpdatedAt: string;
+  /** When we fetched it. */
+  fetchedAt: string;
+}
+
+/** A detected reference-price movement for the dashboard card. */
+export interface MaterialPriceChangeDto {
+  materialId: string;
+  materialName: string;
+  unit: string;
+  currency: string;
+  currentPrice: string;
+  previousPrice: string;
+  /** Signed percentage (current vs previous, same currency only). */
+  changePercent: number;
+  direction: 'up' | 'down';
+  source: string;
+  referenceUpdatedAt: string;
+}
+
+/** Result of a sync run — summary only, safe to surface and audit. */
+export interface SyncPricesResult {
+  /** false when no sources are configured (safe no-op). */
+  enabled: boolean;
+  sources: number;
+  /** Price rows received across all sources. */
+  fetched: number;
+  /** Rows matched to a known material. */
+  matched: number;
+  /** Rows appended (== matched; kept distinct for clarity). */
+  inserted: number;
+  /** Rows dropped because no material matched the name. */
+  skippedUnmatched: number;
+  errors: { source: string; message: string }[];
+  ranAt: string;
+}

@@ -7,6 +7,7 @@ import MonthlyFinancialSummary from '@/components/features/dashboard/MonthlyFina
 import DelayedProjectsWidget from '@/components/features/dashboard/DelayedProjectsWidget.vue';
 import OverduePaymentsWidget from '@/components/features/dashboard/OverduePaymentsWidget.vue';
 import AiRecommendationsWidget from '@/components/features/dashboard/AiRecommendationsWidget.vue';
+import MaterialPriceChangesWidget from '@/components/features/dashboard/MaterialPriceChangesWidget.vue';
 import RecentProjectsWidget from '@/components/features/dashboard/RecentProjectsWidget.vue';
 import RecentPaymentsWidget from '@/components/features/dashboard/RecentPaymentsWidget.vue';
 import QuickActionsPanel from '@/components/features/dashboard/QuickActionsPanel.vue';
@@ -61,6 +62,7 @@ onMounted(fetch);
           <FinancialOverviewChart :summary="summary" :loading="loading" />
 
           <AiRecommendationsWidget />
+          <MaterialPriceChangesWidget />
           <DelayedProjectsWidget :projects="delayed" :loading="loading" />
           <OverduePaymentsWidget :groups="overdue" :loading="loading" />
 

@@ -3,6 +3,7 @@
 import { env } from './config/env.js';
 import { buildApp } from './app.js';
 import { runMigrationsIfService } from './setup/migrate-on-boot.js';
+import { startMaterialPriceScheduler } from './modules/ai-assistant/ai-material-prices.scheduler.js';
 
 async function start() {
   // Service mode only: apply pending migrations before anything touches the DB
@@ -17,6 +18,15 @@ async function start() {
     app.log.error(err);
     process.exit(1);
   }
+
+  // Phase 5 — start the scheduled material-price sync IN this backend process
+  // (never Electron). No-op unless a cadence + sources are configured. Manual
+  // sync via the endpoint is always available regardless.
+  const materialPriceScheduler = startMaterialPriceScheduler({
+    prisma: app.prisma,
+    log: app.log,
+    intervalHours: env.AI_MATERIAL_PRICE_SYNC_INTERVAL_HOURS,
+  });
 
   // Re-spawn cloudflared if the user had remote access enabled before the
   // previous shutdown. Best-effort — failures are logged but don't block boot.
@@ -35,6 +45,7 @@ async function start() {
 
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, 'Shutting down...');
+    materialPriceScheduler?.stop();
     if (app.tunnelService) {
       try {
         await app.tunnelService.shutdown();

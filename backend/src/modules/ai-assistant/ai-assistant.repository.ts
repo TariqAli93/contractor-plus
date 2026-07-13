@@ -1,7 +1,20 @@
-import type { AiApprovalState, AiRequestLog, Prisma, PrismaClient } from '@prisma/client';
-import type { CreateAiRequestLogInput } from './ai-assistant.types.js';
+import type {
+  AiApprovalState,
+  AiRequestLog,
+  MaterialReferencePrice,
+  Prisma,
+  PrismaClient,
+} from '@prisma/client';
+import type { CreateAiRequestLogInput, InsertReferencePriceInput } from './ai-assistant.types.js';
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
+
+/** MaterialReferencePrice joined with the minimal material fields the UI needs. */
+export type ReferencePriceWithMaterial = MaterialReferencePrice & {
+  material: { id: string; name: string; unit: string };
+};
+
+const MATERIAL_SELECT = { id: true, name: true, unit: true } as const;
 
 // The ONLY place in the codebase allowed to touch the ai-assistant tables
 // (ai_request_logs, material_reference_prices). Reading OTHER modules' data
@@ -58,5 +71,52 @@ export class AiAssistantRepository {
     client: DbClient = this.prisma,
   ): Promise<AiRequestLog> {
     return client.aiRequestLog.update({ where: { id }, data: { approvalState } });
+  }
+
+  // ---------- Phase 5: material reference prices (append-only history) ----------
+
+  /** Append a reference-price row. History is preserved — nothing is updated. */
+  insertReferencePrice(
+    data: InsertReferencePriceInput,
+    client: DbClient = this.prisma,
+  ): Promise<MaterialReferencePrice> {
+    return client.materialReferencePrice.create({
+      data: {
+        materialId: data.materialId,
+        referencePrice: data.referencePrice,
+        referenceCurrency: data.referenceCurrency,
+        referenceSource: data.referenceSource,
+        referenceRegion: data.referenceRegion ?? null,
+        referenceUpdatedAt: data.referenceUpdatedAt,
+      },
+    });
+  }
+
+  /** Most recent reference price for one material (by the source's date). */
+  findLatestReferencePrice(
+    materialId: string,
+    client: DbClient = this.prisma,
+  ): Promise<ReferencePriceWithMaterial | null> {
+    return client.materialReferencePrice.findFirst({
+      where: { materialId },
+      orderBy: [{ referenceUpdatedAt: 'desc' }, { createdAt: 'desc' }],
+      include: { material: { select: MATERIAL_SELECT } },
+    });
+  }
+
+  /**
+   * Reference-price rows updated on/after `since`, newest first, with the
+   * material joined — the change-detection query. Volume is small (a handful
+   * per material per sync); grouping/limiting happens in the service.
+   */
+  findRecentReferencePrices(
+    since: Date,
+    client: DbClient = this.prisma,
+  ): Promise<ReferencePriceWithMaterial[]> {
+    return client.materialReferencePrice.findMany({
+      where: { referenceUpdatedAt: { gte: since } },
+      orderBy: [{ materialId: 'asc' }, { referenceUpdatedAt: 'desc' }, { createdAt: 'desc' }],
+      include: { material: { select: MATERIAL_SELECT } },
+    });
   }
 }

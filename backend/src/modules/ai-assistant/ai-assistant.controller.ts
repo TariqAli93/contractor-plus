@@ -5,6 +5,7 @@ import type { AiAssistantService } from './ai-assistant.service.js';
 import {
   guardCostBodySchema,
   guardPaymentBodySchema,
+  materialIdParamSchema,
   narrativeBodySchemas,
   narrativeParamsSchema,
   suggestionIdParamSchema,
@@ -63,6 +64,22 @@ export class AiAssistantController {
     const { id } = suggestionIdParamSchema.parse(request.params);
     const result = await this.service.recommendations.rejectSuggestion(id, this.actor(request));
     return reply.code(200).send(result);
+  };
+
+  syncMaterialPrices = async (request: FastifyRequest, reply: FastifyReply) => {
+    const result = await this.service.materialPrices.syncPrices(this.actor(request));
+    return reply.code(200).send(result);
+  };
+
+  materialReferencePrice = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { materialId } = materialIdParamSchema.parse(request.params);
+    const result = await this.service.materialPrices.getLatestForMaterial(materialId);
+    return reply.code(200).send(result);
+  };
+
+  materialPriceChanges = async (_request: FastifyRequest, reply: FastifyReply) => {
+    const result = await this.service.materialPrices.getRecentPriceChanges();
+    return reply.code(200).send({ items: result });
   };
 
   private actor(request: FastifyRequest): AuditActor {

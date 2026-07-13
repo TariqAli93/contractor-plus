@@ -79,5 +79,7 @@ export function buildServiceModeConfig(): AppConfig {
     AI_APP_TITLE: cfg.ai?.appTitle ?? APP_CONSTANTS.AI_APP_TITLE,
     AI_REQUEST_TIMEOUT_MS: cfg.ai?.requestTimeoutMs ?? APP_CONSTANTS.AI_REQUEST_TIMEOUT_MS,
     AI_MONTHLY_TOKEN_BUDGET: cfg.ai?.monthlyTokenBudget,
+    AI_MATERIAL_PRICE_SOURCES: cfg.ai?.materialPriceSources ?? [],
+    AI_MATERIAL_PRICE_SYNC_INTERVAL_HOURS: cfg.ai?.materialPriceSyncIntervalHours,
   };
 }

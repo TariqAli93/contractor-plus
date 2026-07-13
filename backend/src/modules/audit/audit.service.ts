@@ -11,9 +11,24 @@ import type {
 import type { AuditLogWithUser } from './audit.types.js';
 
 export interface AuditActor {
-  userId: string;
+  // `null` attributes a system/scheduled action (e.g. the material-price sync
+  // job). The AuditLog.userId column is nullable; human callers always pass a
+  // real id, so widening this is backward-compatible.
+  userId: string | null;
   ipAddress?: string;
   userAgent?: string;
+}
+
+/**
+ * Narrow an actor to a concrete user id for records that CANNOT be
+ * system-authored (e.g. AiRequestLog.userId is non-nullable — every provider
+ * call is user-initiated). Throws rather than silently writing a bad FK.
+ */
+export function requireUserId(actor: AuditActor): string {
+  if (actor.userId === null) {
+    throw new Error('a user-attributed action was reached with a system actor');
+  }
+  return actor.userId;
 }
 
 export interface AuditLogInput {

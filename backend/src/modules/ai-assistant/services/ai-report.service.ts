@@ -7,7 +7,7 @@ import type {
   AiProvider,
 } from '../../../lib/ai/ai-provider.interface.js';
 import type { AiRuntime, AiRuntimeConfig } from '../../../lib/ai/ai-config.js';
-import type { AuditActor, AuditService } from '../../audit/audit.service.js';
+import { requireUserId, type AuditActor, type AuditService } from '../../audit/audit.service.js';
 import type { ReportsService } from '../../reports/reports.service.js';
 import type {
   CashFlowQuery,
@@ -275,7 +275,7 @@ export class AiReportService {
     },
   ): Promise<AiRequestLog> {
     const log = await this.deps.repo.createRequestLog({
-      userId: actor.userId,
+      userId: requireUserId(actor),
       operationType: input.operationType,
       modelUsed: input.completion.modelUsed,
       sourceModules: input.sourceModules,

@@ -9,6 +9,7 @@ import { SettingsService } from '../settings/settings.service.js';
 import { CostsService } from '../costs/costs.service.js';
 import { PaymentsService } from '../payments/payments.service.js';
 import { ChangeOrdersService } from '../change-orders/change-orders.service.js';
+import { MaterialsService } from '../materials/materials.service.js';
 import { AiAssistantRepository } from './ai-assistant.repository.js';
 import { AiContextService } from './services/ai-context.service.js';
 import { AiReportService } from './services/ai-report.service.js';
@@ -67,7 +68,12 @@ export class AiAssistantService {
       changeOrders: new ChangeOrdersService(prisma),
       settings: settingsService,
     });
-    this.materialPrices = new AiMaterialPricesService();
+    this.materialPrices = new AiMaterialPricesService({
+      repo: this.repo,
+      materials: new MaterialsService(prisma),
+      audit: auditService,
+      sources: env.AI_MATERIAL_PRICE_SOURCES,
+    });
   }
 
   /**

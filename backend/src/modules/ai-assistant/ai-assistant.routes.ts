@@ -3,8 +3,7 @@ import { AiAssistantService } from './ai-assistant.service.js';
 import { AiAssistantController } from './ai-assistant.controller.js';
 
 // AI routes are permission-only (no legacy-role fallback): the module is new,
-// so there are no un-migrated clients to keep compatible. Remaining phase:
-//   Phase 5: POST /materials/sync-prices           (ai.sync-material-prices)
+// so there are no un-migrated clients to keep compatible.
 const aiAssistantRoutes: FastifyPluginAsync = async (fastify) => {
   const service = new AiAssistantService(fastify.prisma);
   const controller = new AiAssistantController(service);
@@ -30,6 +29,12 @@ const aiAssistantRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.requireAccess({ permissions: ['ai.apply-suggestions'] }),
     ],
   };
+  const syncMaterialPrices = {
+    preHandler: [
+      fastify.authenticate,
+      fastify.requireAccess({ permissions: ['ai.sync-material-prices'] }),
+    ],
+  };
 
   fastify.get('/status', use, controller.status);
   // Phase 2 — read-only narrative over the numeric reports.
@@ -43,6 +48,11 @@ const aiAssistantRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/recommendations', viewRecommendations, controller.listRecommendations);
   fastify.post('/suggestions/:id/apply', applySuggestions, controller.applySuggestion);
   fastify.post('/suggestions/:id/reject', applySuggestions, controller.rejectSuggestion);
+  // Phase 5 — external material reference prices. Manual sync is permissioned;
+  // the reads sit behind ai.use so the material form/dashboard can show them.
+  fastify.post('/materials/sync-prices', syncMaterialPrices, controller.syncMaterialPrices);
+  fastify.get('/materials/price-changes', use, controller.materialPriceChanges);
+  fastify.get('/materials/:materialId/reference-price', use, controller.materialReferencePrice);
 };
 
 export default aiAssistantRoutes;

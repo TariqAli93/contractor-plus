@@ -81,3 +81,39 @@ export interface ApplySuggestionResult {
   approvalState: string;
   changeOrder: { id: string; number: number; amount: string };
 }
+
+// ----- Phase 5: material reference prices -----
+
+export interface ReferencePrice {
+  materialId: string;
+  price: string;
+  currency: string;
+  source: string;
+  region: string | null;
+  referenceUpdatedAt: string;
+  fetchedAt: string;
+}
+
+export interface MaterialPriceChange {
+  materialId: string;
+  materialName: string;
+  unit: string;
+  currency: string;
+  currentPrice: string;
+  previousPrice: string;
+  changePercent: number;
+  direction: 'up' | 'down';
+  source: string;
+  referenceUpdatedAt: string;
+}
+
+export interface SyncPricesResult {
+  enabled: boolean;
+  sources: number;
+  fetched: number;
+  matched: number;
+  inserted: number;
+  skippedUnmatched: number;
+  errors: { source: string; message: string }[];
+  ranAt: string;
+}

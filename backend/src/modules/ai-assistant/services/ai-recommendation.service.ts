@@ -9,7 +9,7 @@ import type {
   AiProvider,
 } from '../../../lib/ai/ai-provider.interface.js';
 import type { AiRuntime } from '../../../lib/ai/ai-config.js';
-import type { AuditActor, AuditService } from '../../audit/audit.service.js';
+import { requireUserId, type AuditActor, type AuditService } from '../../audit/audit.service.js';
 import type { ReportsService } from '../../reports/reports.service.js';
 import type { CostsService } from '../../costs/costs.service.js';
 import type { PaymentsService } from '../../payments/payments.service.js';
@@ -367,7 +367,7 @@ export class AiRecommendationService {
         continue;
       }
       const row = await this.deps.repo.createRequestLog({
-        userId: actor.userId,
+        userId: requireUserId(actor),
         operationType: 'RECOMMENDATION',
         // Suggestion rows are born from the deterministic detectors — no
         // model call is behind THIS row, and the label says so.
@@ -528,7 +528,7 @@ export class AiRecommendationService {
   ): Promise<void> {
     try {
       const log = await this.deps.repo.createRequestLog({
-        userId: actor.userId,
+        userId: requireUserId(actor),
         operationType: input.operationType,
         modelUsed: input.completion.modelUsed,
         sourceModules: input.sourceModules,
