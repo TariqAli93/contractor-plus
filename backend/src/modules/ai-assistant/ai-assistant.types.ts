@@ -14,6 +14,46 @@ export interface AiStatusDto {
   monthlyTokenBudget?: number;
 }
 
+// ----- Phase 6: governance / usage -----
+
+export interface AiOperationUsage {
+  operationType: string;
+  tokens: number;
+  count: number;
+}
+
+/** Current-calendar-month token usage from AiRequestLog (governance view). */
+export interface AiMonthlyUsage {
+  /** First instant of the current calendar month (UTC), ISO. */
+  periodStart: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  requestCount: number;
+  /** Configured ceiling; null → unlimited. */
+  budget: number | null;
+  /** budget - totalTokens (never below 0); null when unlimited. */
+  remaining: number | null;
+  overBudget: boolean;
+  byOperation: AiOperationUsage[];
+}
+
+/**
+ * GET /ai/settings payload (ai.manage-settings). Config-sourced values are
+ * reflected READ-ONLY — models/sources/budget live in service.json (prod) or
+ * .env (dev), the single-source-of-truth contract from Phase 1. URLs are
+ * deliberately omitted from the sources list.
+ */
+export interface AiSettingsDto {
+  enabled: boolean;
+  reason?: AiDisabledReason;
+  modelDefault?: string;
+  modelHeavy?: string;
+  usage: AiMonthlyUsage;
+  sources: { name: string; region: string | null }[];
+  syncIntervalHours: number | null;
+}
+
 /**
  * Input for one AiRequestLog row — a governance SUMMARY of a provider call.
  * Deliberately has no field for prompt/response text (binding rule #4).

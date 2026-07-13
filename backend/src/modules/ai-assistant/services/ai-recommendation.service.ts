@@ -10,6 +10,7 @@ import type {
 } from '../../../lib/ai/ai-provider.interface.js';
 import type { AiRuntime } from '../../../lib/ai/ai-config.js';
 import { requireUserId, type AuditActor, type AuditService } from '../../audit/audit.service.js';
+import type { AiBudgetService } from './ai-budget.service.js';
 import type { ReportsService } from '../../reports/reports.service.js';
 import type { CostsService } from '../../costs/costs.service.js';
 import type { PaymentsService } from '../../payments/payments.service.js';
@@ -74,6 +75,7 @@ export interface AiRecommendationServiceDeps {
   payments: PaymentsService;
   changeOrders: ChangeOrdersService;
   settings: SettingsService;
+  budget: AiBudgetService;
 }
 
 export class AiRecommendationService {
@@ -418,6 +420,9 @@ export class AiRecommendationService {
   ): Promise<{ warnings: GuardWarning[]; checked: boolean }> {
     const { runtime, provider } = this.deps;
     if (!runtime.enabled || !provider) return { warnings: [], checked: false };
+    // Over the monthly ceiling → skip the AI layer silently; the deterministic
+    // rules already ran and the guard must never surface an error.
+    if (await this.deps.budget.isOverBudget()) return { warnings: [], checked: false };
 
     let completion: AiCompletionResult;
     try {
@@ -460,6 +465,8 @@ export class AiRecommendationService {
   ): Promise<{ enriched: boolean; modelUsed?: string }> {
     const { runtime, provider } = this.deps;
     if (items.length === 0 || !runtime.enabled || !provider) return { enriched: false };
+    // Over the monthly ceiling → return the deterministic findings un-enriched.
+    if (await this.deps.budget.isOverBudget()) return { enriched: false };
 
     // Internal heavy-model switch — never exposed to the caller.
     const model =

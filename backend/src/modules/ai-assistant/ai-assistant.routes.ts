@@ -35,8 +35,16 @@ const aiAssistantRoutes: FastifyPluginAsync = async (fastify) => {
       fastify.requireAccess({ permissions: ['ai.sync-material-prices'] }),
     ],
   };
+  const manageSettings = {
+    preHandler: [
+      fastify.authenticate,
+      fastify.requireAccess({ permissions: ['ai.manage-settings'] }),
+    ],
+  };
 
   fastify.get('/status', use, controller.status);
+  // Phase 6 — governance view: config reflection + live monthly usage.
+  fastify.get('/settings', manageSettings, controller.settings);
   // Phase 2 — read-only narrative over the numeric reports.
   fastify.post('/reports/:reportType/narrative', generateReports, controller.reportNarrative);
   // Phase 3 — NL text → constrained query → validation gate → ReportsService.

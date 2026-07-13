@@ -117,3 +117,33 @@ export interface SyncPricesResult {
   errors: { source: string; message: string }[];
   ranAt: string;
 }
+
+// ----- Phase 6: governance / settings -----
+
+export interface AiOperationUsage {
+  operationType: string;
+  tokens: number;
+  count: number;
+}
+
+export interface AiMonthlyUsage {
+  periodStart: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  requestCount: number;
+  budget: number | null;
+  remaining: number | null;
+  overBudget: boolean;
+  byOperation: AiOperationUsage[];
+}
+
+export interface AiSettings {
+  enabled: boolean;
+  reason?: AiDisabledReason;
+  modelDefault?: string;
+  modelHeavy?: string;
+  usage: AiMonthlyUsage;
+  sources: { name: string; region: string | null }[];
+  syncIntervalHours: number | null;
+}

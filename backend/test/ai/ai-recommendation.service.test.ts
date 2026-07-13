@@ -16,6 +16,7 @@ import type { CostsService } from '../../src/modules/costs/costs.service.js';
 import type { PaymentsService } from '../../src/modules/payments/payments.service.js';
 import type { ChangeOrdersService } from '../../src/modules/change-orders/change-orders.service.js';
 import type { SettingsService } from '../../src/modules/settings/settings.service.js';
+import type { AiBudgetService } from '../../src/modules/ai-assistant/services/ai-budget.service.js';
 import type { ProjectProfitability } from '../../src/modules/reports/reports.types.js';
 import type {
   AiCompletionInput,
@@ -115,6 +116,7 @@ interface WorldOptions {
   paymentItems?: unknown[];
   provider?: AiProvider | null;
   runtime?: AiRuntime;
+  overBudget?: boolean;
 }
 
 function makeWorld(opts: WorldOptions = {}) {
@@ -156,10 +158,17 @@ function makeWorld(opts: WorldOptions = {}) {
     getDefaultCurrency: async () => CURRENCY,
   } as unknown as SettingsService;
 
+  // Under-budget unless a test opts into over-budget (Phase 6).
+  const budget = {
+    isOverBudget: async () => opts.overBudget ?? false,
+    assertWithinBudget: async () => {},
+    getMonthlyUsage: async () => ({}) as never,
+  } as unknown as AiBudgetService;
+
   const service = new AiRecommendationService({
     runtime: opts.runtime ?? RUNTIME_DISABLED,
     provider: opts.provider ?? null,
-    repo, audit, reports, costs, payments, changeOrders, settings,
+    repo, audit, reports, costs, payments, changeOrders, settings, budget,
   });
   return { service, created, rows, logged, coCalls };
 }
@@ -210,6 +219,20 @@ test('guardCost: AI layer merges model warnings and is governed (SAVE_GUARD row)
   assert.equal(ai?.code, 'ODD_CATEGORY');
   assert.equal(created.length, 1);
   assert.equal(created[0]!.operationType, 'SAVE_GUARD');
+});
+
+test('guardCost: over monthly budget → AI layer skipped, rules still answer (Phase 6)', async () => {
+  const provider = new FakeProvider(
+    JSON.stringify({ warnings: [{ code: 'X', severity: 'info', message: 'y' }] }),
+  );
+  const { service } = makeWorld({
+    single: profRow({ contractValue: '1000.00', totalCosts: '900.00' }),
+    provider, runtime: RUNTIME_ENABLED, overBudget: true,
+  });
+  const result = await service.guardCost(COST_INPUT, ACTOR);
+  assert.ok(result.warnings.some((w) => w.code === 'COSTS_EXCEED_CONTRACT'));
+  assert.equal(result.aiChecked, false); // budget stopped the model layer
+  assert.equal(provider.calls.length, 0);
 });
 
 test('guardCost: provider failure fails OPEN — rules answer, aiChecked=false, no throw', async () => {

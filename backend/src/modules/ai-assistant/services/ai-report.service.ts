@@ -8,6 +8,7 @@ import type {
 } from '../../../lib/ai/ai-provider.interface.js';
 import type { AiRuntime, AiRuntimeConfig } from '../../../lib/ai/ai-config.js';
 import { requireUserId, type AuditActor, type AuditService } from '../../audit/audit.service.js';
+import type { AiBudgetService } from './ai-budget.service.js';
 import type { ReportsService } from '../../reports/reports.service.js';
 import type {
   CashFlowQuery,
@@ -61,6 +62,7 @@ export interface AiReportServiceDeps {
   audit: AuditService;
   reports: ReportsService;
   validation: AiValidationService;
+  budget: AiBudgetService;
 }
 
 export interface ReportNarrativeResult {
@@ -94,6 +96,8 @@ export class AiReportService {
     actor: AuditActor,
   ): Promise<ReportNarrativeResult> {
     const { provider, config } = this.requireEnabled();
+    // Non-critical, explicit request — a clear stop when over the ceiling.
+    await this.deps.budget.assertWithinBudget();
 
     const context = await this.deps.context.buildReportContext(reportType, query);
     const messages = PROMPT_BUILDERS[reportType](context);
@@ -128,7 +132,9 @@ export class AiReportService {
       completion,
       sourceModules: context.sourceModules,
       recordIds: context.recordIds,
-      outputSummary: summarize(output.narrative),
+      // Content-free summary (Phase 6 hardening): structural metadata only, so
+      // AiRequestLog never stores generated narrative text.
+      outputSummary: `narrative(${reportType}): ${output.factors.length} factors, ${output.narrative.length} chars`,
       auditExtra: { reportType },
     });
 
@@ -148,6 +154,7 @@ export class AiReportService {
    */
   async queryFromText(text: string, narrate: boolean, actor: AuditActor): Promise<NlQueryResult> {
     const { provider, config } = this.requireEnabled();
+    await this.deps.budget.assertWithinBudget();
 
     const completion = await provider.complete({
       model: config.modelDefault,

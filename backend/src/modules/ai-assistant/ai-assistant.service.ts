@@ -16,7 +16,8 @@ import { AiReportService } from './services/ai-report.service.js';
 import { AiRecommendationService } from './services/ai-recommendation.service.js';
 import { AiMaterialPricesService } from './services/ai-material-prices.service.js';
 import { AiValidationService } from './services/ai-validation.service.js';
-import type { AiStatusDto, CreateAiRequestLogInput } from './ai-assistant.types.js';
+import { AiBudgetService } from './services/ai-budget.service.js';
+import type { AiSettingsDto, AiStatusDto, CreateAiRequestLogInput } from './ai-assistant.types.js';
 
 // Facade of the ai-assistant module. Data access rules (non-negotiable):
 //   - own tables only via AiAssistantRepository;
@@ -33,6 +34,7 @@ export class AiAssistantService {
   readonly recommendations: AiRecommendationService;
   readonly materialPrices: AiMaterialPricesService;
   readonly validation: AiValidationService;
+  readonly budget: AiBudgetService;
 
   constructor(prisma: PrismaClient, runtime: AiRuntime = resolveAiRuntime(env)) {
     this.repo = new AiAssistantRepository(prisma);
@@ -46,6 +48,9 @@ export class AiAssistantService {
     const reportsService = new ReportsService(prisma);
     const settingsService = new SettingsService(prisma);
     const auditService = new AuditService(prisma);
+    // Ceiling comes from config regardless of enabled state, so the settings
+    // page shows the configured budget + historical usage even when disabled.
+    this.budget = new AiBudgetService(this.repo, env.AI_MONTHLY_TOKEN_BUDGET);
     this.context = new AiContextService(reportsService, settingsService);
     this.validation = new AiValidationService();
     this.reports = new AiReportService({
@@ -56,6 +61,7 @@ export class AiAssistantService {
       audit: auditService,
       reports: reportsService,
       validation: this.validation,
+      budget: this.budget,
     });
     this.recommendations = new AiRecommendationService({
       runtime,
@@ -67,6 +73,7 @@ export class AiAssistantService {
       payments: new PaymentsService(prisma),
       changeOrders: new ChangeOrdersService(prisma),
       settings: settingsService,
+      budget: this.budget,
     });
     this.materialPrices = new AiMaterialPricesService({
       repo: this.repo,
@@ -86,6 +93,27 @@ export class AiAssistantService {
     }
     const { modelDefault, modelHeavy, monthlyTokenBudget } = this.runtime.config;
     return { enabled: true, modelDefault, modelHeavy, monthlyTokenBudget };
+  }
+
+  /**
+   * Phase 6 — the governance/settings view (ai.manage-settings). Reflects the
+   * config-sourced settings READ-ONLY and adds live monthly usage. Model slugs
+   * and source NAMES are not secrets; the API key and source URLs are never
+   * included.
+   */
+  async getSettings(): Promise<AiSettingsDto> {
+    const usage = await this.budget.getMonthlyUsage();
+    const base: AiSettingsDto = {
+      enabled: this.runtime.enabled,
+      usage,
+      sources: env.AI_MATERIAL_PRICE_SOURCES.map((s) => ({
+        name: s.name,
+        region: s.region ?? null,
+      })),
+      syncIntervalHours: env.AI_MATERIAL_PRICE_SYNC_INTERVAL_HOURS ?? null,
+    };
+    if (!this.runtime.enabled) return { ...base, reason: this.runtime.reason };
+    return { ...base, modelDefault: this.runtime.config.modelDefault, modelHeavy: this.runtime.config.modelHeavy };
   }
 
   /**

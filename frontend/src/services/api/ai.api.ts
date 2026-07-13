@@ -1,6 +1,7 @@
 import { apiGet, apiPost } from './client';
 import type {
   AiReportType,
+  AiSettings,
   AiStatus,
   ApplySuggestionResult,
   GuardResult,
@@ -21,6 +22,8 @@ const GUARD_TIMEOUT_MS = 45_000;
 
 export const aiApi = {
   status: (): Promise<AiStatus> => apiGet('/ai/status'),
+
+  settings: (): Promise<AiSettings> => apiGet('/ai/settings'),
 
   reportNarrative: (
     reportType: AiReportType,

@@ -19,6 +19,10 @@ export class AiAssistantController {
     return reply.code(200).send(this.service.getStatus());
   };
 
+  settings = async (_request: FastifyRequest, reply: FastifyReply) => {
+    return reply.code(200).send(await this.service.getSettings());
+  };
+
   reportNarrative = async (request: FastifyRequest, reply: FastifyReply) => {
     const { reportType } = narrativeParamsSchema.parse(request.params);
     // Body carries the SAME filters as the numeric report (whitelist per type).

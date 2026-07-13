@@ -119,4 +119,41 @@ export class AiAssistantRepository {
       include: { material: { select: MATERIAL_SELECT } },
     });
   }
+
+  // ---------- Phase 6: token-usage governance ----------
+
+  /** Total prompt/completion tokens + request count logged on/after `since`. */
+  async sumTokensSince(
+    since: Date,
+    client: DbClient = this.prisma,
+  ): Promise<{ prompt: number; completion: number; count: number }> {
+    const r = await client.aiRequestLog.aggregate({
+      where: { createdAt: { gte: since } },
+      _sum: { tokensPrompt: true, tokensCompletion: true },
+      _count: { _all: true },
+    });
+    return {
+      prompt: r._sum.tokensPrompt ?? 0,
+      completion: r._sum.tokensCompletion ?? 0,
+      count: r._count._all,
+    };
+  }
+
+  /** Per-operation token totals since `since` — the settings breakdown. */
+  async usageByOperationSince(
+    since: Date,
+    client: DbClient = this.prisma,
+  ): Promise<Array<{ operationType: string; tokens: number; count: number }>> {
+    const rows = await client.aiRequestLog.groupBy({
+      by: ['operationType'],
+      where: { createdAt: { gte: since } },
+      _sum: { tokensPrompt: true, tokensCompletion: true },
+      _count: { _all: true },
+    });
+    return rows.map((r) => ({
+      operationType: r.operationType,
+      tokens: (r._sum.tokensPrompt ?? 0) + (r._sum.tokensCompletion ?? 0),
+      count: r._count._all,
+    }));
+  }
 }

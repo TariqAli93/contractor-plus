@@ -1,21 +1,33 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { t } from '@/i18n';
+import { useAccess } from '@/composables/useAccess';
 import GeneralSettingsTab from '@/components/features/settings/GeneralSettingsTab.vue';
 import CompanyProfileTab from '@/components/features/settings/CompanyProfileTab.vue';
 import CurrencyTab from '@/components/features/settings/CurrencyTab.vue';
 import ContractTemplatesTab from '@/components/features/settings/ContractTemplatesTab.vue';
+import AiSettingsTab from '@/components/features/settings/AiSettingsTab.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
 
-const activeTab = ref<'general' | 'company' | 'currency' | 'contractTemplates' | 'links'>('general');
+const { hasPermission } = useAccess();
+const showAi = computed(() => hasPermission('ai.manage-settings'));
 
-const tabs = [
-  { value: 'general', icon: 'mdi-tune' },
-  { value: 'currency', icon: 'mdi-currency-usd' },
-  { value: 'company', icon: 'mdi-domain' },
-  { value: 'contractTemplates', icon: 'mdi-file-document-outline' },
-  { value: 'links', icon: 'mdi-link-variant' },
-] as const;
+const activeTab = ref<'general' | 'company' | 'currency' | 'contractTemplates' | 'ai' | 'links'>(
+  'general',
+);
+
+// The AI governance tab is added only for holders of ai.manage-settings.
+const tabs = computed(
+  () =>
+    [
+      { value: 'general', icon: 'mdi-tune' },
+      { value: 'currency', icon: 'mdi-currency-usd' },
+      { value: 'company', icon: 'mdi-domain' },
+      { value: 'contractTemplates', icon: 'mdi-file-document-outline' },
+      ...(showAi.value ? [{ value: 'ai', icon: 'mdi-robot-outline' } as const] : []),
+      { value: 'links', icon: 'mdi-link-variant' },
+    ] as const,
+);
 </script>
 
 <template>
@@ -33,6 +45,7 @@ const tabs = [
         <v-window-item value="currency"><CurrencyTab /></v-window-item>
         <v-window-item value="company"><CompanyProfileTab /></v-window-item>
         <v-window-item value="contractTemplates"><ContractTemplatesTab /></v-window-item>
+        <v-window-item v-if="showAi" value="ai"><AiSettingsTab /></v-window-item>
         <v-window-item value="links">
           <section class="cp-panel cp-settings__links">
             <RouterLink to="/tunnel" class="cp-settings__link">

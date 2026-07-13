@@ -10,6 +10,7 @@ import test from 'node:test';
 import { AiReportService } from '../../src/modules/ai-assistant/services/ai-report.service.js';
 import { AiContextService } from '../../src/modules/ai-assistant/services/ai-context.service.js';
 import { AiValidationService } from '../../src/modules/ai-assistant/services/ai-validation.service.js';
+import type { AiBudgetService } from '../../src/modules/ai-assistant/services/ai-budget.service.js';
 import type { AiAssistantRepository } from '../../src/modules/ai-assistant/ai-assistant.repository.js';
 import type { CreateAiRequestLogInput } from '../../src/modules/ai-assistant/ai-assistant.types.js';
 import type { AuditActor, AuditLogInput, AuditService } from '../../src/modules/audit/audit.service.js';
@@ -132,10 +133,25 @@ function fakeContextDeps(overrides: Partial<Record<keyof ReportsService, unknown
   return new AiContextService(reports, settings);
 }
 
+/** Under-budget fake unless `overBudget` is set. */
+function fakeBudget(overBudget = false): AiBudgetService {
+  return {
+    assertWithinBudget: async () => {
+      if (overBudget) {
+        const { AppError } = await import('../../src/shared/errors/app-error.js');
+        throw new AppError(429, 'AI_BUDGET_EXCEEDED', 'over budget');
+      }
+    },
+    isOverBudget: async () => overBudget,
+    getMonthlyUsage: async () => ({}) as never,
+  } as unknown as AiBudgetService;
+}
+
 function makeService(opts: {
   provider?: AiProvider | null;
   runtime?: AiRuntime;
   context?: AiContextService;
+  budget?: AiBudgetService;
 }) {
   const { repo, created } = fakeRepo();
   const { audit, logged } = fakeAudit();
@@ -148,6 +164,7 @@ function makeService(opts: {
     audit,
     reports,
     validation: new AiValidationService(),
+    budget: opts.budget ?? fakeBudget(),
   });
   return { service, created, logged, reportsCalls };
 }
@@ -242,6 +259,29 @@ test('disabled runtime → 503 AI_DISABLED before any provider/report work', asy
   );
   assert.equal(provider.calls.length, 0);
   assert.equal(created.length, 0);
+});
+
+test('over monthly budget → 429 AI_BUDGET_EXCEEDED, no provider call (Phase 6)', async () => {
+  const provider = new FakeProvider(GOOD_OUTPUT);
+  const { service, created } = makeService({ provider, budget: fakeBudget(true) });
+  await assert.rejects(
+    service.narrative('cash-flow', {}, ACTOR),
+    (err: unknown) =>
+      err instanceof AppError && err.statusCode === 429 && err.code === 'AI_BUDGET_EXCEEDED',
+  );
+  assert.equal(provider.calls.length, 0);
+  assert.equal(created.length, 0);
+});
+
+test('nl-query over budget → 429, nothing executed', async () => {
+  const provider = new FakeProvider(NL_QUERY_JSON);
+  const { service, reportsCalls } = makeService({ provider, budget: fakeBudget(true) });
+  await assert.rejects(
+    service.queryFromText('التدفق النقدي لهذا الشهر', false, ACTOR),
+    (err: unknown) => err instanceof AppError && err.code === 'AI_BUDGET_EXCEEDED',
+  );
+  assert.equal(provider.calls.length, 0);
+  assert.equal(reportsCalls.length, 0);
 });
 
 // ---------- Phase 3: queryFromText (NL → gate → ReportsService) ----------
