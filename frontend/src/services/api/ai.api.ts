@@ -1,9 +1,20 @@
 import { apiGet, apiPost } from './client';
-import type { AiReportType, AiStatus, ReportNarrative } from '@/types/ai';
+import type {
+  AiReportType,
+  AiStatus,
+  ApplySuggestionResult,
+  GuardResult,
+  RecommendationsResult,
+  ReportNarrative,
+} from '@/types/ai';
 
-// Narrative generation waits on the model round-trip (backend allows 30s) —
-// override the client's default 15s so the browser doesn't give up first.
+// Model round-trips can exceed the client's default 15s (backend allows 30s
+// per provider call, and recommendations may chain a heavy model) — give the
+// AI endpoints their own generous timeouts so the browser doesn't give up
+// first.
 const NARRATIVE_TIMEOUT_MS = 60_000;
+const RECOMMENDATIONS_TIMEOUT_MS = 90_000;
+const GUARD_TIMEOUT_MS = 45_000;
 
 export const aiApi = {
   status: (): Promise<AiStatus> => apiGet('/ai/status'),
@@ -13,4 +24,19 @@ export const aiApi = {
     filters: Record<string, unknown> = {},
   ): Promise<ReportNarrative> =>
     apiPost(`/ai/reports/${reportType}/narrative`, filters, { timeout: NARRATIVE_TIMEOUT_MS }),
+
+  guardCost: (payload: Record<string, unknown>): Promise<GuardResult> =>
+    apiPost('/ai/guard/cost', payload, { timeout: GUARD_TIMEOUT_MS }),
+
+  guardPayment: (payload: Record<string, unknown>): Promise<GuardResult> =>
+    apiPost('/ai/guard/payment', payload, { timeout: GUARD_TIMEOUT_MS }),
+
+  recommendations: (): Promise<RecommendationsResult> =>
+    apiGet('/ai/recommendations', { timeout: RECOMMENDATIONS_TIMEOUT_MS }),
+
+  applySuggestion: (id: string): Promise<ApplySuggestionResult> =>
+    apiPost(`/ai/suggestions/${id}/apply`),
+
+  rejectSuggestion: (id: string): Promise<{ suggestionId: string; approvalState: string }> =>
+    apiPost(`/ai/suggestions/${id}/reject`),
 };

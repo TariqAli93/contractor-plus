@@ -2,7 +2,13 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { UnauthorizedError } from '../../shared/errors/unauthorized.error.js';
 import type { AuditActor } from '../audit/audit.service.js';
 import type { AiAssistantService } from './ai-assistant.service.js';
-import { narrativeBodySchemas, narrativeParamsSchema } from './ai-assistant.schemas.js';
+import {
+  guardCostBodySchema,
+  guardPaymentBodySchema,
+  narrativeBodySchemas,
+  narrativeParamsSchema,
+  suggestionIdParamSchema,
+} from './ai-assistant.schemas.js';
 import { nlQueryBodySchema } from './ai-query.schema.js';
 
 export class AiAssistantController {
@@ -27,6 +33,35 @@ export class AiAssistantController {
       body.narrate,
       this.actor(request),
     );
+    return reply.code(200).send(result);
+  };
+
+  guardCost = async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = guardCostBodySchema.parse(request.body ?? {});
+    const result = await this.service.recommendations.guardCost(body, this.actor(request));
+    return reply.code(200).send(result);
+  };
+
+  guardPayment = async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = guardPaymentBodySchema.parse(request.body ?? {});
+    const result = await this.service.recommendations.guardPayment(body, this.actor(request));
+    return reply.code(200).send(result);
+  };
+
+  listRecommendations = async (request: FastifyRequest, reply: FastifyReply) => {
+    const result = await this.service.recommendations.listRecommendations(this.actor(request));
+    return reply.code(200).send(result);
+  };
+
+  applySuggestion = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = suggestionIdParamSchema.parse(request.params);
+    const result = await this.service.recommendations.applySuggestion(id, this.actor(request));
+    return reply.code(200).send(result);
+  };
+
+  rejectSuggestion = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = suggestionIdParamSchema.parse(request.params);
+    const result = await this.service.recommendations.rejectSuggestion(id, this.actor(request));
     return reply.code(200).send(result);
   };
 

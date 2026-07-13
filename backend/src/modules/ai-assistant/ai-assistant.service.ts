@@ -6,6 +6,9 @@ import type { AiProvider } from '../../lib/ai/ai-provider.interface.js';
 import { AuditService } from '../audit/audit.service.js';
 import { ReportsService } from '../reports/reports.service.js';
 import { SettingsService } from '../settings/settings.service.js';
+import { CostsService } from '../costs/costs.service.js';
+import { PaymentsService } from '../payments/payments.service.js';
+import { ChangeOrdersService } from '../change-orders/change-orders.service.js';
 import { AiAssistantRepository } from './ai-assistant.repository.js';
 import { AiContextService } from './services/ai-context.service.js';
 import { AiReportService } from './services/ai-report.service.js';
@@ -40,18 +43,30 @@ export class AiAssistantService {
       : null;
 
     const reportsService = new ReportsService(prisma);
-    this.context = new AiContextService(reportsService, new SettingsService(prisma));
+    const settingsService = new SettingsService(prisma);
+    const auditService = new AuditService(prisma);
+    this.context = new AiContextService(reportsService, settingsService);
     this.validation = new AiValidationService();
     this.reports = new AiReportService({
       runtime,
       provider,
       context: this.context,
       repo: this.repo,
-      audit: new AuditService(prisma),
+      audit: auditService,
       reports: reportsService,
       validation: this.validation,
     });
-    this.recommendations = new AiRecommendationService();
+    this.recommendations = new AiRecommendationService({
+      runtime,
+      provider,
+      repo: this.repo,
+      audit: auditService,
+      reports: reportsService,
+      costs: new CostsService(prisma),
+      payments: new PaymentsService(prisma),
+      changeOrders: new ChangeOrdersService(prisma),
+      settings: settingsService,
+    });
     this.materialPrices = new AiMaterialPricesService();
   }
 

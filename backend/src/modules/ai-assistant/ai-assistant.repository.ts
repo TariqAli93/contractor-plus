@@ -1,4 +1,4 @@
-import type { AiRequestLog, Prisma, PrismaClient } from '@prisma/client';
+import type { AiApprovalState, AiRequestLog, Prisma, PrismaClient } from '@prisma/client';
 import type { CreateAiRequestLogInput } from './ai-assistant.types.js';
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
@@ -28,5 +28,35 @@ export class AiAssistantRepository {
         approvalState: data.approvalState ?? 'NONE',
       },
     });
+  }
+
+  findRequestLogById(id: string, client: DbClient = this.prisma): Promise<AiRequestLog | null> {
+    return client.aiRequestLog.findUnique({ where: { id } });
+  }
+
+  /**
+   * The dedupe lookup for applicable suggestions: one PENDING suggestion per
+   * target record — refreshing the recommendations list never spawns twins.
+   */
+  findPendingSuggestionByRecordId(
+    recordId: string,
+    client: DbClient = this.prisma,
+  ): Promise<AiRequestLog | null> {
+    return client.aiRequestLog.findFirst({
+      where: {
+        operationType: 'RECOMMENDATION',
+        approvalState: 'PENDING',
+        recordIds: { has: recordId },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  updateApprovalState(
+    id: string,
+    approvalState: AiApprovalState,
+    client: DbClient = this.prisma,
+  ): Promise<AiRequestLog> {
+    return client.aiRequestLog.update({ where: { id }, data: { approvalState } });
   }
 }

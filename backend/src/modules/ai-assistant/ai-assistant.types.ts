@@ -30,3 +30,74 @@ export interface CreateAiRequestLogInput {
   outputSummary: string;
   approvalState?: AiApprovalState;
 }
+
+// ----- Phase 4: save-guards -----
+
+export type GuardWarningSeverity = 'info' | 'warning';
+
+export interface GuardWarning {
+  code: string;
+  severity: GuardWarningSeverity;
+  /** 'rule' = deterministic check; 'ai' = model-suggested sanity note. */
+  source: 'rule' | 'ai';
+  message: string;
+}
+
+/**
+ * Advisory ONLY. The guard endpoint never blocks anything — existing
+ * programmatic validation in costs/payments stays authoritative, and the
+ * frontend saves regardless of what is returned here.
+ */
+export interface GuardResult {
+  warnings: GuardWarning[];
+  /** false when AI is disabled or the model layer failed (rules still ran). */
+  aiChecked: boolean;
+}
+
+// ----- Phase 4: recommendations & suggestions -----
+
+export type RecommendationKind =
+  | 'NEGATIVE_MARGIN'
+  | 'LOW_MARGIN'
+  | 'SPEND_WITHOUT_PROGRESS'
+  | 'REPEAT_LATE_CUSTOMER'
+  | 'MATERIAL_PRICE_RISE';
+
+export type RecommendationSeverity = 'info' | 'warning' | 'critical';
+
+export interface RecommendationItem {
+  /** Stable finding id: `<kind>:<entityId>` — also the LLM join key. */
+  id: string;
+  kind: RecommendationKind;
+  severity: RecommendationSeverity;
+  title: string;
+  detail: string;
+  projectId?: string;
+  projectName?: string;
+  contractId?: string;
+  contractNumber?: string;
+  customerId?: string;
+  customerName?: string;
+  materialId?: string;
+  materialName?: string;
+  /** true ⇒ a PENDING suggestion exists and can be applied via approval. */
+  applicable: boolean;
+  /** AiRequestLog row id of the PENDING suggestion (when applicable). */
+  suggestionId?: string;
+  /** 1 (low) … 5 (urgent) — model-assigned when enrichment ran. */
+  aiPriority?: number;
+  aiAdvice?: string;
+}
+
+export interface RecommendationsResult {
+  items: RecommendationItem[];
+  aiEnriched: boolean;
+  modelUsed?: string;
+  generatedAt: string;
+}
+
+export interface ApplySuggestionResult {
+  suggestionId: string;
+  approvalState: AiApprovalState;
+  changeOrder: { id: string; number: number; amount: string };
+}

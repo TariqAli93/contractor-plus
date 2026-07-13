@@ -3,9 +3,12 @@ import { computed, onMounted, ref } from 'vue';
 import { t } from '@/i18n';
 import { usePaymentForm } from '@/composables/usePaymentForm';
 import { useSaveShortcut } from '@/composables/useSaveShortcut';
+import { useSaveGuard } from '@/composables/useSaveGuard';
+import { useAccess } from '@/composables/useAccess';
 import { projectsApi } from '@/services/api/projects.api';
 import { PaymentMethod } from '@/types/enums';
 import AdvancedOptions from '@/components/shared/AdvancedOptions.vue';
+import GuardWarningsPanel from '@/components/features/ai/GuardWarningsPanel.vue';
 import type { ProjectWithContract } from '@/types/project';
 
 const props = defineProps<{ id?: string; initialProjectId?: string }>();
@@ -14,7 +17,26 @@ const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } =
   props.initialProjectId,
 );
 
-useSaveShortcut(submit, { enabled: () => !submitting.value });
+// Pre-save AI guard: advisory warnings on NEW payments only; saving is NEVER
+// blocked (first submit fetches warnings, the second always goes through).
+const guard = useSaveGuard('payment');
+const { hasPermission } = useAccess();
+const guardEnabled = computed(() => !isEdit && hasPermission('ai.use'));
+
+async function submitGuarded() {
+  if (!guardEnabled.value || guard.shown.value) return submit();
+  const found = await guard.check({
+    projectId: form.value.projectId,
+    amount: form.value.amount,
+    dueDate: form.value.dueDate,
+    method: form.value.method,
+    reference: form.value.reference,
+    notes: form.value.notes,
+  });
+  if (found.length === 0) return submit();
+}
+
+useSaveShortcut(submitGuarded, { enabled: () => !submitting.value });
 
 const projects = ref<ProjectWithContract[]>([]);
 const projectsLoading = ref(false);
@@ -67,7 +89,7 @@ const hasAdvanced = computed(
 
 <template>
   <v-card :loading="loading || projectsLoading">
-    <v-form @submit.prevent="submit">
+    <v-form @submit.prevent="submitGuarded">
       <v-card-text class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <v-select
           v-model="form.projectId"
@@ -123,6 +145,8 @@ const hasAdvanced = computed(
         </AdvancedOptions>
       </v-card-text>
 
+      <GuardWarningsPanel :warnings="guard.warnings.value" />
+
       <v-divider />
 
       <v-card-actions class="px-4 py-3">
@@ -130,8 +154,19 @@ const hasAdvanced = computed(
           {{ t('common.cancel') }}
         </v-btn>
         <v-spacer />
-        <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
-          {{ isEdit ? t('common.saveChanges') : t('payments.add') }}
+        <v-btn
+          type="submit"
+          color="primary"
+          variant="flat"
+          :loading="submitting || guard.checking.value"
+        >
+          {{
+            guard.warnings.value.length
+              ? t('aiGuard.saveAnyway')
+              : isEdit
+                ? t('common.saveChanges')
+                : t('payments.add')
+          }}
         </v-btn>
       </v-card-actions>
     </v-form>

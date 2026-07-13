@@ -3,10 +3,13 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { t } from '@/i18n';
 import { useCostForm } from '@/composables/useCostForm';
 import { useSaveShortcut } from '@/composables/useSaveShortcut';
+import { useSaveGuard } from '@/composables/useSaveGuard';
+import { useAccess } from '@/composables/useAccess';
 import { projectsApi } from '@/services/api/projects.api';
 import { materialsApi } from '@/services/api/materials.api';
 import { CostCategory } from '@/types/enums';
 import AdvancedOptions from '@/components/shared/AdvancedOptions.vue';
+import GuardWarningsPanel from '@/components/features/ai/GuardWarningsPanel.vue';
 import type { ProjectWithContract } from '@/types/project';
 import type { Material } from '@/types/material';
 
@@ -16,7 +19,32 @@ const { form, isEdit, loading, submitting, fieldErrors, load, submit, cancel } =
   props.initialProjectId,
 );
 
-useSaveShortcut(submit, { enabled: () => !submitting.value });
+// Pre-save AI guard: advisory warnings on NEW entries only (an edit would
+// flag itself as its own duplicate). Saving is NEVER blocked — the first
+// submit fetches warnings, the second one always goes through.
+const guard = useSaveGuard('cost');
+const { hasPermission } = useAccess();
+const guardEnabled = computed(() => !isEdit && hasPermission('ai.use'));
+
+async function submitGuarded() {
+  if (!guardEnabled.value || guard.shown.value) return submit();
+  const found = await guard.check({
+    projectId: form.value.projectId,
+    category: form.value.category,
+    materialId: form.value.materialId,
+    description: form.value.description,
+    quantity: form.value.quantity,
+    unit: form.value.unit,
+    unitPrice: form.value.unitPrice,
+    totalAmount: form.value.totalAmount ?? undefined,
+    date: form.value.date,
+    notes: form.value.notes,
+  });
+  if (found.length === 0) return submit();
+  // Warnings rendered inline; the save button now reads "حفظ رغم التحذيرات".
+}
+
+useSaveShortcut(submitGuarded, { enabled: () => !submitting.value });
 
 // Lightweight pickers - both endpoints are cheap to call once and small
 // enough that we don't need autocomplete-with-fetch.
@@ -104,7 +132,7 @@ const hasAdvanced = computed(() => form.value.totalAmount !== null || !!form.val
 
 <template>
   <v-card :loading="loading || projectsLoading || materialsLoading">
-    <v-form @submit.prevent="submit">
+    <v-form @submit.prevent="submitGuarded">
       <v-card-text class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <v-select
           v-model="form.projectId"
@@ -200,6 +228,8 @@ const hasAdvanced = computed(() => form.value.totalAmount !== null || !!form.val
         </AdvancedOptions>
       </v-card-text>
 
+      <GuardWarningsPanel :warnings="guard.warnings.value" />
+
       <v-divider />
 
       <v-card-actions class="px-4 py-3">
@@ -207,8 +237,19 @@ const hasAdvanced = computed(() => form.value.totalAmount !== null || !!form.val
           {{ t('common.cancel') }}
         </v-btn>
         <v-spacer />
-        <v-btn type="submit" color="primary" variant="flat" :loading="submitting">
-          {{ isEdit ? t('common.saveChanges') : t('costs.add') }}
+        <v-btn
+          type="submit"
+          color="primary"
+          variant="flat"
+          :loading="submitting || guard.checking.value"
+        >
+          {{
+            guard.warnings.value.length
+              ? t('aiGuard.saveAnyway')
+              : isEdit
+                ? t('common.saveChanges')
+                : t('costs.add')
+          }}
         </v-btn>
       </v-card-actions>
     </v-form>
