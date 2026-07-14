@@ -4,13 +4,10 @@ import { NotFoundError } from '../../../shared/errors/not-found.error.js';
 import { extractJsonObject } from '../../../lib/ai/extract-json.js';
 import { formatMoney } from '../../../lib/docx/format-money.js';
 import { money, round, toMoneyString, type Money } from '../../../lib/money.js';
-import type {
-  AiCompletionResult,
-  AiProvider,
-} from '../../../lib/ai/ai-provider.interface.js';
-import type { AiRuntime } from '../../../lib/ai/ai-config.js';
+import type { AiCompletionResult } from '../../../lib/ai/ai-provider.interface.js';
 import { requireUserId, type AuditActor, type AuditService } from '../../audit/audit.service.js';
 import type { AiBudgetService } from './ai-budget.service.js';
+import type { AiSettingsService } from './ai-settings.service.js';
 import type { ReportsService } from '../../reports/reports.service.js';
 import type { CostsService } from '../../costs/costs.service.js';
 import type { PaymentsService } from '../../payments/payments.service.js';
@@ -66,14 +63,15 @@ const MATERIAL_MIN_SAMPLES = 2;
 const HEAVY_MODEL_FINDINGS_THRESHOLD = 5;
 
 export interface AiRecommendationServiceDeps {
-  runtime: AiRuntime;
-  provider: AiProvider | null;
+  /** AI control point — resolves the provider + gates each feature. */
+  aiSettings: AiSettingsService;
   repo: AiAssistantRepository;
   audit: AuditService;
   reports: ReportsService;
   costs: CostsService;
   payments: PaymentsService;
   changeOrders: ChangeOrdersService;
+  /** The app settings module — used here only for the default currency. */
   settings: SettingsService;
   budget: AiBudgetService;
 }
@@ -418,16 +416,18 @@ export class AiRecommendationService {
     projectId: string,
     actor: AuditActor,
   ): Promise<{ warnings: GuardWarning[]; checked: boolean }> {
-    const { runtime, provider } = this.deps;
-    if (!runtime.enabled || !provider) return { warnings: [], checked: false };
-    // Over the monthly ceiling → skip the AI layer silently; the deterministic
-    // rules already ran and the guard must never surface an error.
+    // Gate: system on + save_guard feature on + key/model. Disabled → skip
+    // silently (rules already ran; the guard must never surface an error).
+    const resolved = await this.deps.aiSettings.optionalProviderForFeature('save_guard');
+    if (!resolved) return { warnings: [], checked: false };
+    const { provider, config } = resolved;
+    // Over the monthly ceiling → skip the AI layer silently.
     if (await this.deps.budget.isOverBudget()) return { warnings: [], checked: false };
 
     let completion: AiCompletionResult;
     try {
       completion = await provider.complete({
-        model: runtime.config.modelDefault,
+        model: config.modelDefault,
         messages: buildSaveGuardMessages(entity, payload),
         responseFormat: 'json_object',
         temperature: AI_TEMPERATURE,
@@ -463,16 +463,17 @@ export class AiRecommendationService {
     items: RecommendationItem[],
     actor: AuditActor,
   ): Promise<{ enriched: boolean; modelUsed?: string }> {
-    const { runtime, provider } = this.deps;
-    if (items.length === 0 || !runtime.enabled || !provider) return { enriched: false };
+    if (items.length === 0) return { enriched: false };
+    // Gate: recommendations feature on + key/model. Disabled → un-enriched.
+    const resolved = await this.deps.aiSettings.optionalProviderForFeature('recommendations');
+    if (!resolved) return { enriched: false };
+    const { provider, config } = resolved;
     // Over the monthly ceiling → return the deterministic findings un-enriched.
     if (await this.deps.budget.isOverBudget()) return { enriched: false };
 
     // Internal heavy-model switch — never exposed to the caller.
     const model =
-      items.length >= HEAVY_MODEL_FINDINGS_THRESHOLD
-        ? runtime.config.modelHeavy
-        : runtime.config.modelDefault;
+      items.length >= HEAVY_MODEL_FINDINGS_THRESHOLD ? config.modelHeavy : config.modelDefault;
     const currency = await this.deps.settings.getDefaultCurrency();
     const currencyLabel = currency ? `${currency.symbol} (${currency.code})` : '';
 

@@ -17,6 +17,7 @@ import type { PaymentsService } from '../../src/modules/payments/payments.servic
 import type { ChangeOrdersService } from '../../src/modules/change-orders/change-orders.service.js';
 import type { SettingsService } from '../../src/modules/settings/settings.service.js';
 import type { AiBudgetService } from '../../src/modules/ai-assistant/services/ai-budget.service.js';
+import type { AiSettingsService } from '../../src/modules/ai-assistant/services/ai-settings.service.js';
 import type { ProjectProfitability } from '../../src/modules/reports/reports.types.js';
 import type {
   AiCompletionInput,
@@ -165,9 +166,18 @@ function makeWorld(opts: WorldOptions = {}) {
     getMonthlyUsage: async () => ({}) as never,
   } as unknown as AiBudgetService;
 
+  // Central gate fake — yields the provider only when runtime is enabled.
+  const runtime = opts.runtime ?? RUNTIME_DISABLED;
+  const provider = opts.provider ?? null;
+  const aiSettings = {
+    optionalProviderForFeature: async () =>
+      runtime.enabled && provider ? { provider, config: runtime.config } : null,
+    isFeatureEnabled: async () => runtime.enabled,
+    resolveRuntime: async () => runtime,
+  } as unknown as AiSettingsService;
+
   const service = new AiRecommendationService({
-    runtime: opts.runtime ?? RUNTIME_DISABLED,
-    provider: opts.provider ?? null,
+    aiSettings,
     repo, audit, reports, costs, payments, changeOrders, settings, budget,
   });
   return { service, created, rows, logged, coCalls };

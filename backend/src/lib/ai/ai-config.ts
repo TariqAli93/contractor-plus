@@ -17,7 +17,7 @@ export interface AiRuntimeConfig {
   monthlyTokenBudget?: number;
 }
 
-export type AiDisabledReason = 'NO_API_KEY' | 'NO_DEFAULT_MODEL';
+export type AiDisabledReason = 'NO_API_KEY' | 'NO_DEFAULT_MODEL' | 'SYSTEM_DISABLED';
 
 export type AiRuntime =
   | { enabled: true; config: AiRuntimeConfig }

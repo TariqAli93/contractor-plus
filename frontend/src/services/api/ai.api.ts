@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from './client';
+import { apiDelete, apiGet, apiPost, apiPut } from './client';
 import type {
   AiReportType,
   AiSettings,
@@ -10,6 +10,7 @@ import type {
   ReferencePrice,
   ReportNarrative,
   SyncPricesResult,
+  UpdateAiSettingsPayload,
 } from '@/types/ai';
 
 // Model round-trips can exceed the client's default 15s (backend allows 30s
@@ -24,6 +25,16 @@ export const aiApi = {
   status: (): Promise<AiStatus> => apiGet('/ai/status'),
 
   settings: (): Promise<AiSettings> => apiGet('/ai/settings'),
+
+  updateSettings: (payload: UpdateAiSettingsPayload): Promise<AiSettings> =>
+    apiPut('/ai/settings', payload),
+
+  // The key round-trips through a live OpenRouter validation on the server —
+  // allow generous time. The raw key is sent once and never held after.
+  setApiKey: (apiKey: string): Promise<AiSettings> =>
+    apiPut('/ai/settings/api-key', { apiKey }, { timeout: 30_000 }),
+
+  clearApiKey: (): Promise<AiSettings> => apiDelete('/ai/settings/api-key'),
 
   reportNarrative: (
     reportType: AiReportType,

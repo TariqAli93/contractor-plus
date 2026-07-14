@@ -1,13 +1,23 @@
 import type {
   AiApprovalState,
+  AiProviderCredential,
   AiRequestLog,
+  AiSetting,
   MaterialReferencePrice,
   Prisma,
   PrismaClient,
 } from '@prisma/client';
-import type { CreateAiRequestLogInput, InsertReferencePriceInput } from './ai-assistant.types.js';
+import type {
+  CreateAiRequestLogInput,
+  InsertReferencePriceInput,
+  SaveCredentialInput,
+  UpdateAiSettingInput,
+} from './ai-assistant.types.js';
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
+
+/** Fixed id for the credential + settings singletons. */
+const SINGLETON_ID = 'default';
 
 /** MaterialReferencePrice joined with the minimal material fields the UI needs. */
 export type ReferencePriceWithMaterial = MaterialReferencePrice & {
@@ -155,5 +165,55 @@ export class AiAssistantRepository {
       tokens: (r._sum.tokensPrompt ?? 0) + (r._sum.tokensCompletion ?? 0),
       count: r._count._all,
     }));
+  }
+
+  // ---------- Phase 2.5: encrypted credential (singleton) ----------
+
+  /** The active encrypted credential, or null. NEVER contains the raw key. */
+  findActiveCredential(client: DbClient = this.prisma): Promise<AiProviderCredential | null> {
+    return client.aiProviderCredential.findFirst({ where: { id: SINGLETON_ID, isActive: true } });
+  }
+
+  /** Store/replace the singleton credential (already-encrypted fields only). */
+  saveCredential(
+    data: SaveCredentialInput,
+    client: DbClient = this.prisma,
+  ): Promise<AiProviderCredential> {
+    const fields = {
+      ciphertext: data.ciphertext,
+      iv: data.iv,
+      authTag: data.authTag,
+      lastFour: data.lastFour,
+      isActive: true,
+      validatedAt: data.validatedAt ?? null,
+      createdById: data.createdById ?? null,
+    };
+    return client.aiProviderCredential.upsert({
+      where: { id: SINGLETON_ID },
+      update: fields,
+      create: { id: SINGLETON_ID, ...fields },
+    });
+  }
+
+  /** Remove the DB credential entirely (env key, if any, still works). */
+  async deleteCredential(client: DbClient = this.prisma): Promise<void> {
+    await client.aiProviderCredential.deleteMany({ where: { id: SINGLETON_ID } });
+  }
+
+  // ---------- Phase 2.5: control-panel settings (singleton) ----------
+
+  /** The settings row, or null when none exists yet (→ all defaults apply). */
+  findSettings(client: DbClient = this.prisma): Promise<AiSetting | null> {
+    return client.aiSetting.findUnique({ where: { id: SINGLETON_ID } });
+  }
+
+  /** Upsert the settings singleton with only the provided fields. */
+  saveSettings(data: UpdateAiSettingInput, client: DbClient = this.prisma): Promise<AiSetting> {
+    // Cast to the unchecked shapes: our fields map 1:1 to columns (scalar
+    // `updatedById` + Json `features`/`materialPriceSources`), which the
+    // relation-based checked types don't accept directly.
+    const update = { ...data, updatedAt: new Date() } as Prisma.AiSettingUncheckedUpdateInput;
+    const create = { id: SINGLETON_ID, ...data } as Prisma.AiSettingUncheckedCreateInput;
+    return client.aiSetting.upsert({ where: { id: SINGLETON_ID }, update, create });
   }
 }

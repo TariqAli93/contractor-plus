@@ -122,6 +122,12 @@ export interface ServiceAiConfig {
   materialPriceSources?: ServiceMaterialPriceSource[];
   /** Phase 5 — scheduled sync cadence (hours). Absent → manual sync only. */
   materialPriceSyncIntervalHours?: number;
+  /**
+   * Phase 2.5 — encrypts the DB-stored OpenRouter key (AES-256-GCM). Absent
+   * or <32 bytes → DB-key management disabled. Provision it like the other
+   * service.json secrets (DPAPI + ACL). Never logged/returned.
+   */
+  encryptionKey?: string;
 }
 
 /**
@@ -483,6 +489,7 @@ export const ServiceConfigSchema = {
           'ai.materialPriceSyncIntervalHours',
           configPath,
         ),
+        encryptionKey: optionalString(aiRaw, ['encryptionKey'], 'ai.encryptionKey', configPath),
       };
     }
 

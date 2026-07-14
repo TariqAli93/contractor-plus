@@ -56,4 +56,11 @@ export interface AppConfig {
   AI_MATERIAL_PRICE_SOURCES: MaterialPriceSource[];
   /** Phase 5 — scheduled sync cadence (hours); unset → manual sync only. */
   AI_MATERIAL_PRICE_SYNC_INTERVAL_HOURS?: number;
+  /**
+   * Phase 2.5 — symmetric key for encrypting the DB-stored OpenRouter key at
+   * rest (AES-256-GCM). Hex/base64/≥32-byte string. Absent or <32 bytes →
+   * DB-key management is safely disabled (the env key still works). NEVER
+   * logged or returned by any endpoint.
+   */
+  ENCRYPTION_KEY?: string;
 }

@@ -11,6 +11,7 @@ import { AiReportService } from '../../src/modules/ai-assistant/services/ai-repo
 import { AiContextService } from '../../src/modules/ai-assistant/services/ai-context.service.js';
 import { AiValidationService } from '../../src/modules/ai-assistant/services/ai-validation.service.js';
 import type { AiBudgetService } from '../../src/modules/ai-assistant/services/ai-budget.service.js';
+import type { AiSettingsService } from '../../src/modules/ai-assistant/services/ai-settings.service.js';
 import type { AiAssistantRepository } from '../../src/modules/ai-assistant/ai-assistant.repository.js';
 import type { CreateAiRequestLogInput } from '../../src/modules/ai-assistant/ai-assistant.types.js';
 import type { AuditActor, AuditLogInput, AuditService } from '../../src/modules/audit/audit.service.js';
@@ -138,13 +139,26 @@ function fakeBudget(overBudget = false): AiBudgetService {
   return {
     assertWithinBudget: async () => {
       if (overBudget) {
-        const { AppError } = await import('../../src/shared/errors/app-error.js');
         throw new AppError(429, 'AI_BUDGET_EXCEEDED', 'over budget');
       }
     },
     isOverBudget: async () => overBudget,
     getMonthlyUsage: async () => ({}) as never,
   } as unknown as AiBudgetService;
+}
+
+/** Central-gate fake: yields the provider when the runtime is enabled. */
+function fakeAiSettings(provider: AiProvider | null, runtime: AiRuntime): AiSettingsService {
+  return {
+    requireProviderForFeature: async () => {
+      if (!runtime.enabled) throw new AppError(503, 'AI_DISABLED', 'disabled');
+      return { provider: provider!, config: runtime.config };
+    },
+    optionalProviderForFeature: async () =>
+      runtime.enabled && provider ? { provider, config: runtime.config } : null,
+    isFeatureEnabled: async () => runtime.enabled,
+    resolveRuntime: async () => runtime,
+  } as unknown as AiSettingsService;
 }
 
 function makeService(opts: {
@@ -156,9 +170,10 @@ function makeService(opts: {
   const { repo, created } = fakeRepo();
   const { audit, logged } = fakeAudit();
   const { reports, calls: reportsCalls } = fakeReportsService();
+  const runtime = opts.runtime ?? RUNTIME_ENABLED;
+  const provider = opts.provider ?? new FakeProvider(GOOD_OUTPUT);
   const service = new AiReportService({
-    runtime: opts.runtime ?? RUNTIME_ENABLED,
-    provider: opts.provider ?? new FakeProvider(GOOD_OUTPUT),
+    settings: fakeAiSettings(provider, runtime),
     context: opts.context ?? fakeContextDeps(),
     repo,
     audit,

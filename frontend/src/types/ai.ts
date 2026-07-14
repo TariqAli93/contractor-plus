@@ -138,12 +138,53 @@ export interface AiMonthlyUsage {
   byOperation: AiOperationUsage[];
 }
 
+// Phase 2.5 — control panel.
+export const AI_FEATURE_KEYS = [
+  'report_narrative',
+  'nl_query',
+  'save_guard',
+  'recommendations',
+  'chat',
+] as const;
+export type AiFeatureKey = (typeof AI_FEATURE_KEYS)[number];
+
+export type AiKeyStatus = 'set_env' | 'set_db' | 'unset';
+
+export interface AiKeyInfo {
+  status: AiKeyStatus;
+  lastFour?: string;
+  validatedAt?: string;
+  managedByEnv: boolean;
+}
+
+export interface AiPriceSource {
+  name: string;
+  url: string;
+  region?: string;
+}
+
 export interface AiSettings {
   enabled: boolean;
-  reason?: AiDisabledReason;
+  reason?: AiDisabledReason | 'SYSTEM_DISABLED';
+  systemEnabled: boolean;
+  features: Record<AiFeatureKey, boolean>;
   modelDefault?: string;
   modelHeavy?: string;
+  modelAllowlist: string[];
+  keyManagementEnabled: boolean;
+  key: AiKeyInfo;
+  monthlyTokenBudget: number | null;
   usage: AiMonthlyUsage;
-  sources: { name: string; region: string | null }[];
+  sources: AiPriceSource[];
   syncIntervalHours: number | null;
+}
+
+/** PUT /ai/settings — every field optional (partial update). */
+export interface UpdateAiSettingsPayload {
+  systemEnabled?: boolean;
+  features?: Partial<Record<AiFeatureKey, boolean>>;
+  modelDefault?: string | null;
+  modelHeavy?: string | null;
+  monthlyTokenBudget?: number | null;
+  materialPriceSources?: AiPriceSource[];
 }

@@ -20,7 +20,7 @@ function fakeRepo(prompt: number, completion: number, count = 1) {
 }
 
 test('no budget configured → unlimited: never over budget, budget/remaining null', async () => {
-  const svc = new AiBudgetService(fakeRepo(1000, 500), undefined);
+  const svc = new AiBudgetService(fakeRepo(1000, 500), async () => undefined);
   assert.equal(await svc.isOverBudget(), false);
   const usage = await svc.getMonthlyUsage();
   assert.equal(usage.totalTokens, 1500);
@@ -31,7 +31,7 @@ test('no budget configured → unlimited: never over budget, budget/remaining nu
 });
 
 test('under budget: remaining computed, not over', async () => {
-  const svc = new AiBudgetService(fakeRepo(600, 300), 2000);
+  const svc = new AiBudgetService(fakeRepo(600, 300), async () => 2000);
   const usage = await svc.getMonthlyUsage();
   assert.equal(usage.totalTokens, 900);
   assert.equal(usage.budget, 2000);
@@ -41,7 +41,7 @@ test('under budget: remaining computed, not over', async () => {
 });
 
 test('at/over budget: overBudget true, remaining floored at 0, assert throws 429', async () => {
-  const svc = new AiBudgetService(fakeRepo(1500, 600), 2000);
+  const svc = new AiBudgetService(fakeRepo(1500, 600), async () => 2000);
   const usage = await svc.getMonthlyUsage();
   assert.equal(usage.totalTokens, 2100);
   assert.equal(usage.overBudget, true);
@@ -55,7 +55,7 @@ test('at/over budget: overBudget true, remaining floored at 0, assert throws 429
 });
 
 test('exactly at budget counts as over (>= boundary)', async () => {
-  const svc = new AiBudgetService(fakeRepo(1000, 1000), 2000);
+  const svc = new AiBudgetService(fakeRepo(1000, 1000), async () => 2000);
   assert.equal(await svc.isOverBudget(), true);
 });
 
@@ -68,7 +68,7 @@ test('usage.byOperation is sorted by tokens desc', async () => {
       { operationType: 'NL_REPORT_QUERY', tokens: 20, count: 1 },
     ],
   } as unknown as AiAssistantRepository;
-  const usage = await new AiBudgetService(repo, 1000).getMonthlyUsage();
+  const usage = await new AiBudgetService(repo, async () => 1000).getMonthlyUsage();
   assert.deepEqual(
     usage.byOperation.map((o) => o.operationType),
     ['REPORT_NARRATIVE', 'NL_REPORT_QUERY', 'SAVE_GUARD'],

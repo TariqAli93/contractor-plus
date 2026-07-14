@@ -49,10 +49,6 @@ export function startMaterialPriceScheduler(
   if (!intervalHours || intervalHours <= 0) return null;
 
   const service = new AiAssistantService(prisma).materialPrices;
-  if (!service.enabled) {
-    log.info('[material-prices] sync interval set but no sources configured — not scheduling');
-    return null;
-  }
 
   const run = async (): Promise<void> => {
     try {

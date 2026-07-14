@@ -29,7 +29,8 @@ export interface AiMaterialPricesServiceDeps {
   repo: AiAssistantRepository;
   materials: MaterialsService;
   audit: AuditService;
-  sources: MaterialPriceSource[];
+  /** Resolves the active sources (DB wins over env, Phase 2.5). */
+  resolveSources: () => Promise<MaterialPriceSource[]>;
   /** Injected so tests can supply a fake fetch; production uses the default. */
   sourceClient?: MaterialPriceSourceClient;
 }
@@ -41,9 +42,9 @@ export class AiMaterialPricesService {
     this.client = deps.sourceClient ?? new MaterialPriceSourceClient();
   }
 
-  /** True when at least one source is configured (drives UI + scheduler). */
-  get enabled(): boolean {
-    return this.deps.sources.length > 0;
+  /** True when at least one source is configured (drives the scheduler). */
+  async hasConfiguredSources(): Promise<boolean> {
+    return (await this.deps.resolveSources()).length > 0;
   }
 
   /**
@@ -54,9 +55,10 @@ export class AiMaterialPricesService {
    */
   async syncPrices(actor: AuditActor): Promise<SyncPricesResult> {
     const ranAt = new Date();
+    const sources = await this.deps.resolveSources();
     const result: SyncPricesResult = {
-      enabled: this.enabled,
-      sources: this.deps.sources.length,
+      enabled: sources.length > 0,
+      sources: sources.length,
       fetched: 0,
       matched: 0,
       inserted: 0,
@@ -65,7 +67,7 @@ export class AiMaterialPricesService {
       ranAt: ranAt.toISOString(),
     };
 
-    if (!this.enabled) {
+    if (sources.length === 0) {
       await this.auditSync(actor, result);
       return result;
     }
@@ -80,7 +82,7 @@ export class AiMaterialPricesService {
     const byName = new Map<string, { id: string }>();
     for (const m of materials.items) byName.set(normalizeName(m.name), { id: m.id });
 
-    for (const source of this.deps.sources) {
+    for (const source of sources) {
       const outcome = await this.client.fetchSource(source);
       if (!outcome.ok) {
         result.errors.push({ source: source.name, message: outcome.message });

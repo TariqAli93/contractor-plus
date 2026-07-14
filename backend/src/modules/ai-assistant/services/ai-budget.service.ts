@@ -11,19 +11,23 @@ import type { AiMonthlyUsage } from '../ai-assistant.types.js';
 export class AiBudgetService {
   constructor(
     private readonly repo: AiAssistantRepository,
-    /** Configured ceiling; undefined → unlimited. */
-    private readonly monthlyBudget?: number,
+    /**
+     * Resolves the current ceiling (DB wins over env, Phase 2.5); undefined →
+     * unlimited. A function so a settings change takes effect immediately.
+     */
+    private readonly resolveBudget: () => Promise<number | undefined>,
   ) {}
 
   /** Current-calendar-month usage (UTC), with the configured ceiling applied. */
   async getMonthlyUsage(): Promise<AiMonthlyUsage> {
     const periodStart = currentMonthStart();
-    const [totals, byOperation] = await Promise.all([
+    const [totals, byOperation, monthlyBudget] = await Promise.all([
       this.repo.sumTokensSince(periodStart),
       this.repo.usageByOperationSince(periodStart),
+      this.resolveBudget(),
     ]);
     const totalTokens = totals.prompt + totals.completion;
-    const budget = this.monthlyBudget ?? null;
+    const budget = monthlyBudget ?? null;
     const remaining = budget === null ? null : Math.max(0, budget - totalTokens);
     return {
       periodStart: periodStart.toISOString(),
@@ -40,9 +44,10 @@ export class AiBudgetService {
 
   /** True once the month's tokens reach the ceiling. False when unlimited. */
   async isOverBudget(): Promise<boolean> {
-    if (this.monthlyBudget === undefined) return false;
+    const monthlyBudget = await this.resolveBudget();
+    if (monthlyBudget === undefined) return false;
     const totals = await this.repo.sumTokensSince(currentMonthStart());
-    return totals.prompt + totals.completion >= this.monthlyBudget;
+    return totals.prompt + totals.completion >= monthlyBudget;
   }
 
   /**

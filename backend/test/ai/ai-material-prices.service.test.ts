@@ -84,11 +84,12 @@ function makeService(opts: {
   const sourceClient = new MaterialPriceSourceClient({
     fetchImpl: fakeFetch(opts.routes ?? {}),
   });
+  const sources = opts.sources ?? [];
   const service = new AiMaterialPricesService({
     repo,
     materials: fakeMaterials(opts.materials ?? []),
     audit,
-    sources: opts.sources ?? [],
+    resolveSources: async () => sources,
     sourceClient,
   });
   return { service, inserted, logged };

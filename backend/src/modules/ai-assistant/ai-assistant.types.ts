@@ -1,5 +1,7 @@
 import type { AiApprovalState, AiOperationType } from '@prisma/client';
+import type { AiFeature } from '@contractor-plus/shared';
 import type { AiDisabledReason } from '../../lib/ai/ai-config.js';
+import type { MaterialPriceSource } from '../../config/app-config.js';
 
 /**
  * Payload of GET /ai/status — safe to expose to the SPA. Never carries the
@@ -38,20 +40,70 @@ export interface AiMonthlyUsage {
   byOperation: AiOperationUsage[];
 }
 
+// ----- Phase 2.5: control panel -----
+
+/** Where the resolved OpenRouter key comes from (never the key itself). */
+export type AiKeyStatus = 'set_env' | 'set_db' | 'unset';
+
+export interface AiKeyInfo {
+  status: AiKeyStatus;
+  /** Last 4 chars for masked display (`••••••{lastFour}`). Never the key. */
+  lastFour?: string;
+  /** ISO — when the DB key was last confirmed valid against OpenRouter. */
+  validatedAt?: string;
+  /**
+   * true when the key comes from env/service.json — it WINS over any DB key,
+   * so the panel shows it as "managed by the server" and disables editing.
+   */
+  managedByEnv: boolean;
+}
+
 /**
- * GET /ai/settings payload (ai.manage-settings). Config-sourced values are
- * reflected READ-ONLY — models/sources/budget live in service.json (prod) or
- * .env (dev), the single-source-of-truth contract from Phase 1. URLs are
- * deliberately omitted from the sources list.
+ * GET /ai/settings payload (ai.use to read). Phase 2.5 turns this into a
+ * control panel: DB-backed toggles/models/budget (DB wins over env) plus the
+ * key STATUS. The raw key is NEVER included — only `key.lastFour`/status.
  */
 export interface AiSettingsDto {
+  /** Resolved overall availability (system on AND a key AND a default model). */
   enabled: boolean;
   reason?: AiDisabledReason;
+  /** Master switch (DB). */
+  systemEnabled: boolean;
+  /** Per-feature toggles (DB), defaulting to true. */
+  features: Record<AiFeature, boolean>;
   modelDefault?: string;
   modelHeavy?: string;
+  /** Operator-selectable model slugs for the dropdowns. */
+  modelAllowlist: string[];
+  /** false when ENCRYPTION_KEY is absent/short → DB key storage is disabled. */
+  keyManagementEnabled: boolean;
+  key: AiKeyInfo;
+  monthlyTokenBudget: number | null;
   usage: AiMonthlyUsage;
-  sources: { name: string; region: string | null }[];
+  /** Editable price sources (DB wins over env). URLs included for editing. */
+  sources: MaterialPriceSource[];
   syncIntervalHours: number | null;
+}
+
+// ----- Phase 2.5: repository inputs -----
+
+export interface SaveCredentialInput {
+  ciphertext: string;
+  iv: string;
+  authTag: string;
+  lastFour: string;
+  validatedAt?: Date | null;
+  createdById?: string | null;
+}
+
+export interface UpdateAiSettingInput {
+  systemEnabled?: boolean;
+  features?: Record<string, boolean>;
+  modelDefault?: string | null;
+  modelHeavy?: string | null;
+  monthlyTokenBudget?: number | null;
+  materialPriceSources?: MaterialPriceSource[];
+  updatedById?: string | null;
 }
 
 /**

@@ -81,5 +81,6 @@ export function buildServiceModeConfig(): AppConfig {
     AI_MONTHLY_TOKEN_BUDGET: cfg.ai?.monthlyTokenBudget,
     AI_MATERIAL_PRICE_SOURCES: cfg.ai?.materialPriceSources ?? [],
     AI_MATERIAL_PRICE_SYNC_INTERVAL_HOURS: cfg.ai?.materialPriceSyncIntervalHours,
+    ENCRYPTION_KEY: cfg.ai?.encryptionKey,
   };
 }

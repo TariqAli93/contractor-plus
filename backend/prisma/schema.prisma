@@ -190,6 +190,8 @@ model User {
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]
   aiRequestLogs AiRequestLog[]
+  aiCredentialsCreated AiProviderCredential[] @relation("AiCredentialCreator")
+  aiSettingsUpdated    AiSetting[]            @relation("AiSettingUpdater")
   documentTemplatesCreated DocumentTemplate[] @relation("DocumentTemplateCreator")
   documentsGenerated       GeneratedDocument[] @relation("GeneratedDocumentCreator")
   createdAt     DateTime       @default(now())
@@ -730,4 +732,46 @@ model AiRequestLog {
   @@index([operationType, createdAt])
   @@index([createdAt])
   @@map("ai_request_logs")
+}
+
+// Phase 2.5 — the OpenRouter API key ENCRYPTED at rest (AES-256-GCM). Singleton
+// (fixed id). DELIBERATELY has NO column for the raw key: only the ciphertext,
+// the GCM nonce/tag, and the last 4 chars for masked display. Decryptable only
+// with ENCRYPTION_KEY (never in the DB). See lib/crypto/secret-cipher.ts.
+model AiProviderCredential {
+  id          String    @id @default("default")
+  ciphertext  String
+  iv          String
+  authTag     String
+  // Last 4 chars of the raw key, for `••••••{lastFour}` display ONLY.
+  lastFour    String
+  isActive    Boolean   @default(true)
+  // Set once a live OpenRouter check confirmed the key before it was stored.
+  validatedAt DateTime?
+  createdById String?   @db.Uuid
+  createdBy   User?     @relation("AiCredentialCreator", fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("ai_provider_credentials")
+}
+
+// Phase 2.5 — AI control-panel settings singleton. Non-sensitive: master
+// switch, per-feature flags, chosen models, monthly token budget, price
+// sources. DB values WIN over env/service.json (except the API key). A missing
+// row means "all defaults" (system enabled, every feature on, env models).
+model AiSetting {
+  id                   String    @id @default("default")
+  systemEnabled        Boolean   @default(true)
+  // { report_narrative: bool, nl_query: bool, save_guard: bool, ... }
+  features             Json?
+  modelDefault         String?
+  modelHeavy           String?
+  monthlyTokenBudget   Int?
+  materialPriceSources Json?
+  updatedById          String?   @db.Uuid
+  updatedBy            User?     @relation("AiSettingUpdater", fields: [updatedById], references: [id])
+  updatedAt            DateTime  @default(now()) @updatedAt
+
+  @@map("ai_settings")
 }

@@ -93,6 +93,9 @@ const DevEnvSchema = z.object({
   AI_MATERIAL_PRICE_SYNC_INTERVAL_HOURS: emptyAsUndefined(
     z.coerce.number().int().positive().optional(),
   ),
+  // Phase 2.5 — encrypts the DB-stored OpenRouter key. Length is validated at
+  // the cipher (safe-disable when absent/short), not here.
+  ENCRYPTION_KEY: emptyAsUndefined(z.string().optional()),
 });
 
 /** One material-price source, shared by dev-env parsing and service config. */
@@ -156,6 +159,7 @@ function buildDevConfig(): AppConfig {
     AI_MONTHLY_TOKEN_BUDGET: e.AI_MONTHLY_TOKEN_BUDGET,
     AI_MATERIAL_PRICE_SOURCES: parseDevMaterialSources(e.AI_MATERIAL_PRICE_SOURCES),
     AI_MATERIAL_PRICE_SYNC_INTERVAL_HOURS: e.AI_MATERIAL_PRICE_SYNC_INTERVAL_HOURS,
+    ENCRYPTION_KEY: e.ENCRYPTION_KEY,
   };
 }
 

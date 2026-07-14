@@ -6,3 +6,4 @@ export * from './audit-action.js';
 export * from './construction-step-status.js';
 export * from './ai-operation-type.js';
 export * from './ai-approval-state.js';
+export * from './ai-feature.js';

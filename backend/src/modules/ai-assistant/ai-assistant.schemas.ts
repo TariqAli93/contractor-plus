@@ -92,3 +92,32 @@ export const suggestionIdParamSchema = z.object({ id: uuidSchema });
 // ----- Phase 5: material reference prices -----
 
 export const materialIdParamSchema = z.object({ materialId: uuidSchema });
+
+// ----- Phase 2.5: control panel -----
+
+const priceSourceSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  url: z.string().url().max(2000),
+  region: z.string().trim().min(1).max(60).optional(),
+});
+
+// PUT /ai/settings — a partial update; every field optional. Model slugs are
+// re-checked against the allow-list in the service (env models bypass it).
+export const updateSettingsBodySchema = z
+  .object({
+    systemEnabled: z.boolean().optional(),
+    features: z.record(z.string(), z.boolean()).optional(),
+    modelDefault: z.string().trim().min(1).max(120).nullable().optional(),
+    modelHeavy: z.string().trim().min(1).max(120).nullable().optional(),
+    monthlyTokenBudget: z.number().int().positive().nullable().optional(),
+    materialPriceSources: z.array(priceSourceSchema).max(50).optional(),
+  })
+  .strict();
+
+// PUT /ai/settings/api-key — the raw key. Never logged; validated + encrypted
+// by the service before storage.
+export const setApiKeyBodySchema = z.object({
+  apiKey: z.string().trim().min(8).max(400),
+});
+
+export type UpdateSettingsBody = z.infer<typeof updateSettingsBodySchema>;

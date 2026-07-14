@@ -1,14 +1,10 @@
 import { AppError } from '../../../shared/errors/app-error.js';
 import { UpstreamError } from '../../../shared/errors/upstream.error.js';
 import { extractJsonObject } from '../../../lib/ai/extract-json.js';
-import type {
-  AiCompletionResult,
-  AiMessage,
-  AiProvider,
-} from '../../../lib/ai/ai-provider.interface.js';
-import type { AiRuntime, AiRuntimeConfig } from '../../../lib/ai/ai-config.js';
+import type { AiCompletionResult, AiMessage } from '../../../lib/ai/ai-provider.interface.js';
 import { requireUserId, type AuditActor, type AuditService } from '../../audit/audit.service.js';
 import type { AiBudgetService } from './ai-budget.service.js';
+import type { AiSettingsService } from './ai-settings.service.js';
 import type { ReportsService } from '../../reports/reports.service.js';
 import type {
   CashFlowQuery,
@@ -54,9 +50,8 @@ const PROMPT_BUILDERS: Record<
 };
 
 export interface AiReportServiceDeps {
-  runtime: AiRuntime;
-  /** null exactly when runtime.enabled is false. */
-  provider: AiProvider | null;
+  /** Central control point — resolves the provider + gates each feature. */
+  settings: AiSettingsService;
   context: AiContextService;
   repo: AiAssistantRepository;
   audit: AuditService;
@@ -95,7 +90,8 @@ export class AiReportService {
     query: Parameters<AiContextService['buildReportContext']>[1],
     actor: AuditActor,
   ): Promise<ReportNarrativeResult> {
-    const { provider, config } = this.requireEnabled();
+    // Central gate: system on + report_narrative feature on + key + model.
+    const { provider, config } = await this.deps.settings.requireProviderForFeature('report_narrative');
     // Non-critical, explicit request — a clear stop when over the ceiling.
     await this.deps.budget.assertWithinBudget();
 
@@ -153,7 +149,7 @@ export class AiReportService {
    * to report execution, and out-of-scope requests stop there.
    */
   async queryFromText(text: string, narrate: boolean, actor: AuditActor): Promise<NlQueryResult> {
-    const { provider, config } = this.requireEnabled();
+    const { provider, config } = await this.deps.settings.requireProviderForFeature('nl_query');
     await this.deps.budget.assertWithinBudget();
 
     const completion = await provider.complete({
@@ -215,18 +211,6 @@ export class AiReportService {
   }
 
   // ---------- private ----------
-
-  private requireEnabled(): { provider: AiProvider; config: AiRuntimeConfig } {
-    const { runtime, provider } = this.deps;
-    if (!runtime.enabled || !provider) {
-      throw new AppError(
-        503,
-        'AI_DISABLED',
-        'AI features are disabled — configure the OpenRouter key first',
-      );
-    }
-    return { provider, config: runtime.config };
-  }
 
   /** Execute a VALIDATED query through the reports module's public service. */
   private executeQuery(query: ConstrainedReportQuery): Promise<unknown> {

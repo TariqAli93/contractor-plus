@@ -8,7 +8,9 @@ import {
   materialIdParamSchema,
   narrativeBodySchemas,
   narrativeParamsSchema,
+  setApiKeyBodySchema,
   suggestionIdParamSchema,
+  updateSettingsBodySchema,
 } from './ai-assistant.schemas.js';
 import { nlQueryBodySchema } from './ai-query.schema.js';
 
@@ -16,10 +18,28 @@ export class AiAssistantController {
   constructor(private readonly service: AiAssistantService) {}
 
   status = async (_request: FastifyRequest, reply: FastifyReply) => {
-    return reply.code(200).send(this.service.getStatus());
+    return reply.code(200).send(await this.service.getStatus());
   };
 
   settings = async (_request: FastifyRequest, reply: FastifyReply) => {
+    return reply.code(200).send(await this.service.getSettings());
+  };
+
+  updateSettings = async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = updateSettingsBodySchema.parse(request.body ?? {});
+    await this.service.settings.updateSettings(body, this.actor(request));
+    return reply.code(200).send(await this.service.getSettings());
+  };
+
+  setApiKey = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { apiKey } = setApiKeyBodySchema.parse(request.body ?? {});
+    await this.service.settings.setApiKey(apiKey, this.actor(request));
+    // Respond with the (key-free) settings so the UI refreshes status.
+    return reply.code(200).send(await this.service.getSettings());
+  };
+
+  clearApiKey = async (request: FastifyRequest, reply: FastifyReply) => {
+    await this.service.settings.clearApiKey(this.actor(request));
     return reply.code(200).send(await this.service.getSettings());
   };
 
