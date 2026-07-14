@@ -127,6 +127,8 @@ function makeService(opts: {
       if (!enabled) throw new AppError(503, 'AI_FEATURE_DISABLED', 'off');
       return { provider: opts.provider, config: CONFIG };
     },
+    // Capability guard is best-effort; the fake model is unknown → fails open.
+    assertModelSupportsTools: async () => {},
   } as unknown as AiSettingsService;
   const budget = {
     assertWithinBudget: async () => {

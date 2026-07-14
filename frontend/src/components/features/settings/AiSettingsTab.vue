@@ -5,26 +5,38 @@ import { useAiSettings } from '@/composables/useAiSettings';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
 import { ApiError } from '@/types/api';
-import { AI_FEATURE_KEYS, type AiFeatureKey } from '@/types/ai';
+import { AI_FEATURE_KEYS, type AiFeatureKey, type AiModelListItem } from '@/types/ai';
 import SettingsCard from './SettingsCard.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
 
-// Phase 2.5 — the AI control panel. Toggles/models/budget are DB-backed (DB
-// wins over env); the API key is managed here ENCRYPTED (or shown as
-// "managed by the server" when it comes from env). The raw key is never
-// displayed and never kept in state after it is sent.
-const { data, loading, saving, error, load, update, setKey, clearKey } = useAiSettings();
+// The AI control panel. The OpenRouter key is managed here (encrypted, DB-first;
+// env is only a fallback). Models are chosen from the LIVE OpenRouter catalogue
+// for the current key — there is no static list. The raw key is never displayed
+// and never kept in state after it is sent.
+const {
+  data,
+  models,
+  modelsStale,
+  loading,
+  modelsLoading,
+  saving,
+  error,
+  load,
+  loadModels,
+  update,
+  saveModels,
+  setKey,
+  clearKey,
+} = useAiSettings();
 const toast = useToast();
 const { confirm } = useConfirm();
 
 onMounted(load);
 
-// ----- editable general controls (local draft + Save) -----
+// ----- general controls (system + features + budget) -----
 const draft = reactive({
   systemEnabled: true,
   features: {} as Record<AiFeatureKey, boolean>,
-  modelDefault: null as string | null,
-  modelHeavy: null as string | null,
   monthlyTokenBudget: null as number | null,
 });
 
@@ -34,8 +46,6 @@ watch(
     if (!d) return;
     draft.systemEnabled = d.systemEnabled;
     draft.features = { ...d.features };
-    draft.modelDefault = d.modelDefault ?? null;
-    draft.modelHeavy = d.modelHeavy ?? null;
     draft.monthlyTokenBudget = d.monthlyTokenBudget;
   },
   { immediate: true },
@@ -47,21 +57,15 @@ const dirty = computed(() => {
   return (
     draft.systemEnabled !== d.systemEnabled ||
     AI_FEATURE_KEYS.some((f) => draft.features[f] !== d.features[f]) ||
-    (draft.modelDefault ?? null) !== (d.modelDefault ?? null) ||
-    (draft.modelHeavy ?? null) !== (d.modelHeavy ?? null) ||
     (draft.monthlyTokenBudget ?? null) !== (d.monthlyTokenBudget ?? null)
   );
 });
-
-const modelOptions = computed(() => data.value?.modelAllowlist ?? []);
 
 async function saveGeneral() {
   try {
     await update({
       systemEnabled: draft.systemEnabled,
       features: { ...draft.features },
-      modelDefault: draft.modelDefault,
-      modelHeavy: draft.modelHeavy,
       monthlyTokenBudget: draft.monthlyTokenBudget,
     });
     toast.success(t('common.saved'));
@@ -71,32 +75,98 @@ async function saveGeneral() {
 }
 
 function resetGeneral() {
-  if (data.value) watchTrigger();
-}
-function watchTrigger() {
-  const d = data.value!;
+  const d = data.value;
+  if (!d) return;
   draft.systemEnabled = d.systemEnabled;
   draft.features = { ...d.features };
-  draft.modelDefault = d.modelDefault ?? null;
-  draft.modelHeavy = d.modelHeavy ?? null;
   draft.monthlyTokenBudget = d.monthlyTokenBudget;
+}
+
+// ----- model selection (from the live list) -----
+const modelDraft = reactive({
+  defaultModel: null as string | null,
+  heavyModel: null as string | null,
+});
+const freeOnly = ref(false);
+
+watch(
+  data,
+  (d) => {
+    if (!d) return;
+    modelDraft.defaultModel = d.modelDefault ?? null;
+    modelDraft.heavyModel = d.modelHeavy ?? null;
+  },
+  { immediate: true },
+);
+
+const filteredModels = computed<AiModelListItem[]>(() =>
+  freeOnly.value ? models.value.filter((m) => m.isFree) : models.value,
+);
+
+const modelsDirty = computed(() => {
+  const d = data.value;
+  if (!d) return false;
+  return (
+    (modelDraft.defaultModel ?? null) !== (d.modelDefault ?? null) ||
+    (modelDraft.heavyModel ?? null) !== (d.modelHeavy ?? null)
+  );
+});
+
+// A previously-chosen model that the current key can no longer reach — the user
+// must pick a new one (we never keep an unavailable model selected silently).
+const defaultUnavailable = computed(
+  () =>
+    !!data.value?.modelDefault &&
+    models.value.length > 0 &&
+    !models.value.some((m) => m.id === data.value!.modelDefault),
+);
+
+watch([models, () => data.value?.modelDefault], () => {
+  if (defaultUnavailable.value && modelDraft.defaultModel === data.value?.modelDefault) {
+    modelDraft.defaultModel = null; // deselect the vanished model
+  }
+});
+
+async function refreshModels() {
+  await loadModels(true);
+  toast.info(t('settings.ai.models.refreshed'));
+}
+
+async function saveModelSelection() {
+  if (!modelDraft.defaultModel) return;
+  try {
+    await saveModels(modelDraft.defaultModel, modelDraft.heavyModel);
+    toast.success(t('settings.ai.models.saved'));
+  } catch (e) {
+    toast.error(errMsg(e));
+  }
+}
+
+function fmtPrice(n: number): string {
+  return n.toLocaleString('en-US', { maximumFractionDigits: 3 });
+}
+function fmtContext(ctx: number | null): string | null {
+  if (ctx === null) return null;
+  if (ctx >= 1_000_000) return `${(ctx / 1_000_000).toLocaleString('en-US', { maximumFractionDigits: 1 })}M`;
+  if (ctx >= 1000) return `${Math.round(ctx / 1000)}K`;
+  return String(ctx);
 }
 
 // ----- API key management -----
 const keyInput = ref('');
 const showKeyField = ref(false);
 
-const envManaged = computed(() => data.value?.key.managedByEnv ?? false);
 const keyMgmtOff = computed(() => data.value?.keyManagementEnabled === false);
+const isEnvFallback = computed(() => data.value?.key.status === 'set_env');
 
 async function saveKey() {
   const value = keyInput.value.trim();
   if (!value) return;
   try {
-    await setKey(value);
+    const count = await setKey(value);
     keyInput.value = ''; // never retain the raw key
     showKeyField.value = false;
-    toast.success(t('settings.ai.key.saved'));
+    toast.success(t('settings.ai.key.savedCount', { count }));
   } catch (e) {
     toast.error(errMsg(e));
   }
@@ -119,7 +189,7 @@ async function removeKey() {
   }
 }
 
-// ----- usage (read-only, from Phase 6) -----
+// ----- usage (read-only) -----
 const usage = computed(() => data.value?.usage ?? null);
 const budgetPercent = computed(() => {
   const u = usage.value;
@@ -160,7 +230,198 @@ function errMsg(e: unknown): string {
         </div>
       </SettingsCard>
 
-      <!-- General controls (DB-backed; Save persists) -->
+      <!-- API key (first — everything else needs it) -->
+      <SettingsCard
+        :title="t('settings.ai.key.title')"
+        :description="t('settings.ai.key.desc')"
+        icon="mdi-key-variant"
+      >
+        <div class="cp-ai-settings__key">
+          <div class="cp-ai-settings__key-status">
+            <v-chip
+              :color="data.key.status === 'unset' ? 'default' : 'success'"
+              size="small"
+              variant="tonal"
+              label
+            >
+              {{ t(`settings.ai.key.status.${data.key.status}`) }}
+            </v-chip>
+            <code v-if="data.key.lastFour" class="cp-ai-settings__masked">••••••{{ data.key.lastFour }}</code>
+            <span v-if="data.modelCount !== null" class="cp-ai-settings__reason">
+              {{ t('settings.ai.key.modelCount', { count: data.modelCount }) }}
+            </span>
+          </div>
+
+          <p v-if="isEnvFallback" class="cp-ai-settings__note">{{ t('settings.ai.key.envFallback') }}</p>
+          <p v-if="keyMgmtOff" class="cp-ai-settings__note">{{ t('settings.ai.key.mgmtDisabled') }}</p>
+
+          <template v-if="!keyMgmtOff">
+            <div v-if="showKeyField" class="cp-ai-settings__key-edit">
+              <v-text-field
+                v-model="keyInput"
+                :label="t('settings.ai.key.inputLabel')"
+                type="password"
+                density="compact"
+                autocomplete="off"
+                hide-details
+                :placeholder="'sk-or-...'"
+              />
+              <v-btn color="primary" variant="flat" size="small" :loading="saving" @click="saveKey">
+                {{ t('settings.ai.key.validateSave') }}
+              </v-btn>
+              <v-btn variant="text" size="small" :disabled="saving" @click="showKeyField = false">
+                {{ t('common.cancel') }}
+              </v-btn>
+            </div>
+            <div v-else class="cp-ai-settings__key-actions">
+              <v-btn variant="tonal" size="small" prepend-icon="mdi-key-plus" @click="showKeyField = true">
+                {{ data.key.status === 'set_db' ? t('settings.ai.key.change') : t('settings.ai.key.set') }}
+              </v-btn>
+              <v-btn
+                v-if="data.key.status === 'set_db'"
+                variant="text"
+                size="small"
+                color="error"
+                :disabled="saving"
+                @click="removeKey"
+              >
+                {{ t('settings.ai.key.remove') }}
+              </v-btn>
+            </div>
+          </template>
+        </div>
+      </SettingsCard>
+
+      <!-- Models (live from OpenRouter) -->
+      <SettingsCard
+        :title="t('settings.ai.models.title')"
+        :description="t('settings.ai.models.desc')"
+        icon="mdi-brain"
+      >
+        <template #action>
+          <v-btn
+            size="small"
+            variant="text"
+            prepend-icon="mdi-refresh"
+            :loading="modelsLoading"
+            :disabled="!data.configured"
+            @click="refreshModels"
+          >
+            {{ t('settings.ai.models.refresh') }}
+          </v-btn>
+        </template>
+
+        <p v-if="!data.configured" class="cp-ai-settings__note">
+          {{ t('settings.ai.models.needKey') }}
+        </p>
+
+        <template v-else>
+          <div class="cp-ai-settings__models-bar">
+            <v-checkbox
+              v-model="freeOnly"
+              :label="t('settings.ai.models.freeOnly')"
+              density="compact"
+              hide-details
+            />
+            <v-chip v-if="modelsStale" size="x-small" color="warning" variant="tonal" label>
+              {{ t('settings.ai.models.stale') }}
+            </v-chip>
+            <v-spacer />
+            <span class="cp-ai-settings__reason">
+              {{ t('settings.ai.models.count', { count: filteredModels.length }) }}
+            </span>
+          </div>
+
+          <v-alert
+            v-if="defaultUnavailable"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mb-2"
+          >
+            {{ t('settings.ai.models.unavailable') }}
+          </v-alert>
+
+          <div class="cp-ai-settings__grid">
+            <v-autocomplete
+              v-model="modelDraft.defaultModel"
+              :items="filteredModels"
+              item-title="displayName"
+              item-value="id"
+              :label="t('settings.ai.modelDefault')"
+              :loading="modelsLoading"
+              :no-data-text="t('settings.ai.models.empty')"
+              density="compact"
+              clearable
+            >
+              <template #item="{ props: itemProps, item }">
+                <v-list-item v-bind="itemProps" :title="item.raw.displayName">
+                  <template #subtitle>
+                    <span class="cp-model-slug">{{ item.raw.id }}</span>
+                    <span v-if="fmtContext(item.raw.contextLength)" class="cp-model-ctx">
+                      · {{ fmtContext(item.raw.contextLength) }}
+                    </span>
+                  </template>
+                  <template #append>
+                    <span v-if="item.raw.isFree" class="cp-model-free">{{ t('settings.ai.models.free') }}</span>
+                    <span
+                      v-else-if="item.raw.promptPricePerMillion !== null"
+                      class="cp-model-price"
+                    >${{ fmtPrice(item.raw.promptPricePerMillion) }}/1M</span>
+                  </template>
+                </v-list-item>
+              </template>
+            </v-autocomplete>
+
+            <v-autocomplete
+              v-model="modelDraft.heavyModel"
+              :items="filteredModels"
+              item-title="displayName"
+              item-value="id"
+              :label="t('settings.ai.modelHeavy')"
+              :loading="modelsLoading"
+              :no-data-text="t('settings.ai.models.empty')"
+              :placeholder="t('settings.ai.models.heavyFallback')"
+              persistent-placeholder
+              density="compact"
+              clearable
+            >
+              <template #item="{ props: itemProps, item }">
+                <v-list-item v-bind="itemProps" :title="item.raw.displayName">
+                  <template #subtitle>
+                    <span class="cp-model-slug">{{ item.raw.id }}</span>
+                  </template>
+                  <template #append>
+                    <span v-if="item.raw.isFree" class="cp-model-free">{{ t('settings.ai.models.free') }}</span>
+                    <span
+                      v-else-if="item.raw.promptPricePerMillion !== null"
+                      class="cp-model-price"
+                    >${{ fmtPrice(item.raw.promptPricePerMillion) }}/1M</span>
+                  </template>
+                </v-list-item>
+              </template>
+            </v-autocomplete>
+          </div>
+
+          <div v-if="modelsDirty" class="cp-ai-settings__models-actions">
+            <v-btn size="small" variant="text" :disabled="saving" @click="modelDraft.defaultModel = data.modelDefault ?? null; modelDraft.heavyModel = data.modelHeavy ?? null">
+              {{ t('common.cancel') }}
+            </v-btn>
+            <v-btn
+              size="small"
+              color="primary"
+              variant="flat"
+              :loading="saving"
+              :disabled="!modelDraft.defaultModel"
+              @click="saveModelSelection"
+            >
+              {{ t('settings.ai.models.saveSelection') }}
+            </v-btn>
+          </div>
+        </template>
+      </SettingsCard>
+
+      <!-- General controls (system + features + budget) -->
       <SettingsCard
         :title="t('settings.ai.controlsTitle')"
         :description="t('settings.ai.controlsDesc')"
@@ -202,24 +463,6 @@ function errMsg(e: unknown): string {
         </div>
         <v-divider class="my-2" />
         <div class="cp-ai-settings__grid">
-          <v-select
-            v-model="draft.modelDefault"
-            :items="modelOptions"
-            :label="t('settings.ai.modelDefault')"
-            density="compact"
-            clearable
-            :placeholder="t('settings.ai.envDefault')"
-            persistent-placeholder
-          />
-          <v-select
-            v-model="draft.modelHeavy"
-            :items="modelOptions"
-            :label="t('settings.ai.modelHeavy')"
-            density="compact"
-            clearable
-            :placeholder="t('settings.ai.envDefault')"
-            persistent-placeholder
-          />
           <v-text-field
             v-model.number="draft.monthlyTokenBudget"
             :label="t('settings.ai.budget')"
@@ -230,69 +473,6 @@ function errMsg(e: unknown): string {
             :placeholder="t('settings.ai.unlimited')"
             persistent-placeholder
           />
-        </div>
-      </SettingsCard>
-
-      <!-- API key -->
-      <SettingsCard
-        :title="t('settings.ai.key.title')"
-        :description="t('settings.ai.key.desc')"
-        icon="mdi-key-variant"
-      >
-        <div class="cp-ai-settings__key">
-          <div class="cp-ai-settings__key-status">
-            <v-chip
-              :color="data.key.status === 'unset' ? 'default' : 'success'"
-              size="small"
-              variant="tonal"
-              label
-            >
-              {{ t(`settings.ai.key.status.${data.key.status}`) }}
-            </v-chip>
-            <code v-if="data.key.lastFour" class="cp-ai-settings__masked">••••••{{ data.key.lastFour }}</code>
-            <span v-if="envManaged" class="cp-ai-settings__reason">
-              {{ t('settings.ai.key.envManaged') }}
-            </span>
-          </div>
-
-          <p v-if="keyMgmtOff && !envManaged" class="cp-ai-settings__note">
-            {{ t('settings.ai.key.mgmtDisabled') }}
-          </p>
-
-          <template v-else-if="!envManaged">
-            <div v-if="showKeyField" class="cp-ai-settings__key-edit">
-              <v-text-field
-                v-model="keyInput"
-                :label="t('settings.ai.key.inputLabel')"
-                type="password"
-                density="compact"
-                autocomplete="off"
-                hide-details
-                :placeholder="'sk-or-...'"
-              />
-              <v-btn color="primary" variant="flat" size="small" :loading="saving" @click="saveKey">
-                {{ t('settings.ai.key.validateSave') }}
-              </v-btn>
-              <v-btn variant="text" size="small" :disabled="saving" @click="showKeyField = false">
-                {{ t('common.cancel') }}
-              </v-btn>
-            </div>
-            <div v-else class="cp-ai-settings__key-actions">
-              <v-btn variant="tonal" size="small" prepend-icon="mdi-key-plus" @click="showKeyField = true">
-                {{ data.key.status === 'set_db' ? t('settings.ai.key.change') : t('settings.ai.key.set') }}
-              </v-btn>
-              <v-btn
-                v-if="data.key.status === 'set_db'"
-                variant="text"
-                size="small"
-                color="error"
-                :disabled="saving"
-                @click="removeKey"
-              >
-                {{ t('settings.ai.key.remove') }}
-              </v-btn>
-            </div>
-          </template>
         </div>
       </SettingsCard>
 
@@ -377,9 +557,45 @@ function errMsg(e: unknown): string {
 }
 .cp-ai-settings__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 8px 12px;
   margin-top: 4px;
+}
+.cp-ai-settings__models-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.cp-ai-settings__models-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+.cp-model-slug {
+  font-family: monospace;
+  font-size: 0.72rem;
+  direction: ltr;
+  display: inline-block;
+}
+.cp-model-ctx {
+  font-size: 0.72rem;
+  color: var(--cp-text-muted);
+}
+.cp-model-free {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgb(var(--v-theme-success));
+  border: 1px solid rgb(var(--v-theme-success));
+  border-radius: var(--cp-radius-sm);
+  padding: 0 6px;
+}
+.cp-model-price {
+  font-size: 0.7rem;
+  color: var(--cp-text-muted);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
 }
 .cp-ai-settings__key {
   display: flex;
@@ -390,6 +606,7 @@ function errMsg(e: unknown): string {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 .cp-ai-settings__masked {
   font-family: monospace;

@@ -750,6 +750,9 @@ model AiProviderCredential {
   isActive    Boolean   @default(true)
   // Set once a live OpenRouter check confirmed the key before it was stored.
   validatedAt DateTime?
+  // Number of models the key could reach at validation time — drives the
+  // "N models available" panel hint without a live call. Null on legacy rows.
+  validatedModelCount Int?
   createdById String?   @db.Uuid
   createdBy   User?     @relation("AiCredentialCreator", fields: [createdById], references: [id])
   createdAt   DateTime  @default(now())

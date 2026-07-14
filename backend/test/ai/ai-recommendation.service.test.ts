@@ -38,7 +38,7 @@ const RUNTIME_ENABLED: AiRuntime = {
     timeoutMs: 5_000,
   },
 };
-const RUNTIME_DISABLED: AiRuntime = { enabled: false, reason: 'NO_API_KEY' };
+const RUNTIME_DISABLED: AiRuntime = { enabled: false, reason: 'NOT_CONFIGURED' };
 const ACTOR: AuditActor = { userId: 'user-1' };
 
 const CURRENCY = {

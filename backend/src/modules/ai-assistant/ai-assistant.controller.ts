@@ -7,11 +7,13 @@ import {
   guardCostBodySchema,
   guardPaymentBodySchema,
   materialIdParamSchema,
+  modelsQuerySchema,
   narrativeBodySchemas,
   narrativeParamsSchema,
   setApiKeyBodySchema,
   suggestionIdParamSchema,
   threadIdParamSchema,
+  updateModelsBodySchema,
   updateSettingsBodySchema,
 } from './ai-assistant.schemas.js';
 import { nlQueryBodySchema } from './ai-query.schema.js';
@@ -35,13 +37,26 @@ export class AiAssistantController {
 
   setApiKey = async (request: FastifyRequest, reply: FastifyReply) => {
     const { apiKey } = setApiKeyBodySchema.parse(request.body ?? {});
-    await this.service.settings.setApiKey(apiKey, this.actor(request));
-    // Respond with the (key-free) settings so the UI refreshes status.
-    return reply.code(200).send(await this.service.getSettings());
+    // Validates live + fetches models before storing; returns {configured,
+    // maskedKey, modelCount} — NEVER the raw key.
+    const result = await this.service.settings.setApiKey(apiKey, this.actor(request));
+    return reply.code(200).send(result);
   };
 
   clearApiKey = async (request: FastifyRequest, reply: FastifyReply) => {
     await this.service.settings.clearApiKey(this.actor(request));
+    return reply.code(200).send(await this.service.getSettings());
+  };
+
+  // Live OpenRouter catalogue for the current key (cached; ?refresh=true skips it).
+  models = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { refresh } = modelsQuerySchema.parse(request.query ?? {});
+    return reply.code(200).send(await this.service.settings.getModels({ refresh }));
+  };
+
+  updateModels = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { defaultModel, heavyModel } = updateModelsBodySchema.parse(request.body ?? {});
+    await this.service.settings.updateModels(defaultModel, heavyModel, this.actor(request));
     return reply.code(200).send(await this.service.getSettings());
   };
 

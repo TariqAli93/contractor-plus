@@ -1,33 +1,43 @@
-import { AI_FEATURES, AI_MODEL_ALLOWLIST, isAllowedModel, type AiFeature } from '@contractor-plus/shared';
+import { AI_FEATURES, type AiFeature } from '@contractor-plus/shared';
 import { AppError } from '../../../shared/errors/app-error.js';
 import { ValidationError } from '../../../shared/errors/validation.error.js';
 import type { AppConfig, MaterialPriceSource } from '../../../config/app-config.js';
-import type { AiRuntime, AiRuntimeConfig, AiDisabledReason } from '../../../lib/ai/ai-config.js';
+import type {
+  AiRuntime,
+  AiRuntimeConfig,
+  AiRuntimeConfigResolver,
+  AiDisabledReason,
+} from '../../../lib/ai/ai-config.js';
 import type { AiProvider } from '../../../lib/ai/ai-provider.interface.js';
 import { OpenRouterProvider } from '../../../lib/ai/openrouter.provider.js';
 import { createSecretCipher, lastFour, type SecretCipher } from '../../../lib/crypto/secret-cipher.js';
 import { checkOpenRouterKey, type KeyCheckResult } from '../../../lib/ai/openrouter-key-check.js';
 import { requireUserId, type AuditActor, type AuditService } from '../../audit/audit.service.js';
 import type { AiAssistantRepository } from '../ai-assistant.repository.js';
+import type { AiModelsService } from './ai-models.service.js';
 import type {
   AiKeyInfo,
+  AiModelsResponse,
   AiMonthlyUsage,
   AiSettingsDto,
+  KeySaveResult,
   UpdateAiSettingInput,
 } from '../ai-assistant.types.js';
 
-// Phase 2.5 — the CENTRAL AI control point. Everything AI resolves through
-// here: the API key (env WINS over DB), the master + per-feature switches, the
-// chosen models (DB wins over env, from an allow-list), the budget, and the
-// price sources. The raw key never leaves this service — no method returns it
-// except the internal `getResolvedApiKey`, which no route exposes.
+// The CENTRAL AI control point. Everything AI resolves through here:
+//   - the API key: the encrypted DB key is PRIMARY; env/service.json is only an
+//     optional migration fallback (so the app runs with NO key in .env);
+//   - the master + per-feature switches (DB wins over env);
+//   - the chosen models, validated against the LIVE OpenRouter catalogue for
+//     the current key (there is no static allow-list);
+//   - the budget and price sources.
+// The raw key never leaves this service — no method returns it except the
+// internal `getResolvedApiKey`, which no route exposes.
 
 /** Public request shape for PUT /ai/settings (already zod-validated upstream). */
 export interface UpdateSettingsRequest {
   systemEnabled?: boolean;
   features?: Partial<Record<AiFeature, boolean>>;
-  modelDefault?: string | null;
-  modelHeavy?: string | null;
   monthlyTokenBudget?: number | null;
   materialPriceSources?: MaterialPriceSource[];
 }
@@ -36,6 +46,7 @@ export interface AiSettingsServiceDeps {
   repo: AiAssistantRepository;
   audit: AuditService;
   env: AppConfig;
+  models: AiModelsService;
   /** Injectable for tests; defaults to the real OpenRouter /key check. */
   keyChecker?: (rawKey: string) => Promise<KeyCheckResult>;
 }
@@ -53,29 +64,29 @@ export class AiSettingsService {
     return this.cipher !== null;
   }
 
-  /** True when the key comes from env/service.json — it always wins. */
-  get keyManagedByEnv(): boolean {
-    return Boolean(this.deps.env.OPENROUTER_API_KEY);
-  }
-
   // ---------- resolution (internal) ----------
 
   /**
-   * The effective OpenRouter key. env/service.json WINS (E3); otherwise the
-   * decrypted DB key when key management is enabled. Returns null when neither
-   * exists. INTERNAL ONLY — never surfaced by a route.
+   * The effective OpenRouter key. The DB key is PRIMARY (decrypted); the env
+   * key is only a fallback when no DB key exists (or a DB row can't be
+   * decrypted). Returns null when neither exists. INTERNAL ONLY — never a route.
    */
   async getResolvedApiKey(): Promise<string | null> {
-    if (this.deps.env.OPENROUTER_API_KEY) return this.deps.env.OPENROUTER_API_KEY;
-    if (!this.cipher) return null;
-    const cred = await this.deps.repo.findActiveCredential();
-    if (!cred) return null;
-    try {
-      return this.cipher.decrypt({ ciphertext: cred.ciphertext, iv: cred.iv, authTag: cred.authTag });
-    } catch {
-      // Tampered row or wrong ENCRYPTION_KEY — treat as no key (never crash).
-      return null;
+    if (this.cipher) {
+      const cred = await this.deps.repo.findActiveCredential();
+      if (cred) {
+        try {
+          return this.cipher.decrypt({
+            ciphertext: cred.ciphertext,
+            iv: cred.iv,
+            authTag: cred.authTag,
+          });
+        } catch {
+          // Tampered row or a rotated ENCRYPTION_KEY — fall back to env, never crash.
+        }
+      }
     }
+    return this.deps.env.OPENROUTER_API_KEY ?? null;
   }
 
   /** Full runtime for the provider — DB-wins settings + resolved key. */
@@ -84,7 +95,7 @@ export class AiSettingsService {
       return { enabled: false, reason: 'SYSTEM_DISABLED' };
     }
     const apiKey = await this.getResolvedApiKey();
-    if (!apiKey) return { enabled: false, reason: 'NO_API_KEY' };
+    if (!apiKey) return { enabled: false, reason: 'NOT_CONFIGURED' };
 
     const modelDefault = await this.getModelDefault();
     if (!modelDefault) return { enabled: false, reason: 'NO_DEFAULT_MODEL' };
@@ -101,6 +112,20 @@ export class AiSettingsService {
         appTitle: env.AI_APP_TITLE,
         timeoutMs: env.AI_REQUEST_TIMEOUT_MS,
         monthlyTokenBudget: await this.getMonthlyTokenBudget(),
+      },
+    };
+  }
+
+  /**
+   * A resolver bound to this service — the provider consults it on every call,
+   * so a key/model change from the panel applies with NO restart.
+   */
+  private buildRuntimeResolver(): AiRuntimeConfigResolver {
+    return {
+      resolve: async () => {
+        const rt = await this.resolveRuntime();
+        if (!rt.enabled) throw new AppError(503, 'AI_DISABLED', disabledMessage(rt.reason));
+        return rt.config;
       },
     };
   }
@@ -123,7 +148,7 @@ export class AiSettingsService {
         'هذه الميزة معطّلة من إعدادات الذكاء الاصطناعي.',
       );
     }
-    return { provider: new OpenRouterProvider(rt.config), config: rt.config };
+    return { provider: new OpenRouterProvider(this.buildRuntimeResolver()), config: rt.config };
   }
 
   /**
@@ -137,7 +162,7 @@ export class AiSettingsService {
     const rt = await this.resolveRuntime();
     if (!rt.enabled) return null;
     if (!(await this.isFeatureEnabled(feature))) return null;
-    return { provider: new OpenRouterProvider(rt.config), config: rt.config };
+    return { provider: new OpenRouterProvider(this.buildRuntimeResolver()), config: rt.config };
   }
 
   // ---------- the central gate ----------
@@ -179,6 +204,77 @@ export class AiSettingsService {
     return this.deps.env.AI_MATERIAL_PRICE_SOURCES;
   }
 
+  // ---------- live models (dynamic, from OpenRouter) ----------
+
+  /**
+   * The models available to the CURRENT key, straight from OpenRouter (cached).
+   * Throws 409 AI_NOT_CONFIGURED when no key is set.
+   */
+  async getModels(opts: { refresh?: boolean } = {}): Promise<AiModelsResponse> {
+    const key = await this.getResolvedApiKey();
+    if (!key) throw new AppError(409, 'AI_NOT_CONFIGURED', 'لم يُضبط مفتاح OpenRouter بعد.');
+    const result = await this.deps.models.list(key, opts);
+    return { models: result.items, stale: result.stale };
+  }
+
+  /**
+   * Persist the chosen models — but only after checking they EXIST in the live
+   * list for the current key. A slug from the panel is never trusted. Heavy
+   * falls back to default when omitted.
+   */
+  async updateModels(
+    defaultModel: string,
+    heavyModel: string | null | undefined,
+    actor: AuditActor,
+  ): Promise<void> {
+    const key = await this.getResolvedApiKey();
+    if (!key) throw new AppError(409, 'AI_NOT_CONFIGURED', 'لم يُضبط مفتاح OpenRouter بعد.');
+
+    const { items } = await this.deps.models.list(key);
+    const available = new Set(items.map((m) => m.id));
+    if (!available.has(defaultModel)) {
+      throw new ValidationError('default model is not available for the current key', {
+        defaultModel: [`${defaultModel} is not available`],
+      });
+    }
+    const heavy = heavyModel && heavyModel.length > 0 ? heavyModel : defaultModel;
+    if (!available.has(heavy)) {
+      throw new ValidationError('heavy model is not available for the current key', {
+        heavyModel: [`${heavy} is not available`],
+      });
+    }
+
+    await this.deps.repo.saveSettings({
+      modelDefault: defaultModel,
+      modelHeavy: heavy,
+      updatedById: requireUserId(actor),
+    });
+    await this.deps.audit.log(actor, {
+      action: 'UPDATE',
+      entity: 'AiSetting',
+      entityId: 'default',
+      newValues: { modelDefault: defaultModel, modelHeavy: heavy },
+    });
+  }
+
+  /**
+   * Best-effort capability guard: if the model is in the cached list and does
+   * NOT support tools, refuse with a clear error rather than a vague provider
+   * failure. Fails OPEN when the model/capabilities are unknown (uncached).
+   */
+  async assertModelSupportsTools(model: string): Promise<void> {
+    const key = await this.getResolvedApiKey();
+    if (!key) return;
+    const caps = this.deps.models.capabilities(key, model);
+    if (caps && !caps.supportsTools) {
+      throw new AppError(
+        422,
+        'AI_MODEL_TOOLS_UNSUPPORTED',
+        'النموذج المختار لا يدعم استدعاء الأدوات المطلوبة لهذه الميزة — اختر نموذجًا يدعمها.',
+      );
+    }
+  }
+
   // ---------- public read ----------
 
   /** GET /ai/settings — everything the panel needs, NEVER the raw key. */
@@ -186,17 +282,20 @@ export class AiSettingsService {
     const s = await this.deps.repo.findSettings();
     const systemEnabled = s?.systemEnabled ?? true;
     const runtime = await this.resolveRuntime();
+    const key = await this.getKeyInfo();
 
     return {
+      provider: 'openrouter',
+      configured: key.status !== 'unset',
       enabled: runtime.enabled,
       ...(runtime.enabled ? {} : { reason: runtime.reason }),
       systemEnabled,
       features: readFeatureFlags(s?.features),
       modelDefault: await this.getModelDefault(),
       modelHeavy: await this.getModelHeavy(),
-      modelAllowlist: [...AI_MODEL_ALLOWLIST],
+      modelCount: key.modelCount ?? null,
       keyManagementEnabled: this.keyManagementEnabled,
-      key: await this.getKeyInfo(),
+      key,
       monthlyTokenBudget: (await this.getMonthlyTokenBudget()) ?? null,
       usage,
       sources: await this.getMaterialPriceSources(),
@@ -205,38 +304,32 @@ export class AiSettingsService {
   }
 
   private async getKeyInfo(): Promise<AiKeyInfo> {
-    if (this.keyManagedByEnv) {
-      return {
-        status: 'set_env',
-        lastFour: lastFour(this.deps.env.OPENROUTER_API_KEY!),
-        managedByEnv: true,
-      };
-    }
+    // DB key is primary — report it first.
     const cred = this.cipher ? await this.deps.repo.findActiveCredential() : null;
     if (cred) {
       return {
         status: 'set_db',
         lastFour: cred.lastFour,
         validatedAt: cred.validatedAt?.toISOString(),
+        modelCount: cred.validatedModelCount ?? null,
         managedByEnv: false,
       };
     }
-    return { status: 'unset', managedByEnv: false };
+    // No DB key → the env fallback (if any) is what resolves.
+    if (this.deps.env.OPENROUTER_API_KEY) {
+      return {
+        status: 'set_env',
+        lastFour: lastFour(this.deps.env.OPENROUTER_API_KEY),
+        modelCount: null,
+        managedByEnv: true,
+      };
+    }
+    return { status: 'unset', modelCount: null, managedByEnv: false };
   }
 
   // ---------- mutations (ai.manage-settings; audited; no secrets logged) ----------
 
   async updateSettings(input: UpdateSettingsRequest, actor: AuditActor): Promise<void> {
-    // Model choices from the panel MUST be in the allow-list (E4). env-provided
-    // models bypass this because they never come through here.
-    for (const model of [input.modelDefault, input.modelHeavy]) {
-      if (model && !isAllowedModel(model)) {
-        throw new ValidationError('model is not in the allowed list', {
-          model: [`${model} is not an allowed model`],
-        });
-      }
-    }
-
     const patch: UpdateAiSettingInput = { updatedById: requireUserId(actor) };
     if (input.systemEnabled !== undefined) patch.systemEnabled = input.systemEnabled;
     if (input.features !== undefined) {
@@ -245,8 +338,6 @@ export class AiSettingsService {
       const current = readFeatureFlags((await this.deps.repo.findSettings())?.features);
       patch.features = mergeFeatureFlags(input.features, current);
     }
-    if (input.modelDefault !== undefined) patch.modelDefault = input.modelDefault;
-    if (input.modelHeavy !== undefined) patch.modelHeavy = input.modelHeavy;
     if (input.monthlyTokenBudget !== undefined) patch.monthlyTokenBudget = input.monthlyTokenBudget;
     if (input.materialPriceSources !== undefined) patch.materialPriceSources = input.materialPriceSources;
 
@@ -259,8 +350,6 @@ export class AiSettingsService {
       newValues: {
         ...(input.systemEnabled !== undefined && { systemEnabled: input.systemEnabled }),
         ...(input.features !== undefined && { features: input.features }),
-        ...(input.modelDefault !== undefined && { modelDefault: input.modelDefault }),
-        ...(input.modelHeavy !== undefined && { modelHeavy: input.modelHeavy }),
         ...(input.monthlyTokenBudget !== undefined && { monthlyTokenBudget: input.monthlyTokenBudget }),
         ...(input.materialPriceSources !== undefined && {
           materialPriceSourceCount: input.materialPriceSources.length,
@@ -270,23 +359,18 @@ export class AiSettingsService {
   }
 
   /**
-   * Set/replace the DB OpenRouter key: validate LIVE against OpenRouter, then
-   * encrypt and store. A key that fails validation is NEVER stored. The raw key
-   * is never logged or audited — only its last 4 chars.
+   * Set/replace the DB OpenRouter key. The key is validated LIVE — first the
+   * cheap credit-free /key check, then a real models fetch — and only stored
+   * (encrypted) when BOTH succeed. A key that can't be confirmed is NEVER
+   * stored. The raw key is never logged or audited — only its last 4 chars and
+   * the model count. The models cache is dropped so the new key's list is used.
    */
-  async setApiKey(rawKey: string, actor: AuditActor): Promise<void> {
+  async setApiKey(rawKey: string, actor: AuditActor): Promise<KeySaveResult> {
     if (!this.cipher) {
       throw new AppError(
         503,
         'AI_KEY_MANAGEMENT_DISABLED',
         'إدارة المفتاح من القاعدة معطّلة — لم يُضبط ENCRYPTION_KEY في الخادم.',
-      );
-    }
-    if (this.keyManagedByEnv) {
-      throw new AppError(
-        409,
-        'AI_KEY_ENV_MANAGED',
-        'المفتاح مُدار من إعدادات الخادم (env) ولا يمكن تغييره من اللوحة.',
       );
     }
 
@@ -302,6 +386,21 @@ export class AiSettingsService {
       );
     }
 
+    // Prove the key can actually list models before trusting it. Drop any prior
+    // cache first so a stale list from an old key can't mask a failure.
+    this.deps.models.invalidate();
+    let modelCount: number;
+    try {
+      const result = await this.deps.models.list(rawKey, { refresh: true });
+      modelCount = result.items.length;
+    } catch {
+      throw new AppError(
+        422,
+        'AI_KEY_UNVERIFIED',
+        'تعذّر جلب قائمة الموديلات بهذا المفتاح — لم يُحفظ.',
+      );
+    }
+
     const sealed = this.cipher.encrypt(rawKey);
     const now = new Date();
     await this.deps.repo.saveCredential({
@@ -310,19 +409,23 @@ export class AiSettingsService {
       authTag: sealed.authTag,
       lastFour: lastFour(rawKey),
       validatedAt: now,
+      validatedModelCount: modelCount,
       createdById: requireUserId(actor),
     });
     await this.deps.audit.log(actor, {
       action: 'UPDATE',
       entity: 'AiProviderCredential',
       entityId: 'default',
-      // NEVER the key or ciphertext — only the masked tail + when validated.
-      newValues: { keyLastFour: lastFour(rawKey), validatedAt: now.toISOString() },
+      // NEVER the key or ciphertext — only the masked tail, when validated, count.
+      newValues: { keyLastFour: lastFour(rawKey), validatedAt: now.toISOString(), modelCount },
     });
+
+    return { configured: true, maskedKey: `••••••${lastFour(rawKey)}`, modelCount };
   }
 
   async clearApiKey(actor: AuditActor): Promise<void> {
     await this.deps.repo.deleteCredential();
+    this.deps.models.invalidate();
     await this.deps.audit.log(actor, {
       action: 'DELETE',
       entity: 'AiProviderCredential',
@@ -347,7 +450,7 @@ function disabledMessage(reason: AiDisabledReason): string {
   switch (reason) {
     case 'SYSTEM_DISABLED':
       return 'الذكاء الاصطناعي معطّل من لوحة التحكم.';
-    case 'NO_API_KEY':
+    case 'NOT_CONFIGURED':
       return 'لم يُضبط مفتاح OpenRouter.';
     case 'NO_DEFAULT_MODEL':
       return 'لم يُحدَّد النموذج الافتراضي.';

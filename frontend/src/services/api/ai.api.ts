@@ -1,5 +1,6 @@
 import { apiDelete, apiGet, apiPost, apiPut } from './client';
 import type {
+  AiModelsResponse,
   AiReportType,
   AiSettings,
   AiStatus,
@@ -8,12 +9,14 @@ import type {
   ChatThread,
   ChatThreadSummary,
   GuardResult,
+  KeySaveResult,
   MaterialPriceChange,
   RecommendationsResult,
   ReferencePrice,
   ReportNarrative,
   SyncPricesResult,
   UpdateAiSettingsPayload,
+  UpdateModelsPayload,
 } from '@/types/ai';
 
 // Model round-trips can exceed the client's default 15s (backend allows 30s
@@ -32,12 +35,20 @@ export const aiApi = {
   updateSettings: (payload: UpdateAiSettingsPayload): Promise<AiSettings> =>
     apiPut('/ai/settings', payload),
 
-  // The key round-trips through a live OpenRouter validation on the server —
-  // allow generous time. The raw key is sent once and never held after.
-  setApiKey: (apiKey: string): Promise<AiSettings> =>
-    apiPut('/ai/settings/api-key', { apiKey }, { timeout: 30_000 }),
+  // The key round-trips through a live OpenRouter validation AND a models fetch
+  // on the server — allow generous time. The raw key is sent once, never held
+  // after, and the response carries only {configured, maskedKey, modelCount}.
+  setOpenRouterKey: (apiKey: string): Promise<KeySaveResult> =>
+    apiPut('/ai/settings/openrouter-key', { apiKey }, { timeout: 45_000 }),
 
-  clearApiKey: (): Promise<AiSettings> => apiDelete('/ai/settings/api-key'),
+  clearOpenRouterKey: (): Promise<AiSettings> => apiDelete('/ai/settings/openrouter-key'),
+
+  // Live OpenRouter catalogue for the current key; ?refresh=true skips the cache.
+  models: (refresh = false): Promise<AiModelsResponse> =>
+    apiGet(`/ai/models${refresh ? '?refresh=true' : ''}`, { timeout: 45_000 }),
+
+  updateModels: (payload: UpdateModelsPayload): Promise<AiSettings> =>
+    apiPut('/ai/settings/models', payload),
 
   // Chat — the send waits on 1-2 model round-trips (tool + compose).
   chatSend: (text: string, threadId: string | null): Promise<ChatSendResult> =>

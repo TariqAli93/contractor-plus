@@ -1,5 +1,5 @@
 import type { AiApprovalState, AiOperationType } from '@prisma/client';
-import type { AiFeature } from '@contractor-plus/shared';
+import type { AiFeature, AiModelListItem } from '@contractor-plus/shared';
 import type { AiDisabledReason } from '../../lib/ai/ai-config.js';
 import type { MaterialPriceSource } from '../../config/app-config.js';
 
@@ -51,19 +51,26 @@ export interface AiKeyInfo {
   lastFour?: string;
   /** ISO — when the DB key was last confirmed valid against OpenRouter. */
   validatedAt?: string;
+  /** Models the key could reach at validation time (DB key only). */
+  modelCount?: number | null;
   /**
-   * true when the key comes from env/service.json — it WINS over any DB key,
-   * so the panel shows it as "managed by the server" and disables editing.
+   * true when the resolved key comes from the env/service.json FALLBACK (no DB
+   * key is set). The DB key is primary; the panel can still set one to take over.
    */
   managedByEnv: boolean;
 }
 
 /**
- * GET /ai/settings payload (ai.use to read). Phase 2.5 turns this into a
- * control panel: DB-backed toggles/models/budget (DB wins over env) plus the
- * key STATUS. The raw key is NEVER included — only `key.lastFour`/status.
+ * GET /ai/settings payload (ai.use to read). A control panel: DB-backed
+ * toggles/budget (DB wins over env) plus the selected models and the key
+ * STATUS. Models are chosen from the LIVE OpenRouter list (fetched separately
+ * via GET /ai/models), so no static allow-list is exposed here. The raw key is
+ * NEVER included — only `key.lastFour`/status.
  */
 export interface AiSettingsDto {
+  provider: 'openrouter';
+  /** true once a key (DB or env fallback) is configured. */
+  configured: boolean;
   /** Resolved overall availability (system on AND a key AND a default model). */
   enabled: boolean;
   reason?: AiDisabledReason;
@@ -73,8 +80,8 @@ export interface AiSettingsDto {
   features: Record<AiFeature, boolean>;
   modelDefault?: string;
   modelHeavy?: string;
-  /** Operator-selectable model slugs for the dropdowns. */
-  modelAllowlist: string[];
+  /** Models reachable by the current key (from the last validation); null if unknown. */
+  modelCount: number | null;
   /** false when ENCRYPTION_KEY is absent/short → DB key storage is disabled. */
   keyManagementEnabled: boolean;
   key: AiKeyInfo;
@@ -85,6 +92,22 @@ export interface AiSettingsDto {
   syncIntervalHours: number | null;
 }
 
+/** Result of PUT /ai/settings/openrouter-key — never the raw key. */
+export interface KeySaveResult {
+  configured: true;
+  /** `••••••{lastFour}` for immediate display. */
+  maskedKey: string;
+  /** Models the key can reach (from the live fetch done during validation). */
+  modelCount: number;
+}
+
+/** Response of GET /ai/models — the live, key-scoped catalogue. */
+export interface AiModelsResponse {
+  models: AiModelListItem[];
+  /** true when a refresh failed and a previously-cached list is served. */
+  stale: boolean;
+}
+
 // ----- Phase 2.5: repository inputs -----
 
 export interface SaveCredentialInput {
@@ -93,6 +116,8 @@ export interface SaveCredentialInput {
   authTag: string;
   lastFour: string;
   validatedAt?: Date | null;
+  /** Models reachable at validation time (drives the panel hint). */
+  validatedModelCount?: number | null;
   createdById?: string | null;
 }
 

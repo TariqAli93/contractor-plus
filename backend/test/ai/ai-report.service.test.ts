@@ -265,7 +265,7 @@ test('disabled runtime → 503 AI_DISABLED before any provider/report work', asy
   const provider = new FakeProvider(GOOD_OUTPUT);
   const { service, created } = makeService({
     provider,
-    runtime: { enabled: false, reason: 'NO_API_KEY' },
+    runtime: { enabled: false, reason: 'NOT_CONFIGURED' },
   });
   await assert.rejects(
     service.narrative('cash-flow', {}, ACTOR),

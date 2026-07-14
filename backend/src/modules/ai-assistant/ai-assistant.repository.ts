@@ -188,6 +188,7 @@ export class AiAssistantRepository {
       lastFour: data.lastFour,
       isActive: true,
       validatedAt: data.validatedAt ?? null,
+      validatedModelCount: data.validatedModelCount ?? null,
       createdById: data.createdById ?? null,
     };
     return client.aiProviderCredential.upsert({

@@ -61,6 +61,36 @@ test('success: parses content, echoed model and usage', async () => {
   assert.deepEqual(result.usage, { promptTokens: 42, completionTokens: 7 });
 });
 
+test('resolver-driven: config is resolved on EVERY call (key/model change, no restart)', async () => {
+  const captured: Captured[] = [];
+  const fetchImpl = (async (url: unknown, init?: RequestInit) => {
+    captured.push({ url: String(url), init: init ?? {} });
+    return jsonResponse(OK_BODY);
+  }) as typeof fetch;
+
+  // The resolver returns a DIFFERENT key/base on the second call — simulating a
+  // panel edit between requests. A frozen-config provider could never do this.
+  let call = 0;
+  const provider = new OpenRouterProvider(
+    {
+      resolve: async () => {
+        call += 1;
+        return { ...CONFIG, apiKey: `sk-or-key-${call}`, baseUrl: `https://host-${call}.test/api/v1` };
+      },
+    },
+    { fetchImpl },
+  );
+
+  await provider.complete({ model: 'm', messages: [{ role: 'user', content: 'a' }] });
+  await provider.complete({ model: 'm', messages: [{ role: 'user', content: 'b' }] });
+
+  assert.equal(call, 2);
+  assert.equal(captured[0]!.url, 'https://host-1.test/api/v1/chat/completions');
+  assert.equal((captured[0]!.init.headers as Record<string, string>).Authorization, 'Bearer sk-or-key-1');
+  assert.equal(captured[1]!.url, 'https://host-2.test/api/v1/chat/completions');
+  assert.equal((captured[1]!.init.headers as Record<string, string>).Authorization, 'Bearer sk-or-key-2');
+});
+
 test('request shape: endpoint, auth + attribution headers, OpenAI-compatible body', async () => {
   const captured: Captured[] = [];
   const provider = makeProvider(jsonResponse(OK_BODY), captured);

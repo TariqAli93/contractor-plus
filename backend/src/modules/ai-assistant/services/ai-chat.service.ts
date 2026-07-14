@@ -3,7 +3,6 @@ import { AppError } from '../../../shared/errors/app-error.js';
 import { NotFoundError } from '../../../shared/errors/not-found.error.js';
 import { extractJsonObject } from '../../../lib/ai/extract-json.js';
 import type { AiCompletionResult, AiMessage } from '../../../lib/ai/ai-provider.interface.js';
-import type { AiRuntimeConfig } from '../../../lib/ai/ai-config.js';
 import { requireUserId, type AuditActor, type AuditService } from '../../audit/audit.service.js';
 import type { ReportsService } from '../../reports/reports.service.js';
 import type { AiAssistantRepository } from '../ai-assistant.repository.js';
@@ -85,6 +84,9 @@ export class AiChatService {
     actor: AuditActor,
   ): Promise<ChatSendResult> {
     const { provider, config } = await this.deps.settings.requireProviderForFeature('chat');
+    // Chat leans on tool-calling — refuse a model known not to support tools
+    // (clear error instead of a vague provider failure). Fails open if unknown.
+    await this.deps.settings.assertModelSupportsTools(config.modelDefault);
     await this.deps.budget.assertWithinBudget();
     const userId = requireUserId(actor);
 

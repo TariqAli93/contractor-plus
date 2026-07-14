@@ -15,6 +15,7 @@ import { AiMaterialPricesService } from './services/ai-material-prices.service.j
 import { AiValidationService } from './services/ai-validation.service.js';
 import { AiBudgetService } from './services/ai-budget.service.js';
 import { AiSettingsService } from './services/ai-settings.service.js';
+import { AiModelsService } from './services/ai-models.service.js';
 import { AiChatService } from './services/ai-chat.service.js';
 import type { AiSettingsDto, AiStatusDto, CreateAiRequestLogInput } from './ai-assistant.types.js';
 
@@ -49,7 +50,14 @@ export class AiAssistantService {
     const settingsService = new SettingsService(prisma);
     const auditService = new AuditService(prisma);
 
-    this.settings = new AiSettingsService({ repo: this.repo, audit: auditService, env });
+    // Live OpenRouter catalogue (cached, key-scoped) — no static model list.
+    const modelsService = new AiModelsService({ baseUrl: env.OPENROUTER_BASE_URL });
+    this.settings = new AiSettingsService({
+      repo: this.repo,
+      audit: auditService,
+      env,
+      models: modelsService,
+    });
     // Budget resolves DB-wins-env each call, so a panel change takes effect.
     this.budget = new AiBudgetService(this.repo, () => this.settings.getMonthlyTokenBudget());
     this.context = new AiContextService(reportsService, settingsService);

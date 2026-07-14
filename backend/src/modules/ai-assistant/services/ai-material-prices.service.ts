@@ -1,9 +1,6 @@
 import { money, round, toMoneyString } from '../../../lib/money.js';
 import type { MaterialPriceSource } from '../../../config/app-config.js';
-import {
-  MaterialPriceSourceClient,
-  type MaterialPriceRow,
-} from '../../../lib/ai/material-price-source.js';
+import { MaterialPriceSourceClient } from '../../../lib/ai/material-price-source.js';
 import type { AuditActor, AuditService } from '../../audit/audit.service.js';
 import type { MaterialsService } from '../../materials/materials.service.js';
 import type { AiAssistantRepository, ReferencePriceWithMaterial } from '../ai-assistant.repository.js';

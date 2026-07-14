@@ -1,6 +1,6 @@
 // ai-assistant module DTOs (Phase 1: status, Phase 2: report narratives).
 
-export type AiDisabledReason = 'NO_API_KEY' | 'NO_DEFAULT_MODEL';
+export type AiDisabledReason = 'NOT_CONFIGURED' | 'NO_DEFAULT_MODEL' | 'SYSTEM_DISABLED';
 
 export interface AiStatus {
   enabled: boolean;
@@ -154,6 +154,9 @@ export interface AiKeyInfo {
   status: AiKeyStatus;
   lastFour?: string;
   validatedAt?: string;
+  /** Models the key could reach at validation time (DB key only). */
+  modelCount?: number | null;
+  /** true when the resolved key is the env FALLBACK (no DB key set). */
   managedByEnv: boolean;
 }
 
@@ -163,14 +166,44 @@ export interface AiPriceSource {
   region?: string;
 }
 
+/** One selectable OpenRouter model (mirrors the backend/shared DTO). */
+export interface AiModelListItem {
+  id: string;
+  name: string;
+  provider: string;
+  displayName: string;
+  description?: string;
+  isFree: boolean;
+  contextLength: number | null;
+  promptPricePerMillion: number | null;
+  completionPricePerMillion: number | null;
+  supportsTools: boolean;
+  supportsStructuredOutput: boolean;
+}
+
+/** GET /ai/models — the live, key-scoped catalogue. */
+export interface AiModelsResponse {
+  models: AiModelListItem[];
+  stale: boolean;
+}
+
+/** PUT /ai/settings/openrouter-key result — never the raw key. */
+export interface KeySaveResult {
+  configured: true;
+  maskedKey: string;
+  modelCount: number;
+}
+
 export interface AiSettings {
+  provider: 'openrouter';
+  configured: boolean;
   enabled: boolean;
-  reason?: AiDisabledReason | 'SYSTEM_DISABLED';
+  reason?: AiDisabledReason;
   systemEnabled: boolean;
   features: Record<AiFeatureKey, boolean>;
   modelDefault?: string;
   modelHeavy?: string;
-  modelAllowlist: string[];
+  modelCount: number | null;
   keyManagementEnabled: boolean;
   key: AiKeyInfo;
   monthlyTokenBudget: number | null;
@@ -179,14 +212,18 @@ export interface AiSettings {
   syncIntervalHours: number | null;
 }
 
-/** PUT /ai/settings — every field optional (partial update). */
+/** PUT /ai/settings — every field optional (partial update). Models NOT here. */
 export interface UpdateAiSettingsPayload {
   systemEnabled?: boolean;
   features?: Partial<Record<AiFeatureKey, boolean>>;
-  modelDefault?: string | null;
-  modelHeavy?: string | null;
   monthlyTokenBudget?: number | null;
   materialPriceSources?: AiPriceSource[];
+}
+
+/** PUT /ai/settings/models — the chosen slugs (validated server-side). */
+export interface UpdateModelsPayload {
+  defaultModel: string;
+  heavyModel?: string | null;
 }
 
 // ----- Phase 7: chat -----

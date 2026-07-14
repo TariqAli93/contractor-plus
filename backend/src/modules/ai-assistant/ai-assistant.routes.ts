@@ -44,11 +44,15 @@ const aiAssistantRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.get('/status', use, controller.status);
   // Settings: reading is available to any AI user (the panel + status);
-  // mutating (toggles, models, budget, key) requires ai.manage-settings.
+  // mutating (toggles, budget, key, models) requires ai.manage-settings.
   fastify.get('/settings', use, controller.settings);
   fastify.put('/settings', manageSettings, controller.updateSettings);
-  fastify.put('/settings/api-key', manageSettings, controller.setApiKey);
-  fastify.delete('/settings/api-key', manageSettings, controller.clearApiKey);
+  // OpenRouter key — managed from the UI, validated live, stored encrypted.
+  fastify.put('/settings/openrouter-key', manageSettings, controller.setApiKey);
+  fastify.delete('/settings/openrouter-key', manageSettings, controller.clearApiKey);
+  // Live model catalogue for the current key + the chosen-model persistence.
+  fastify.get('/models', use, controller.models);
+  fastify.put('/settings/models', manageSettings, controller.updateModels);
   // Phase 2 — read-only narrative over the numeric reports.
   fastify.post('/reports/:reportType/narrative', generateReports, controller.reportNarrative);
   // Phase 3 — NL text → constrained query → validation gate → ReportsService.

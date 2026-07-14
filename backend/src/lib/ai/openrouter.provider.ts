@@ -8,7 +8,7 @@ import type {
   AiProvider,
   AiToolCall,
 } from './ai-provider.interface.js';
-import type { AiRuntimeConfig } from './ai-config.js';
+import type { AiRuntimeConfig, AiRuntimeConfigResolver } from './ai-config.js';
 
 // The ONLY AiProvider implementation — every model call in this project goes
 // through OpenRouter's OpenAI-compatible /chat/completions endpoint. No other
@@ -36,15 +36,27 @@ interface OpenRouterCompletionResponse {
 export class OpenRouterProvider implements AiProvider {
   private readonly fetchImpl: typeof fetch;
 
+  /**
+   * Accepts EITHER a frozen config (tests, one-shot calls) OR a resolver that
+   * is consulted on every `complete()` — so a key/model edited from the panel
+   * takes effect on the very next call, with no process restart.
+   */
   constructor(
-    private readonly config: AiRuntimeConfig,
+    private readonly configOrResolver: AiRuntimeConfig | AiRuntimeConfigResolver,
     options: OpenRouterProviderOptions = {},
   ) {
     this.fetchImpl = options.fetchImpl ?? fetch;
   }
 
+  private resolveConfig(): Promise<AiRuntimeConfig> {
+    return isResolver(this.configOrResolver)
+      ? this.configOrResolver.resolve()
+      : Promise.resolve(this.configOrResolver);
+  }
+
   async complete(input: AiCompletionInput): Promise<AiCompletionResult> {
-    const response = await this.request(input);
+    const config = await this.resolveConfig();
+    const response = await this.request(input, config);
     if (!response.ok) throw await this.toError(response);
 
     let payload: OpenRouterCompletionResponse;
@@ -75,8 +87,8 @@ export class OpenRouterProvider implements AiProvider {
     };
   }
 
-  private async request(input: AiCompletionInput): Promise<Response> {
-    const { apiKey, baseUrl, appUrl, appTitle, timeoutMs } = this.config;
+  private async request(input: AiCompletionInput, config: AiRuntimeConfig): Promise<Response> {
+    const { apiKey, baseUrl, appUrl, appTitle, timeoutMs } = config;
     try {
       return await this.fetchImpl(`${baseUrl}/chat/completions`, {
         method: 'POST',
@@ -138,6 +150,13 @@ export class OpenRouterProvider implements AiProvider {
         );
     }
   }
+}
+
+/** Distinguish a lazy resolver from a frozen config by its `resolve` method. */
+function isResolver(
+  value: AiRuntimeConfig | AiRuntimeConfigResolver,
+): value is AiRuntimeConfigResolver {
+  return typeof (value as AiRuntimeConfigResolver).resolve === 'function';
 }
 
 function toTokenCount(value: unknown): number {
