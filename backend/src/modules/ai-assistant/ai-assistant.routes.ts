@@ -65,6 +65,13 @@ const aiAssistantRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/materials/sync-prices', syncMaterialPrices, controller.syncMaterialPrices);
   fastify.get('/materials/price-changes', use, controller.materialPriceChanges);
   fastify.get('/materials/:materialId/reference-price', use, controller.materialReferencePrice);
+  // Phase 7 — conversational assistant (read-only tools, owner-scoped threads).
+  // send() gates on the chat feature + key + budget; thread reads/deletes are
+  // the user's own data (ai.use), always scoped to the caller.
+  fastify.post('/chat', use, controller.chatSend);
+  fastify.get('/chat/threads', use, controller.chatThreads);
+  fastify.get('/chat/threads/:threadId', use, controller.chatThread);
+  fastify.delete('/chat/threads/:threadId', use, controller.chatDeleteThread);
 };
 
 export default aiAssistantRoutes;

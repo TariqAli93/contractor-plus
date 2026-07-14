@@ -216,3 +216,58 @@ test('non-JSON success body → UpstreamError AI_PROVIDER_BAD_RESPONSE', async (
     (err: unknown) => err instanceof UpstreamError && err.code === 'AI_PROVIDER_BAD_RESPONSE',
   );
 });
+
+// ---------- Phase 7: tool-calling wire format ----------
+
+test('tools are sent in OpenAI function format with tool_choice', async () => {
+  const captured: Captured[] = [];
+  const provider = makeProvider(jsonResponse(OK_BODY), captured);
+  await provider.complete({
+    model: 'm',
+    messages: [{ role: 'user', content: 'u' }],
+    tools: [{ name: 'query_report', description: 'd', parameters: { type: 'object' } }],
+    toolChoice: 'auto',
+  });
+  const body = JSON.parse(String(captured[0]!.init.body)) as Record<string, unknown>;
+  assert.deepEqual(body.tools, [
+    { type: 'function', function: { name: 'query_report', description: 'd', parameters: { type: 'object' } } },
+  ]);
+  assert.equal(body.tool_choice, 'auto');
+});
+
+test('assistant tool_calls + tool-role messages serialize to the wire shape', async () => {
+  const captured: Captured[] = [];
+  const provider = makeProvider(jsonResponse(OK_BODY), captured);
+  await provider.complete({
+    model: 'm',
+    messages: [
+      { role: 'user', content: 'q' },
+      { role: 'assistant', content: '', toolCalls: [{ id: 'c1', name: 'query_report', argumentsJson: '{"reportType":"cash-flow"}' }] },
+      { role: 'tool', toolCallId: 'c1', name: 'query_report', content: '{"totalRevenue":"1"}' },
+    ],
+  });
+  const body = JSON.parse(String(captured[0]!.init.body)) as { messages: Array<Record<string, unknown>> };
+  const asst = body.messages[1]!;
+  assert.equal(asst.role, 'assistant');
+  assert.deepEqual(asst.tool_calls, [
+    { id: 'c1', type: 'function', function: { name: 'query_report', arguments: '{"reportType":"cash-flow"}' } },
+  ]);
+  const tool = body.messages[2]!;
+  assert.equal(tool.role, 'tool');
+  assert.equal(tool.tool_call_id, 'c1');
+});
+
+test('a response with tool_calls and empty content is valid (parsed into toolCalls)', async () => {
+  const provider = makeProvider(
+    jsonResponse({
+      model: 'm',
+      choices: [{ message: { content: null, tool_calls: [{ id: 'c9', function: { name: 'query_report', arguments: '{"reportType":"delayed-projects"}' } }] } }],
+      usage: { prompt_tokens: 5, completion_tokens: 2 },
+    }),
+  );
+  const result = await provider.complete({ model: 'm', messages: [{ role: 'user', content: 'u' }] });
+  assert.equal(result.content, '');
+  assert.equal(result.toolCalls?.length, 1);
+  assert.equal(result.toolCalls![0]!.name, 'query_report');
+  assert.equal(result.toolCalls![0]!.argumentsJson, '{"reportType":"delayed-projects"}');
+});

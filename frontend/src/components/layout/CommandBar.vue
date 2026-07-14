@@ -20,7 +20,11 @@ import NotificationsBell from './NotificationsBell.vue';
 const auth = useAuthStore();
 const ui = useUiStore();
 const router = useRouter();
-const { canAccess } = useAccess();
+const { canAccess, hasPermission } = useAccess();
+
+// The AI assistant button — shown to anyone who may use AI; the drawer itself
+// handles the "feature disabled" state gracefully.
+const canUseAi = computed(() => hasPermission('ai.use'));
 
 async function handleLogout() {
   await auth.logout();
@@ -128,6 +132,16 @@ function openSearch() {
     <span class="cp-cmd-spacer" />
 
     <!-- Group: status + account -->
+    <button
+      v-if="canUseAi"
+      type="button"
+      class="cp-cmd cp-cmd--icon"
+      :title="t('chat.title')"
+      :aria-label="t('chat.title')"
+      @click="ui.toggleChat()"
+    >
+      <v-icon icon="mdi-robot-happy-outline" size="16" />
+    </button>
     <TunnelStatusChip />
     <NotificationsBell />
 

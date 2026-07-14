@@ -106,6 +106,37 @@ export interface UpdateAiSettingInput {
   updatedById?: string | null;
 }
 
+// ----- Phase 7: chat -----
+
+export type ChatRole = 'user' | 'assistant';
+
+export interface ChatMessageDto {
+  id: string;
+  role: ChatRole;
+  content: string;
+  /** The report the assistant queried this turn, when it used the tool. */
+  toolReportType?: string;
+  createdAt: string;
+}
+
+export interface ChatThreadSummaryDto {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatThreadDto extends ChatThreadSummaryDto {
+  messages: ChatMessageDto[];
+}
+
+/** Result of sending one message — the assistant reply + the (maybe new) thread. */
+export interface ChatSendResult {
+  threadId: string;
+  title: string;
+  message: ChatMessageDto;
+}
+
 /**
  * Input for one AiRequestLog row — a governance SUMMARY of a provider call.
  * Deliberately has no field for prompt/response text (binding rule #4).

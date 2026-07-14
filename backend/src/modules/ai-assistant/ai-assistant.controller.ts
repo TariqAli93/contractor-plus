@@ -3,6 +3,7 @@ import { UnauthorizedError } from '../../shared/errors/unauthorized.error.js';
 import type { AuditActor } from '../audit/audit.service.js';
 import type { AiAssistantService } from './ai-assistant.service.js';
 import {
+  chatSendBodySchema,
   guardCostBodySchema,
   guardPaymentBodySchema,
   materialIdParamSchema,
@@ -10,6 +11,7 @@ import {
   narrativeParamsSchema,
   setApiKeyBodySchema,
   suggestionIdParamSchema,
+  threadIdParamSchema,
   updateSettingsBodySchema,
 } from './ai-assistant.schemas.js';
 import { nlQueryBodySchema } from './ai-query.schema.js';
@@ -104,6 +106,31 @@ export class AiAssistantController {
   materialPriceChanges = async (_request: FastifyRequest, reply: FastifyReply) => {
     const result = await this.service.materialPrices.getRecentPriceChanges();
     return reply.code(200).send({ items: result });
+  };
+
+  // ----- Phase 7: chat -----
+
+  chatSend = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { text, threadId } = chatSendBodySchema.parse(request.body ?? {});
+    const result = await this.service.chat.send(text, threadId, this.actor(request));
+    return reply.code(200).send(result);
+  };
+
+  chatThreads = async (request: FastifyRequest, reply: FastifyReply) => {
+    const items = await this.service.chat.listThreads(this.actor(request));
+    return reply.code(200).send({ items });
+  };
+
+  chatThread = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { threadId } = threadIdParamSchema.parse(request.params);
+    const result = await this.service.chat.getThread(threadId, this.actor(request));
+    return reply.code(200).send(result);
+  };
+
+  chatDeleteThread = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { threadId } = threadIdParamSchema.parse(request.params);
+    await this.service.chat.deleteThread(threadId, this.actor(request));
+    return reply.code(204).send();
   };
 
   private actor(request: FastifyRequest): AuditActor {

@@ -5,5 +5,6 @@ export const AiOperationType = {
   RECOMMENDATION: 'RECOMMENDATION',
   NL_REPORT_QUERY: 'NL_REPORT_QUERY',
   MATERIAL_PRICE_SYNC: 'MATERIAL_PRICE_SYNC',
+  CHAT: 'CHAT',
 } as const;
 export type AiOperationType = (typeof AiOperationType)[keyof typeof AiOperationType];

@@ -16,6 +16,7 @@ import SideNav from './SideNav.vue';
 import StatusBar from './StatusBar.vue';
 import CommandPalette from './CommandPalette.vue';
 import ShortcutsHelp from './ShortcutsHelp.vue';
+import AiChatDrawer from '@/components/features/ai/AiChatDrawer.vue';
 import AboutDialog from './AboutDialog.vue';
 import { useUiStore } from '@/stores/ui.store';
 import { useShellStore } from '@/stores/shell.store';
@@ -121,6 +122,7 @@ onKeyStroke(['?'], (e) => {
     <CommandPalette />
     <ShortcutsHelp />
     <AboutDialog />
+    <AiChatDrawer />
   </v-app>
 </template>
 

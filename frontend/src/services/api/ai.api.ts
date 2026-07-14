@@ -4,6 +4,9 @@ import type {
   AiSettings,
   AiStatus,
   ApplySuggestionResult,
+  ChatSendResult,
+  ChatThread,
+  ChatThreadSummary,
   GuardResult,
   MaterialPriceChange,
   RecommendationsResult,
@@ -35,6 +38,16 @@ export const aiApi = {
     apiPut('/ai/settings/api-key', { apiKey }, { timeout: 30_000 }),
 
   clearApiKey: (): Promise<AiSettings> => apiDelete('/ai/settings/api-key'),
+
+  // Chat — the send waits on 1-2 model round-trips (tool + compose).
+  chatSend: (text: string, threadId: string | null): Promise<ChatSendResult> =>
+    apiPost('/ai/chat', { text, threadId }, { timeout: 90_000 }),
+
+  chatThreads: (): Promise<{ items: ChatThreadSummary[] }> => apiGet('/ai/chat/threads'),
+
+  chatThread: (threadId: string): Promise<ChatThread> => apiGet(`/ai/chat/threads/${threadId}`),
+
+  chatDeleteThread: (threadId: string): Promise<void> => apiDelete(`/ai/chat/threads/${threadId}`),
 
   reportNarrative: (
     reportType: AiReportType,

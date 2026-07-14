@@ -99,6 +99,7 @@ enum AiOperationType {
   RECOMMENDATION
   NL_REPORT_QUERY
   MATERIAL_PRICE_SYNC
+  CHAT
 }
 
 // ai-assistant — approval lifecycle of an AI suggestion. NONE for read-only
@@ -192,6 +193,7 @@ model User {
   aiRequestLogs AiRequestLog[]
   aiCredentialsCreated AiProviderCredential[] @relation("AiCredentialCreator")
   aiSettingsUpdated    AiSetting[]            @relation("AiSettingUpdater")
+  aiChatThreads        AiChatThread[]         @relation("AiChatThreadOwner")
   documentTemplatesCreated DocumentTemplate[] @relation("DocumentTemplateCreator")
   documentsGenerated       GeneratedDocument[] @relation("GeneratedDocumentCreator")
   createdAt     DateTime       @default(now())
@@ -774,4 +776,40 @@ model AiSetting {
   updatedAt            DateTime  @default(now()) @updatedAt
 
   @@map("ai_settings")
+}
+
+// Phase 7 — conversational assistant. A thread belongs to ONE user; the chat
+// service scopes every read/write by userId so a thread is only ever visible
+// to its owner. Storing the conversation is a user-owned convenience (resume)
+// and is distinct from the AiRequestLog governance log, which stays
+// content-free (binding rule #4).
+model AiChatThread {
+  id        String          @id @default(uuid()) @db.Uuid
+  userId    String          @db.Uuid
+  user      User            @relation("AiChatThreadOwner", fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  messages  AiChatMessage[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([userId, updatedAt])
+  @@map("ai_chat_threads")
+}
+
+// One turn in a thread. `role` is user | assistant | tool. `toolCalls`/`toolResult`
+// carry the read-only report-query tool round when present (never any mutation).
+model AiChatMessage {
+  id         String       @id @default(uuid()) @db.Uuid
+  threadId   String       @db.Uuid
+  thread     AiChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  role       String
+  content    String
+  // Structured tool-call metadata for an assistant turn that queried a report.
+  toolCalls  Json?
+  // The (read-only) report data returned to the model for a tool turn.
+  toolResult Json?
+  createdAt  DateTime     @default(now())
+
+  @@index([threadId, createdAt])
+  @@map("ai_chat_messages")
 }

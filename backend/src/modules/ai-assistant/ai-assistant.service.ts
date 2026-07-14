@@ -15,6 +15,7 @@ import { AiMaterialPricesService } from './services/ai-material-prices.service.j
 import { AiValidationService } from './services/ai-validation.service.js';
 import { AiBudgetService } from './services/ai-budget.service.js';
 import { AiSettingsService } from './services/ai-settings.service.js';
+import { AiChatService } from './services/ai-chat.service.js';
 import type { AiSettingsDto, AiStatusDto, CreateAiRequestLogInput } from './ai-assistant.types.js';
 
 // Facade of the ai-assistant module. Data access rules (non-negotiable):
@@ -39,6 +40,7 @@ export class AiAssistantService {
   readonly materialPrices: AiMaterialPricesService;
   readonly validation: AiValidationService;
   readonly budget: AiBudgetService;
+  readonly chat: AiChatService;
 
   constructor(prisma: PrismaClient) {
     this.repo = new AiAssistantRepository(prisma);
@@ -78,6 +80,14 @@ export class AiAssistantService {
       materials: new MaterialsService(prisma),
       audit: auditService,
       resolveSources: () => this.settings.getMaterialPriceSources(),
+    });
+    this.chat = new AiChatService({
+      settings: this.settings,
+      budget: this.budget,
+      repo: this.repo,
+      audit: auditService,
+      reports: reportsService,
+      validation: this.validation,
     });
   }
 

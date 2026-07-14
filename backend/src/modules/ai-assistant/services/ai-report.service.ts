@@ -6,12 +6,6 @@ import { requireUserId, type AuditActor, type AuditService } from '../../audit/a
 import type { AiBudgetService } from './ai-budget.service.js';
 import type { AiSettingsService } from './ai-settings.service.js';
 import type { ReportsService } from '../../reports/reports.service.js';
-import type {
-  CashFlowQuery,
-  DelayedProjectsQuery,
-  ListProjectProfitabilityQuery,
-  OverduePaymentsQuery,
-} from '../../reports/reports.schemas.js';
 import type { AiRequestLog } from '@prisma/client';
 import type { AiAssistantRepository } from '../ai-assistant.repository.js';
 import type { AiContextService, ReportNarrativeContext } from './ai-context.service.js';
@@ -22,6 +16,7 @@ import {
   type NarrativeOutput,
 } from '../ai-assistant.schemas.js';
 import type { ConstrainedReportQuery } from '../ai-query.schema.js';
+import { executeConstrainedReportQuery, toReportsQuery } from './report-query-executor.js';
 import { buildCashFlowNarrativeMessages } from '../prompts/report-narrative.cash-flow.js';
 import { buildDelayedProjectsNarrativeMessages } from '../prompts/report-narrative.delayed-projects.js';
 import { buildOverduePaymentsNarrativeMessages } from '../prompts/report-narrative.overdue-payments.js';
@@ -171,7 +166,7 @@ export class AiReportService {
       }
       // THE gate. Nothing executes unless this returns.
       query = this.deps.validation.validateQuery(raw);
-      result = await this.executeQuery(query);
+      result = await executeConstrainedReportQuery(this.deps.reports, query);
     } catch (err) {
       await this.safeLogGovernance(actor, {
         operationType: 'NL_REPORT_QUERY',
@@ -197,11 +192,7 @@ export class AiReportService {
     if (narrate) {
       // Optional Phase-2 add-on; its failure must not void the executed query.
       try {
-        nlResult.narrative = await this.narrative(
-          query.reportType,
-          this.toReportsQuery(query),
-          actor,
-        );
+        nlResult.narrative = await this.narrative(query.reportType, toReportsQuery(query), actor);
       } catch {
         // Narrative leg failed (provider hiccup) — the query result stands.
       }
@@ -211,48 +202,6 @@ export class AiReportService {
   }
 
   // ---------- private ----------
-
-  /** Execute a VALIDATED query through the reports module's public service. */
-  private executeQuery(query: ConstrainedReportQuery): Promise<unknown> {
-    switch (query.reportType) {
-      case 'cash-flow':
-        return this.deps.reports.getCashFlow(this.toReportsQuery(query) as CashFlowQuery);
-      case 'delayed-projects':
-        return this.deps.reports.getDelayedProjects(
-          this.toReportsQuery(query) as DelayedProjectsQuery,
-        );
-      case 'overdue-payments':
-        return this.deps.reports.getOverduePayments(
-          this.toReportsQuery(query) as OverduePaymentsQuery,
-        );
-      case 'project-profitability':
-        return this.deps.reports.listProjectProfitability(
-          this.toReportsQuery(query) as ListProjectProfitabilityQuery,
-        );
-    }
-  }
-
-  /** Map the constrained query onto the reports module's own query shapes. */
-  private toReportsQuery(
-    query: ConstrainedReportQuery,
-  ): CashFlowQuery | DelayedProjectsQuery | OverduePaymentsQuery | ListProjectProfitabilityQuery {
-    switch (query.reportType) {
-      case 'cash-flow':
-        return { dateFrom: query.filters.dateFrom, dateTo: query.filters.dateTo };
-      case 'delayed-projects':
-        return {};
-      case 'overdue-payments':
-        return {};
-      case 'project-profitability':
-        return {
-          page: 1,
-          pageSize: 20,
-          status: query.filters.status,
-          sortBy: query.sortBy ?? 'createdAt',
-          sortDir: query.sortDir ?? 'desc',
-        };
-    }
-  }
 
   private async logGovernance(
     actor: AuditActor,

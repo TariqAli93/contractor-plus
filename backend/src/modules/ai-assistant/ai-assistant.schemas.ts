@@ -121,3 +121,12 @@ export const setApiKeyBodySchema = z.object({
 });
 
 export type UpdateSettingsBody = z.infer<typeof updateSettingsBodySchema>;
+
+// ----- Phase 7: chat -----
+
+export const chatSendBodySchema = z.object({
+  text: z.string().trim().min(1).max(2000),
+  threadId: uuidSchema.nullish().transform((v) => v ?? null),
+});
+
+export const threadIdParamSchema = z.object({ threadId: uuidSchema });

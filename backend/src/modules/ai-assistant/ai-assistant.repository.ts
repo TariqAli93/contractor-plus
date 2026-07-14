@@ -1,5 +1,7 @@
 import type {
   AiApprovalState,
+  AiChatMessage,
+  AiChatThread,
   AiProviderCredential,
   AiRequestLog,
   AiSetting,
@@ -205,6 +207,66 @@ export class AiAssistantRepository {
   /** The settings row, or null when none exists yet (→ all defaults apply). */
   findSettings(client: DbClient = this.prisma): Promise<AiSetting | null> {
     return client.aiSetting.findUnique({ where: { id: SINGLETON_ID } });
+  }
+
+  // ---------- Phase 7: chat threads/messages (ALWAYS owner-scoped) ----------
+
+  /** Threads owned by `userId`, newest first — the thread list. */
+  listThreads(userId: string, client: DbClient = this.prisma): Promise<AiChatThread[]> {
+    return client.aiChatThread.findMany({
+      where: { userId },
+      orderBy: { updatedAt: 'desc' },
+      take: 100,
+    });
+  }
+
+  /** A thread WITH its messages, but ONLY if it belongs to `userId` (else null). */
+  findThreadForUser(
+    threadId: string,
+    userId: string,
+    client: DbClient = this.prisma,
+  ): Promise<(AiChatThread & { messages: AiChatMessage[] }) | null> {
+    return client.aiChatThread.findFirst({
+      where: { id: threadId, userId },
+      include: { messages: { orderBy: { createdAt: 'asc' } } },
+    });
+  }
+
+  createThread(
+    data: { userId: string; title: string },
+    client: DbClient = this.prisma,
+  ): Promise<AiChatThread> {
+    return client.aiChatThread.create({ data });
+  }
+
+  touchThread(threadId: string, client: DbClient = this.prisma): Promise<AiChatThread> {
+    return client.aiChatThread.update({
+      where: { id: threadId },
+      data: { updatedAt: new Date() },
+    });
+  }
+
+  /** Owner-scoped delete — deleteMany so a wrong userId simply affects 0 rows. */
+  async deleteThreadForUser(
+    threadId: string,
+    userId: string,
+    client: DbClient = this.prisma,
+  ): Promise<number> {
+    const r = await client.aiChatThread.deleteMany({ where: { id: threadId, userId } });
+    return r.count;
+  }
+
+  createMessage(
+    data: {
+      threadId: string;
+      role: string;
+      content: string;
+      toolCalls?: Prisma.InputJsonValue;
+      toolResult?: Prisma.InputJsonValue;
+    },
+    client: DbClient = this.prisma,
+  ): Promise<AiChatMessage> {
+    return client.aiChatMessage.create({ data });
   }
 
   /** Upsert the settings singleton with only the provided fields. */

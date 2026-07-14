@@ -188,3 +188,30 @@ export interface UpdateAiSettingsPayload {
   monthlyTokenBudget?: number | null;
   materialPriceSources?: AiPriceSource[];
 }
+
+// ----- Phase 7: chat -----
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  toolReportType?: string;
+  createdAt: string;
+}
+
+export interface ChatThreadSummary {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatThread extends ChatThreadSummary {
+  messages: ChatMessage[];
+}
+
+export interface ChatSendResult {
+  threadId: string;
+  title: string;
+  message: ChatMessage;
+}

@@ -4,7 +4,9 @@ import { UpstreamError } from '../../shared/errors/upstream.error.js';
 import type {
   AiCompletionInput,
   AiCompletionResult,
+  AiMessage,
   AiProvider,
+  AiToolCall,
 } from './ai-provider.interface.js';
 import type { AiRuntimeConfig } from './ai-config.js';
 
@@ -21,9 +23,13 @@ export interface OpenRouterProviderOptions {
 }
 
 /** Minimal shape of a successful OpenRouter chat-completions response. */
+interface OpenRouterToolCall {
+  id?: unknown;
+  function?: { name?: unknown; arguments?: unknown };
+}
 interface OpenRouterCompletionResponse {
   model?: string;
-  choices?: Array<{ message?: { content?: unknown } }>;
+  choices?: Array<{ message?: { content?: unknown; tool_calls?: OpenRouterToolCall[] } }>;
   usage?: { prompt_tokens?: unknown; completion_tokens?: unknown };
 }
 
@@ -48,13 +54,19 @@ export class OpenRouterProvider implements AiProvider {
       throw new UpstreamError('OpenRouter returned a non-JSON response', 'AI_PROVIDER_BAD_RESPONSE');
     }
 
-    const content = payload.choices?.[0]?.message?.content;
-    if (typeof content !== 'string' || content.length === 0) {
+    const message = payload.choices?.[0]?.message;
+    const rawContent = message?.content;
+    const content = typeof rawContent === 'string' ? rawContent : '';
+    const toolCalls = parseToolCalls(message?.tool_calls);
+
+    // Valid responses have EITHER content OR tool calls. Empty both = broken.
+    if (content.length === 0 && toolCalls.length === 0) {
       throw new UpstreamError('OpenRouter response has no completion content', 'AI_PROVIDER_BAD_RESPONSE');
     }
 
     return {
       content,
+      ...(toolCalls.length > 0 ? { toolCalls } : {}),
       modelUsed: typeof payload.model === 'string' && payload.model ? payload.model : input.model,
       usage: {
         promptTokens: toTokenCount(payload.usage?.prompt_tokens),
@@ -76,11 +88,20 @@ export class OpenRouterProvider implements AiProvider {
         },
         body: JSON.stringify({
           model: input.model,
-          messages: input.messages,
+          messages: input.messages.map(toOpenAiMessage),
           temperature: input.temperature ?? DEFAULT_TEMPERATURE,
           max_tokens: input.maxTokens ?? DEFAULT_MAX_TOKENS,
           ...(input.responseFormat === 'json_object'
             ? { response_format: { type: 'json_object' } }
+            : {}),
+          ...(input.tools && input.tools.length > 0
+            ? {
+                tools: input.tools.map((tl) => ({
+                  type: 'function',
+                  function: { name: tl.name, description: tl.description, parameters: tl.parameters },
+                })),
+                tool_choice: input.toolChoice ?? 'auto',
+              }
             : {}),
         }),
         signal: AbortSignal.timeout(timeoutMs),
@@ -121,6 +142,39 @@ export class OpenRouterProvider implements AiProvider {
 
 function toTokenCount(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
+}
+
+/** Serialize our AiMessage into the OpenAI/OpenRouter wire shape. */
+function toOpenAiMessage(m: AiMessage): Record<string, unknown> {
+  if (m.role === 'tool') {
+    return { role: 'tool', tool_call_id: m.toolCallId, content: m.content };
+  }
+  if (m.role === 'assistant' && m.toolCalls && m.toolCalls.length > 0) {
+    return {
+      role: 'assistant',
+      content: m.content || null,
+      tool_calls: m.toolCalls.map((tc) => ({
+        id: tc.id,
+        type: 'function',
+        function: { name: tc.name, arguments: tc.argumentsJson },
+      })),
+    };
+  }
+  return { role: m.role, content: m.content };
+}
+
+/** Parse the response `tool_calls` into typed AiToolCall[] (defensive). */
+function parseToolCalls(raw: OpenRouterToolCall[] | undefined): AiToolCall[] {
+  if (!Array.isArray(raw)) return [];
+  const calls: AiToolCall[] = [];
+  for (const tc of raw) {
+    const id = typeof tc.id === 'string' ? tc.id : '';
+    const name = typeof tc.function?.name === 'string' ? tc.function.name : '';
+    const argumentsJson =
+      typeof tc.function?.arguments === 'string' ? tc.function.arguments : '{}';
+    if (id && name) calls.push({ id, name, argumentsJson });
+  }
+  return calls;
 }
 
 /** Best-effort extraction of OpenRouter's `error.message` — never throws. */

@@ -59,6 +59,15 @@ export const useUiStore = defineStore('ui', () => {
     aboutOpen.value = !aboutOpen.value;
   }
 
+  // AI chat assistant drawer (Phase 7), opened from the command bar.
+  const chatOpen = ref(false);
+  function toggleChat() {
+    chatOpen.value = !chatOpen.value;
+  }
+  function closeChat() {
+    chatOpen.value = false;
+  }
+
   return {
     sidebarCollapsed,
     toggleSidebar,
@@ -73,5 +82,8 @@ export const useUiStore = defineStore('ui', () => {
     toggleDetails,
     aboutOpen,
     toggleAbout,
+    chatOpen,
+    toggleChat,
+    closeChat,
   };
 });

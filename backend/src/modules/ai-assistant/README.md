@@ -17,6 +17,7 @@ OpenRouter** — لا يوجد أي SDK أو endpoint لمزوّد آخر في �
 | 4 | تطبيق/رفض اقتراح (→ أمر تغيير مسودة) | `POST /ai/suggestions/:id/apply` \| `/reject` | `ai.apply-suggestions` |
 | 5 | أسعار المواد المرجعية (جلب + مزامنة) | `POST /ai/materials/sync-prices` | `ai.sync-material-prices` |
 | 5 | قراءة السعر المرجعي / تغيّرات الأسعار | `GET /ai/materials/:id/reference-price`, `GET /ai/materials/price-changes` | `ai.use` |
+| 7 | مساعد محادثة للقراءة فقط (سؤال/جواب فوق التقارير عبر الحاجز) | `POST /ai/chat`, `GET /ai/chat/threads`, `GET /ai/chat/threads/:id`, `DELETE /ai/chat/threads/:id` | `ai.use` |
 | 1/6 | الحالة والحوكمة (الإعدادات + الاستهلاك) | `GET /ai/status` (`ai.use`), `GET /ai/settings` | `ai.manage-settings` |
 
 > **كل** endpoint محمي بصلاحية. النظام لا يملك ملكية صفوف لكل مستخدم؛ النطاق =
@@ -69,6 +70,27 @@ OpenRouter** — لا يوجد أي SDK أو endpoint لمزوّد آخر في �
 الخادم حيث يعيش `ENCRYPTION_KEY` — وفي الإنتاج هذا الملف (`service.json`) مشفّر بـDPAPI
 ومقفول بـACL على SYSTEM+Administrators+حساب الخدمة. إن لم يكن `ENCRYPTION_KEY` مُدارًا
 بأمان في بيئتك، اترك المفتاح في env فقط (لا تُفعّل تخزين القاعدة).
+
+## المرحلة 7 — مساعد المحادثة (قراءة فقط)
+
+درج محادثة (`AiChatDrawer`) يُفتح من شريط الأوامر لمن يملك `ai.use`. مساعد
+**للقراءة فقط**: يجيب عن أسئلة مبنية على التقارير الأربعة، ويشرح استخدام التطبيق،
+**ولا يعدّل أي بيانات إطلاقًا**.
+
+- **أداة واحدة فقط:** `query_report` — النموذج قد يطلبها في الجولة الأولى (function
+  calling)؛ الوسائط التي يرجعها تُعاد **إلى نفس الحاجز الأمني** (`ai-validation.service`)
+  قبل أي تنفيذ، ثم تُنفَّذ عبر `ReportsService` (المنفّذ المقيّد المشترك مع مسار المرحلة 3
+  في `report-query-executor.ts`). الجولة الثانية (`toolChoice: 'none'`) تصوغ الجواب من
+  نتيجة الأداة. لا SQL ولا Prisma ولا وصول مباشر للبيانات.
+- **رفض التعديل:** أي طلب لتغيير بيانات (حذف/تعديل/إنشاء) يُرفض نصًّا دون استدعاء أي
+  أداة — نظام التوجيه يوضّح أنه للقراءة فقط.
+- **المحادثات محفوظة في القاعدة** (`AiChatThread` + `AiChatMessage`)، **مملوكة
+  للمستخدم**: كل استعلام مقيّد بـ`userId` (لا يرى مستخدم محادثة غيره — 404). الحذف
+  يمسح المحادثة ورسائلها (cascade).
+- **الحوكمة:** كل رسالة تُسجَّل في `AiRequestLog` بنوع `CHAT` **بلا محتوى** (ملخص مثل
+  `chat: query cash-flow` أو `chat: conversation`، مجموع الرموز فقط)، وتخضع للسقف
+  الشهري وبوابة الميزة (`chat`) عبر `isFeatureEnabled` — تعطيلها يعيد 503
+  `AI_FEATURE_DISABLED`.
 
 ## النماذج
 
