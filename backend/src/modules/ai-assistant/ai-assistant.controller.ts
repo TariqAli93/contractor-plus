@@ -3,7 +3,9 @@ import { UnauthorizedError } from '../../shared/errors/unauthorized.error.js';
 import type { AuditActor } from '../audit/audit.service.js';
 import type { AiAssistantService } from './ai-assistant.service.js';
 import {
+  actionIdParamSchema,
   chatSendBodySchema,
+  confirmActionBodySchema,
   guardCostBodySchema,
   guardPaymentBodySchema,
   materialIdParamSchema,
@@ -13,6 +15,7 @@ import {
   setApiKeyBodySchema,
   suggestionIdParamSchema,
   threadIdParamSchema,
+  toolMessageBodySchema,
   updateModelsBodySchema,
   updateSettingsBodySchema,
 } from './ai-assistant.schemas.js';
@@ -147,6 +150,42 @@ export class AiAssistantController {
     await this.service.chat.deleteThread(threadId, this.actor(request));
     return reply.code(204).send();
   };
+
+  // ----- Phase 8: AI tools / actions -----
+
+  toolMessage = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { text } = toolMessageBodySchema.parse(request.body ?? {});
+    const result = await this.service.tools.message(text, this.caller(request), this.actor(request));
+    return reply.code(200).send(result);
+  };
+
+  toolPending = async (request: FastifyRequest, reply: FastifyReply) => {
+    const items = await this.service.tools.listPending(this.caller(request), this.actor(request));
+    return reply.code(200).send({ items });
+  };
+
+  toolConfirm = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { actionId } = actionIdParamSchema.parse(request.params);
+    const { secrets } = confirmActionBodySchema.parse(request.body ?? {});
+    const result = await this.service.tools.confirm(
+      actionId,
+      secrets,
+      this.caller(request),
+      this.actor(request),
+    );
+    return reply.code(200).send(result);
+  };
+
+  toolReject = async (request: FastifyRequest, reply: FastifyReply) => {
+    const { actionId } = actionIdParamSchema.parse(request.params);
+    await this.service.tools.reject(actionId, this.caller(request), this.actor(request));
+    return reply.code(204).send();
+  };
+
+  private caller(request: FastifyRequest): { id: string; role: string } {
+    if (!request.user) throw new UnauthorizedError();
+    return { id: request.user.id, role: request.user.role };
+  }
 
   private actor(request: FastifyRequest): AuditActor {
     if (!request.user) throw new UnauthorizedError();

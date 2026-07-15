@@ -44,12 +44,19 @@ const canCancel = computed(() => !isTerminal.value);
 // ----- Simple confirm-and-call actions -----
 
 const running = ref<string | null>(null);
+const cancelDialog = ref(false);
+const cancelReason = ref('');
+const cancelling = ref(false);
+// Any lifecycle call in flight (a plain action, or the cancel dialog) locks the
+// whole toolbar so two transitions can't race.
+const busy = computed(() => running.value !== null || cancelling.value);
 
 async function performAction(
   key: 'start' | 'pause' | 'resume' | 'complete',
   apiCall: () => Promise<unknown>,
   confirmOpts: { title: string; message: string; destructive?: boolean },
 ) {
+  if (busy.value) return;
   const ok = await confirm({
     title: confirmOpts.title,
     message: confirmOpts.message,
@@ -95,11 +102,8 @@ const onComplete = () =>
 
 // ----- Cancel with reason -----
 
-const cancelDialog = ref(false);
-const cancelReason = ref('');
-const cancelling = ref(false);
-
 async function performCancel() {
+  if (cancelling.value) return;
   cancelling.value = true;
   try {
     await projectsApi.cancel(props.project.id, {
@@ -135,6 +139,7 @@ async function performCancel() {
             variant="flat"
             prepend-icon="mdi-play-circle-outline"
             :loading="running === 'start'"
+            :disabled="busy"
             @click="onStart"
           >
             {{ t('projects.actions.start') }}
@@ -147,6 +152,7 @@ async function performCancel() {
             variant="tonal"
             prepend-icon="mdi-pause-circle-outline"
             :loading="running === 'pause'"
+            :disabled="busy"
             @click="onPause"
           >
             {{ t('projects.actions.pause') }}
@@ -156,6 +162,7 @@ async function performCancel() {
             variant="flat"
             prepend-icon="mdi-check-circle-outline"
             :loading="running === 'complete'"
+            :disabled="busy"
             @click="onComplete"
           >
             {{ t('projects.actions.complete') }}
@@ -169,6 +176,7 @@ async function performCancel() {
             variant="flat"
             prepend-icon="mdi-play-circle-outline"
             :loading="running === 'resume'"
+            :disabled="busy"
             @click="onResume"
           >
             {{ t('projects.actions.resume') }}
@@ -178,6 +186,7 @@ async function performCancel() {
             variant="tonal"
             prepend-icon="mdi-check-circle-outline"
             :loading="running === 'complete'"
+            :disabled="busy"
             @click="onComplete"
           >
             {{ t('projects.actions.complete') }}
@@ -190,6 +199,7 @@ async function performCancel() {
           color="error"
           variant="text"
           prepend-icon="mdi-cancel"
+          :disabled="busy"
           @click="cancelDialog = true"
         >
           {{ t('projects.actions.cancel') }}

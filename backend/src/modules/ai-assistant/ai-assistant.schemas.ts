@@ -149,3 +149,17 @@ export const chatSendBodySchema = z.object({
 });
 
 export const threadIdParamSchema = z.object({ threadId: uuidSchema });
+
+// ----- Phase 8: AI tools / actions -----
+
+export const toolMessageBodySchema = z.object({
+  text: z.string().trim().min(1).max(4000),
+});
+
+export const actionIdParamSchema = z.object({ actionId: uuidSchema });
+
+// Secrets are collected in the confirm dialog and forwarded ONLY at execution
+// (e.g. { password }). They are never sent to the model nor stored.
+export const confirmActionBodySchema = z.object({
+  secrets: z.record(z.string(), z.string().max(256)).optional(),
+});

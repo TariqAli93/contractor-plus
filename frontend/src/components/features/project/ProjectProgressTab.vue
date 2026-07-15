@@ -27,14 +27,27 @@ const isTerminal = computed(
     props.project.status === ProjectStatus.CANCELLED,
 );
 
-const draft = ref<number>(Number(props.project.progressPercentage));
-const original = computed(() => Number(props.project.progressPercentage));
+const toPct = (v: unknown) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const draft = ref<number>(toPct(props.project.progressPercentage));
+const original = computed(() => toPct(props.project.progressPercentage));
 const dirty = computed(() => draft.value !== original.value);
+// A cleared or out-of-range field must not be savable.
+const valid = computed(
+  () => Number.isFinite(Number(draft.value)) && Number(draft.value) >= 0 && Number(draft.value) <= 100,
+);
+const displayPct = computed(() => (valid.value ? Math.round(Number(draft.value)) : 0));
 const submitting = ref(false);
 
-watch(() => props.project.progressPercentage, (v) => {
-  draft.value = Number(v);
-});
+watch(
+  () => props.project.progressPercentage,
+  (v) => {
+    draft.value = toPct(v);
+  },
+);
 
 const percentageRule = (v: unknown) => {
   const n = Number(v);
@@ -42,7 +55,7 @@ const percentageRule = (v: unknown) => {
 };
 
 async function save() {
-  if (!dirty.value) return;
+  if (!dirty.value || !valid.value || submitting.value) return;
   submitting.value = true;
   try {
     await projectsApi.update(props.project.id, { progressPercentage: draft.value });
@@ -67,6 +80,7 @@ function reset() {
     <v-alert
       v-if="isTerminal"
       :type="project.status === ProjectStatus.COMPLETED ? 'success' : 'warning'"
+      :icon="project.status === ProjectStatus.COMPLETED ? 'mdi-check-circle-outline' : 'mdi-cancel'"
       variant="tonal"
       class="mb-4"
     >
@@ -82,7 +96,7 @@ function reset() {
             <div class="text-medium-emphasis text-sm">
               {{ t('projects.progress.current') }}
             </div>
-            <div class="text-h4 font-medium">{{ draft }}%</div>
+            <div class="cp-metric-value cp-tnum">{{ displayPct }}%</div>
           </div>
           <ProjectProgressBar :value="draft" :height="20" />
         </div>
@@ -122,7 +136,7 @@ function reset() {
           <v-btn
             color="primary"
             variant="flat"
-            :disabled="!dirty"
+            :disabled="!dirty || !valid"
             :loading="submitting"
             @click="save"
           >

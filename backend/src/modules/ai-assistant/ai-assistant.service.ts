@@ -17,6 +17,7 @@ import { AiBudgetService } from './services/ai-budget.service.js';
 import { AiSettingsService } from './services/ai-settings.service.js';
 import { AiModelsService } from './services/ai-models.service.js';
 import { AiChatService } from './services/ai-chat.service.js';
+import { AiToolsService } from './tools/ai-tools.service.js';
 import type { AiSettingsDto, AiStatusDto, CreateAiRequestLogInput } from './ai-assistant.types.js';
 
 // Facade of the ai-assistant module. Data access rules (non-negotiable):
@@ -42,6 +43,7 @@ export class AiAssistantService {
   readonly validation: AiValidationService;
   readonly budget: AiBudgetService;
   readonly chat: AiChatService;
+  readonly tools: AiToolsService;
 
   constructor(prisma: PrismaClient) {
     this.repo = new AiAssistantRepository(prisma);
@@ -96,6 +98,14 @@ export class AiAssistantService {
       audit: auditService,
       reports: reportsService,
       validation: this.validation,
+    });
+    // Phase 8 — real write/read tools (create_*, generate_report,
+    // update_app_settings) behind an explicit propose → confirm → execute flow.
+    this.tools = new AiToolsService({
+      prisma,
+      settings: this.settings,
+      budget: this.budget,
+      aiRepo: this.repo,
     });
   }
 

@@ -43,6 +43,17 @@ export class CustomersService {
     return customer;
   }
 
+  /**
+   * Live customers sharing a phone number — the duplicate-detection lookup used
+   * by the quick-entry / AI create flows to warn before creating a twin. Empty
+   * phone → no duplicates.
+   */
+  async findDuplicatesByPhone(phone: string | null | undefined): Promise<Customer[]> {
+    const trimmed = (phone ?? '').trim();
+    if (!trimmed) return [];
+    return this.repo.findByPhone(trimmed);
+  }
+
   async create(data: CreateCustomerInput, actor: AuditActor): Promise<Customer> {
     return this.prisma.$transaction((tx) => this.createWithinTx(tx, data, actor));
   }

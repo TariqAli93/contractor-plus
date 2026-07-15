@@ -48,7 +48,11 @@ export function useProjectForm(id?: string) {
     }
   }
 
-  async function submit() {
+  // Returns true only when the write succeeded, so the caller never treats a
+  // validation/API failure as a save. Re-entrant calls (a second Enter while the
+  // first is in flight) are dropped.
+  async function submit(): Promise<boolean> {
+    if (submitting.value) return false;
     clear();
     submitting.value = true;
     try {
@@ -75,8 +79,10 @@ export function useProjectForm(id?: string) {
         toast.success(t('common.saved'));
         await router.push(`/projects/${created.id}`);
       }
+      return true;
     } catch (e) {
       handle(e);
+      return false;
     } finally {
       submitting.value = false;
     }

@@ -18,6 +18,7 @@ import type {
   UpdateAiSettingsPayload,
   UpdateModelsPayload,
 } from '@/types/ai';
+import type { AgentTurnResult, PendingAction, ToolResult } from '@/types/aiActions';
 
 // Model round-trips can exceed the client's default 15s (backend allows 30s
 // per provider call, and recommendations may chain a heavy model) — give the
@@ -90,4 +91,18 @@ export const aiApi = {
   // Fetch loop can be slow (multiple external sources) — allow generous time.
   syncMaterialPrices: (): Promise<SyncPricesResult> =>
     apiPost('/ai/materials/sync-prices', undefined, { timeout: 90_000 }),
+
+  // Phase 8 — tools/actions. A message may run several model round-trips (tool
+  // cycles), so allow generous time. Writes come back as pending actions; the
+  // write itself happens only through confirmAction.
+  toolMessage: (text: string): Promise<AgentTurnResult> =>
+    apiPost('/ai/actions/message', { text }, { timeout: 90_000 }),
+
+  pendingActions: (): Promise<{ items: PendingAction[] }> => apiGet('/ai/actions/pending'),
+
+  confirmAction: (actionId: string, secrets?: Record<string, string>): Promise<ToolResult> =>
+    apiPost(`/ai/actions/${actionId}/confirm`, { secrets }, { timeout: 60_000 }),
+
+  rejectAction: (actionId: string): Promise<void> =>
+    apiPost(`/ai/actions/${actionId}/reject`),
 };

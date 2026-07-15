@@ -60,7 +60,7 @@ defineEmits<{
     @dblclick:row="(eventData: any, row: any) => $emit('dblclick:row', eventData, row)"
   >
     <template v-for="(_, slotName) in $slots" :key="slotName" #[slotName]="slotProps">
-      <slot :name="slotName" v-bind="slotProps" />
+      <slot :name="slotName" v-bind="slotProps ?? {}" />
     </template>
   </v-data-table-server>
 
@@ -84,7 +84,7 @@ defineEmits<{
     @dblclick:row="(eventData: any, row: any) => $emit('dblclick:row', eventData, row)"
   >
     <template v-for="(_, slotName) in $slots" :key="slotName" #[slotName]="slotProps">
-      <slot :name="slotName" v-bind="slotProps" />
+      <slot :name="slotName" v-bind="slotProps ?? {}" />
     </template>
   </v-data-table>
 </template>

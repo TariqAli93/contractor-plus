@@ -169,6 +169,9 @@ function close() {
 }
 
 async function submit() {
+  // Enter in any field fires the form submit regardless of the button's loading
+  // state, so guard against a second create while the first is in flight.
+  if (submitting.value) return;
   clear();
   submitting.value = true;
   try {

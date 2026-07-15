@@ -263,6 +263,14 @@ textarea.v-field__input::placeholder {
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--cp-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tabular figures for counts, percentages, dates and ids that sit outside a
+   table (inside a table the thead/td rules already handle it). DESIGN.md treats
+   this as a financial-accuracy requirement, not a flourish. */
+.cp-tnum {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Subtle slide-fade for content swaps (loading→loaded). */

@@ -76,6 +76,15 @@ const aiAssistantRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/chat/threads', use, controller.chatThreads);
   fastify.get('/chat/threads/:threadId', use, controller.chatThread);
   fastify.delete('/chat/threads/:threadId', use, controller.chatDeleteThread);
+
+  // Phase 8 — AI tools/actions. The route gate is ai.use (+ apply-suggestions
+  // for the write path); each TOOL additionally enforces its own module
+  // permission inside the executor (backend-side, per binding rule #7). A write
+  // never runs from /message — only through an explicit /confirm of an actionId.
+  fastify.post('/actions/message', applySuggestions, controller.toolMessage);
+  fastify.get('/actions/pending', use, controller.toolPending);
+  fastify.post('/actions/:actionId/confirm', applySuggestions, controller.toolConfirm);
+  fastify.post('/actions/:actionId/reject', use, controller.toolReject);
 };
 
 export default aiAssistantRoutes;

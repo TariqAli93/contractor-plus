@@ -8,25 +8,18 @@ import { useAccess } from '@/composables/useAccess';
 import { useConfirm } from '@/composables/useConfirm';
 import { useCurrencyFormat } from '@/composables/useCurrencyFormat';
 import { numOrNull } from '@/lib/number';
-import { PaymentMethod, RoleName } from '@/types/enums';
+import { PaymentMethod, PaymentStatus, RoleName } from '@/types/enums';
 import type {
   CreatePaymentInput,
   Payment,
   ProjectPaymentSummary,
   UpdatePaymentInput,
 } from '@/types/payment';
-import type {
-  GridCellCommit,
-  GridColumn,
-  GridPastePayload,
-  GridRow,
-  GridRowAction,
-} from '@/components/shared/datagrid/types';
-import DataGrid from '@/components/shared/datagrid/DataGrid.vue';
-import {
-  buildPaymentColumns,
-  paymentRowClass,
-} from '@/components/features/payment/paymentGridColumns';
+import DataTable from '@/components/shared/DataTable.vue';
+import InlineTextField from '@/components/shared/table/InlineTextField.vue';
+import InlineSelect from '@/components/shared/table/InlineSelect.vue';
+import InlineTableActions from '@/components/shared/table/InlineTableActions.vue';
+import { useInlineTableEditor } from '@/components/shared/table/useInlineTableEditor';
 import SummaryCard from '@/components/shared/SummaryCard.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
@@ -44,7 +37,6 @@ const { format: money } = useCurrencyFormat();
 // Payments are finance-only - engineers/viewers read but can't post.
 const WRITE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ACCOUNTANT];
 const ADD_PERMS = ['payments.create'];
-const canCreate = computed(() => canAccess({ permissions: ADD_PERMS, roles: WRITE_ROLES }));
 const canEdit = computed(() => canAccess({ permissions: ['payments.update'], roles: WRITE_ROLES }));
 const canDelete = computed(() => canAccess({ permissions: ['payments.delete'], roles: WRITE_ROLES }));
 
@@ -76,126 +68,129 @@ async function refresh() {
 onMounted(refresh);
 watch(() => props.projectId, refresh);
 
-const columns = computed<GridColumn[]>(() => buildPaymentColumns({ t, money }));
-const gridRows = computed<GridRow[]>(() => payments.value as unknown as GridRow[]);
+const methodOptions = computed(() => [
+  { value: PaymentMethod.CASH, title: t('payments.method.CASH') },
+  { value: PaymentMethod.BANK_TRANSFER, title: t('payments.method.BANK_TRANSFER') },
+  { value: PaymentMethod.CHECK, title: t('payments.method.CHECK') },
+  { value: PaymentMethod.OTHER, title: t('payments.method.OTHER') },
+]);
+
+const headers = computed(() => [
+  { title: t('payments.fields.dueDate'), key: 'dueDate', width: 150 },
+  { title: t('payments.fields.amount'), key: 'amount', align: 'end', width: 140 },
+  { title: t('payments.fields.status'), key: 'status', width: 120, sortable: false },
+  { title: t('payments.fields.paymentDate'), key: 'paymentDate', width: 140 },
+  { title: t('payments.fields.method'), key: 'method', width: 150 },
+  { title: t('payments.fields.reference'), key: 'reference', minWidth: 150 },
+  { title: '', key: 'actions', align: 'end', sortable: false, width: 92 },
+]);
+
+function statusColor(status: unknown): string | undefined {
+  if (status === PaymentStatus.PAID) return 'success';
+  if (status === PaymentStatus.LATE) return 'error';
+  if (status === PaymentStatus.CANCELLED) return undefined;
+  return 'default';
+}
+
+const editor = useInlineTableEditor<Payment>({
+  newDraft: () => ({ dueDate: todayIso(), amount: null, method: null, reference: '' }),
+  toDraft: (row) => ({
+    dueDate: String(row.dueDate).slice(0, 10),
+    amount: row.amount,
+    method: row.method,
+    reference: row.reference ?? '',
+  }),
+});
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
-function newRowFactory(): Record<string, unknown> {
-  return {
-    dueDate: todayIso(),
-    amount: null,
-    method: null,
-    reference: '',
-    status: 'PENDING',
-    paymentDate: null,
-  };
+
+function rowProps({ item }: { item: Payment }) {
+  return editor.isEditing(item) ? { class: 'cp-inline-editing' } : {};
 }
 
-function paymentPatch(values: Record<string, unknown>): UpdatePaymentInput {
+function validate(draft: Record<string, unknown>): Record<string, string> {
+  const errs: Record<string, string> = {};
+  if (!draft.dueDate) errs.dueDate = t('inline.required');
+  if (numOrNull(draft.amount) == null) errs.amount = t('inline.required');
+  return errs;
+}
+
+function toPatch(draft: Record<string, unknown>): UpdatePaymentInput {
   const patch: UpdatePaymentInput = {};
-  if ('dueDate' in values && values.dueDate) patch.dueDate = String(values.dueDate);
-  if ('amount' in values) {
-    const a = numOrNull(values.amount);
-    if (a != null) patch.amount = a;
-  }
-  if ('method' in values) patch.method = (values.method as PaymentMethod | null) ?? null;
-  if ('reference' in values)
-    patch.reference = values.reference == null || values.reference === '' ? null : String(values.reference);
+  if (draft.dueDate) patch.dueDate = String(draft.dueDate);
+  const a = numOrNull(draft.amount);
+  if (a != null) patch.amount = a;
+  patch.method = (draft.method as PaymentMethod | null) ?? null;
+  patch.reference = draft.reference == null || draft.reference === '' ? null : String(draft.reference);
   return patch;
 }
-
-function buildCreate(values: Record<string, unknown>): CreatePaymentInput | null {
-  const amount = numOrNull(values.amount);
-  const dueDate = values.dueDate ? String(values.dueDate) : '';
-  if (amount == null || !dueDate) return null;
+function toCreate(draft: Record<string, unknown>): CreatePaymentInput {
   return {
     projectId: props.projectId,
-    amount,
-    dueDate,
-    method: (values.method as PaymentMethod | null) ?? null,
-    reference: values.reference == null || values.reference === '' ? null : String(values.reference),
+    amount: numOrNull(draft.amount) ?? 0,
+    dueDate: String(draft.dueDate),
+    method: (draft.method as PaymentMethod | null) ?? null,
+    reference: draft.reference == null || draft.reference === '' ? null : String(draft.reference),
     notes: null,
   };
 }
 
-async function onCellCommit(p: GridCellCommit) {
-  try {
-    await paymentsApi.update(p.id, paymentPatch({ [p.field]: p.value }));
-    await refresh();
-    emit('changed');
-  } catch (e) {
-    handle(e);
-    await refresh();
-  }
-}
-
-async function onNewCommit(values: Record<string, unknown>) {
-  const payload = buildCreate(values);
-  if (!payload) {
-    toast.error(t('projects.payments.gridAddInvalid'));
-    return;
-  }
-  try {
-    await paymentsApi.create(payload);
-    toast.success(t('projects.payments.paymentCreated'));
-    await refresh();
-    emit('changed');
-  } catch (e) {
-    handle(e);
-  }
-}
-
-async function onPaste(payload: GridPastePayload) {
-  try {
-    for (const u of payload.updates) await paymentsApi.update(u.id, paymentPatch(u.values));
-    let skipped = 0;
-    for (const row of payload.creates) {
-      const create = buildCreate(row);
-      if (create) await paymentsApi.create(create);
-      else skipped++;
+async function saveCreate() {
+  const draft = editor.creatingDraft.value;
+  if (!draft) return;
+  const errs = validate(draft);
+  if (Object.keys(errs).length) return editor.setErrors(errs);
+  const ok = await editor.runSave(async () => {
+    try {
+      await paymentsApi.create(toCreate(draft));
+      toast.success(t('projects.payments.paymentCreated'));
+      await refresh();
+      emit('changed');
+    } catch (e) {
+      handle(e);
+      throw e;
     }
-    toast.success(t('datagrid.pasteApplied'));
-    if (skipped > 0) toast.error(t('datagrid.pasteSkipped'));
-    await refresh();
-    emit('changed');
-  } catch (e) {
-    handle(e);
-    await refresh();
-  }
+  });
+  if (ok) editor.cancelCreate();
 }
 
-async function onDeleteRows(ids: string[]) {
+async function saveEdit() {
+  const draft = editor.editingDraft.value;
+  const id = editor.editingId.value;
+  if (!draft || id == null) return;
+  const errs = validate(draft);
+  if (Object.keys(errs).length) return editor.setErrors(errs);
+  const ok = await editor.runSave(async () => {
+    try {
+      await paymentsApi.update(String(id), toPatch(draft));
+      await refresh();
+      emit('changed');
+    } catch (e) {
+      handle(e);
+      throw e;
+    }
+  });
+  if (ok) editor.cancelEdit();
+}
+
+async function remove(row: Payment) {
   const ok = await confirm({
     title: t('projects.payments.deleteTitle'),
-    message: t('projects.payments.deleteManyMsg').replace('{n}', String(ids.length)),
+    message: t('projects.payments.deleteMsg', { amount: money(Number(row.amount)) }),
     confirmText: t('common.delete'),
     destructive: true,
   });
   if (!ok) return;
   try {
-    for (const id of ids) await paymentsApi.remove(id);
+    await paymentsApi.remove(row.id);
     toast.success(t('common.deleted'));
     await refresh();
     emit('changed');
   } catch (e) {
     handle(e);
-    await refresh();
   }
-}
-
-function rowActions(row: GridRow): GridRowAction[] {
-  const actions: GridRowAction[] = [];
-  if (canDelete.value) {
-    actions.push({
-      label: t('datagrid.deleteRow'),
-      icon: 'mdi-delete',
-      danger: true,
-      perform: () => void onDeleteRows([String(row.id)]),
-    });
-  }
-  return actions;
 }
 
 const addOpen = ref(false);
@@ -241,33 +236,158 @@ async function onCreated() {
 
       <div class="flex items-center justify-between mb-2 gap-2 flex-wrap">
         <span class="text-h6">{{ t('projects.payments.latest') }}</span>
-        <span v-if="canCreate || canEdit" class="text-caption text-medium-emphasis">
-          {{ t('datagrid.hint') }}
-        </span>
+        <RoleGate :permissions="ADD_PERMS" :roles="WRITE_ROLES">
+          <v-btn
+            size="small"
+            variant="tonal"
+            prepend-icon="mdi-plus"
+            :disabled="editor.busy.value"
+            @click="editor.startCreate()"
+          >
+            {{ t('projects.payments.quickAdd') }}
+          </v-btn>
+        </RoleGate>
       </div>
 
-      <DataGrid
-        :rows="gridRows"
-        :columns="columns"
-        :editable="canEdit"
-        :show-new-row="canCreate"
-        :new-row-factory="newRowFactory"
-        :selectable="canDelete"
-        :row-actions="rowActions"
-        :row-class="paymentRowClass"
-        :enable-csv="true"
-        export-name="payments"
+      <DataTable
+        :server="false"
+        :items="payments"
+        :items-length="payments.length"
+        :headers="headers"
         :loading="loading"
-        height="440px"
-        @cell-commit="onCellCommit"
-        @new-commit="onNewCommit"
-        @paste="onPaste"
-        @delete-rows="onDeleteRows"
-      />
+        item-value="id"
+        :items-per-page="25"
+        :items-per-page-options="[25, 50, 100]"
+        :row-props="rowProps"
+        :aria-label="t('projects.payments.title')"
+      >
+        <template #body.prepend>
+          <tr v-if="editor.isCreating.value" class="cp-inline-add">
+            <td>
+              <InlineTextField
+                field="dueDate"
+                kind="date"
+                :model-value="editor.createValue('dueDate')"
+                :error="editor.errorFor('dueDate')"
+                autofocus
+                @update:model-value="editor.setCreateValue('dueDate', $event)"
+              />
+            </td>
+            <td>
+              <InlineTextField
+                field="amount"
+                kind="money"
+                :model-value="editor.createValue('amount')"
+                :step="0.01"
+                :min="0"
+                :error="editor.errorFor('amount')"
+                @update:model-value="editor.setCreateValue('amount', $event)"
+              />
+            </td>
+            <td>
+              <v-chip size="x-small" color="default" variant="tonal">
+                {{ t('payments.status.PENDING') }}
+              </v-chip>
+            </td>
+            <td>-</td>
+            <td>
+              <InlineSelect
+                field="method"
+                :model-value="editor.createValue('method')"
+                :items="methodOptions"
+                :placeholder="t('payments.method.unset')"
+                @update:model-value="editor.setCreateValue('method', $event)"
+              />
+            </td>
+            <td>
+              <InlineTextField
+                field="reference"
+                :model-value="editor.createValue('reference')"
+                :placeholder="t('payments.fields.reference')"
+                @update:model-value="editor.setCreateValue('reference', $event)"
+              />
+            </td>
+            <td>
+              <InlineTableActions editing :saving="editor.saving.value" @save="saveCreate" @cancel="editor.cancelCreate()" />
+            </td>
+          </tr>
+        </template>
 
-      <p v-if="total > payments.length" class="text-caption text-medium-emphasis mt-2">
-        {{ t('datagrid.truncated').replace('{shown}', String(payments.length)).replace('{total}', String(total)) }}
-      </p>
+        <template #[`item.dueDate`]="{ item }">
+          <InlineTextField
+            v-if="editor.isEditing(item)"
+            field="dueDate"
+            kind="date"
+            :model-value="editor.editValue('dueDate')"
+            :error="editor.errorFor('dueDate')"
+            @update:model-value="editor.setEditValue('dueDate', $event)"
+          />
+          <span v-else>{{ String(item.dueDate).slice(0, 10) }}</span>
+        </template>
+
+        <template #[`item.amount`]="{ item }">
+          <InlineTextField
+            v-if="editor.isEditing(item)"
+            field="amount"
+            kind="money"
+            :model-value="editor.editValue('amount')"
+            :step="0.01"
+            :min="0"
+            :error="editor.errorFor('amount')"
+            @update:model-value="editor.setEditValue('amount', $event)"
+          />
+          <span v-else class="cp-num">{{ money(Number(item.amount)) }}</span>
+        </template>
+
+        <template #[`item.status`]="{ item }">
+          <v-chip size="x-small" :color="statusColor(item.status)" variant="tonal">
+            {{ t('payments.status.' + String(item.status)) }}
+          </v-chip>
+        </template>
+
+        <template #[`item.paymentDate`]="{ item }">
+          {{ item.paymentDate ? String(item.paymentDate).slice(0, 10) : '-' }}
+        </template>
+
+        <template #[`item.method`]="{ item }">
+          <InlineSelect
+            v-if="editor.isEditing(item)"
+            field="method"
+            :model-value="editor.editValue('method')"
+            :items="methodOptions"
+            :placeholder="t('payments.method.unset')"
+            @update:model-value="editor.setEditValue('method', $event)"
+          />
+          <span v-else>{{ item.method ? t('payments.method.' + String(item.method)) : t('payments.method.unset') }}</span>
+        </template>
+
+        <template #[`item.reference`]="{ item }">
+          <InlineTextField
+            v-if="editor.isEditing(item)"
+            field="reference"
+            :model-value="editor.editValue('reference')"
+            @update:model-value="editor.setEditValue('reference', $event)"
+          />
+          <span v-else class="cp-muted">{{ item.reference || '-' }}</span>
+        </template>
+
+        <template #[`item.actions`]="{ item }">
+          <InlineTableActions
+            :editing="editor.isEditing(item)"
+            :saving="editor.saving.value"
+            :can-edit="canEdit"
+            :can-delete="canDelete"
+            @edit="editor.startEdit(item)"
+            @save="saveEdit"
+            @cancel="editor.cancelEdit()"
+            @delete="remove(item)"
+          />
+        </template>
+
+        <template #no-data>
+          <div class="cp-empty">{{ t('projects.payments.empty') }}</div>
+        </template>
+      </DataTable>
     </template>
 
     <v-progress-linear v-else indeterminate />
@@ -275,3 +395,25 @@ async function onCreated() {
     <AddPaymentDialog v-model="addOpen" :project-id="projectId" @created="onCreated" />
   </div>
 </template>
+
+<style scoped>
+.cp-num {
+  font-variant-numeric: tabular-nums;
+}
+.cp-muted {
+  color: var(--cp-text-muted);
+}
+.cp-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--cp-text-muted);
+}
+.cp-inline-add > td {
+  background: var(--cp-primary-soft);
+  vertical-align: top;
+}
+:deep(tr.cp-inline-editing > td) {
+  background: var(--cp-primary-soft);
+  vertical-align: top;
+}
+</style>

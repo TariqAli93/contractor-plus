@@ -31,10 +31,18 @@ const isTerminal = computed(
 const allLocked = computed(() => !canWrite.value || isTerminal.value);
 
 const requiredRule = (v: unknown) => !!v || ' ';
+// Delivery cannot precede the start. Instant client feedback; the server still
+// enforces it. Empty either side is allowed (both dates are optional).
+const deliveryAfterStart = (v: unknown) => {
+  const start = form.value.startDate;
+  if (!v || !start) return true;
+  return String(v) >= String(start) || t('projects.errors.deliveryBeforeStart');
+};
 
 async function handleSubmit() {
-  await submit();
-  emit('saved');
+  // Only signal the parent when the write actually succeeded - a failed save
+  // must not trigger a reload/list refresh.
+  if (await submit()) emit('saved');
 }
 </script>
 
@@ -82,6 +90,7 @@ async function handleSubmit() {
           :label="t('projects.fields.deliveryDate')"
           :error-messages="fieldErrors.deliveryDate"
           :disabled="allLocked"
+          :rules="[deliveryAfterStart]"
           type="date"
         />
         <v-textarea

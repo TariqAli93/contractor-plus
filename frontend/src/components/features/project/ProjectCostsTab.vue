@@ -7,6 +7,7 @@ import { useToast } from '@/composables/useToast';
 import { useAccess } from '@/composables/useAccess';
 import { useConfirm } from '@/composables/useConfirm';
 import { useCurrencyFormat } from '@/composables/useCurrencyFormat';
+import { numOrNull } from '@/lib/number';
 import { CostCategory, RoleName } from '@/types/enums';
 import type {
   CostWithMaterial,
@@ -14,15 +15,11 @@ import type {
   ProjectCostSummary,
   UpdateCostInput,
 } from '@/types/cost';
-import type {
-  GridCellCommit,
-  GridColumn,
-  GridPastePayload,
-  GridRow,
-  GridRowAction,
-} from '@/components/shared/datagrid/types';
-import DataGrid from '@/components/shared/datagrid/DataGrid.vue';
-import { buildCostColumns, numOrNull } from '@/components/features/cost/costGridColumns';
+import DataTable from '@/components/shared/DataTable.vue';
+import InlineTextField from '@/components/shared/table/InlineTextField.vue';
+import InlineSelect from '@/components/shared/table/InlineSelect.vue';
+import InlineTableActions from '@/components/shared/table/InlineTableActions.vue';
+import { useInlineTableEditor } from '@/components/shared/table/useInlineTableEditor';
 import SummaryCard from '@/components/shared/SummaryCard.vue';
 import MoneyDisplay from '@/components/shared/MoneyDisplay.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
@@ -37,21 +34,11 @@ const { canAccess } = useAccess();
 const { confirm } = useConfirm();
 const { format: money } = useCurrencyFormat();
 
-const ADD_ROLES: RoleName[] = [
-  RoleName.OWNER,
-  RoleName.ADMIN,
-  RoleName.ACCOUNTANT,
-  RoleName.ENGINEER,
-];
+const ADD_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ACCOUNTANT, RoleName.ENGINEER];
 const DELETE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ACCOUNTANT];
 const ADD_PERMS = ['costs.create'];
-const EDIT_PERMS = ['costs.update'];
-const DELETE_PERMS = ['costs.delete'];
-const canAdd = computed(() => canAccess({ permissions: ADD_PERMS, roles: ADD_ROLES }));
-const canEdit = computed(() => canAccess({ permissions: EDIT_PERMS, roles: ADD_ROLES }));
-const canDelete = computed(() =>
-  canAccess({ permissions: DELETE_PERMS, roles: DELETE_ROLES }),
-);
+const canEdit = computed(() => canAccess({ permissions: ['costs.update'], roles: ADD_ROLES }));
+const canDelete = computed(() => canAccess({ permissions: ['costs.delete'], roles: DELETE_ROLES }));
 
 const PAGE_SIZE = 100;
 const summary = ref<ProjectCostSummary | null>(null);
@@ -78,7 +65,6 @@ async function refresh() {
     loading.value = false;
   }
 }
-
 onMounted(refresh);
 watch(() => props.projectId, refresh);
 
@@ -90,167 +76,156 @@ const categories = computed(() => [
   { value: CostCategory.MISC, title: t('costs.category.MISC') },
 ]);
 
-const columns = computed<GridColumn[]>(() =>
-  buildCostColumns({ t, money, categories: categories.value }),
-);
-// The grid reads rows structurally; CostWithMaterial carries the `id` key it
-// needs. Cast through unknown to satisfy the generic GridRow index signature.
-const gridRows = computed<GridRow[]>(() => costs.value as unknown as GridRow[]);
+const headers = computed(() => [
+  { title: t('projects.costs.fields.date'), key: 'date', width: 140 },
+  { title: t('projects.costs.fields.category'), key: 'category', width: 140 },
+  { title: t('projects.costs.fields.description'), key: 'description', minWidth: 200 },
+  { title: t('projects.costs.fields.quantity'), key: 'quantity', align: 'end', width: 110 },
+  { title: t('projects.costs.fields.unitPrice'), key: 'unitPrice', align: 'end', width: 130 },
+  { title: t('projects.costs.fields.totalAmount'), key: 'totalAmount', align: 'end', width: 140 },
+  { title: '', key: 'actions', align: 'end', sortable: false, width: 92 },
+]);
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
-function newRowFactory(): Record<string, unknown> {
-  return {
+
+const editor = useInlineTableEditor<CostWithMaterial>({
+  newDraft: () => ({
     category: CostCategory.MATERIAL,
     description: '',
     quantity: null,
     unitPrice: null,
     totalAmount: null,
     date: todayIso(),
-  };
+  }),
+  toDraft: (row) => ({
+    category: row.category,
+    description: row.description,
+    quantity: row.quantity,
+    unitPrice: row.unitPrice,
+    totalAmount: row.totalAmount,
+    date: String(row.date).slice(0, 10),
+  }),
+});
+
+/** Total is derived from qty × unitPrice; only typeable when one is blank. */
+const totalEditable = (draft: Record<string, unknown> | null) =>
+  !!draft && (numOrNull(draft.quantity) == null || numOrNull(draft.unitPrice) == null);
+
+function totalDisplay(row: { quantity: unknown; unitPrice: unknown; totalAmount: unknown }): string {
+  const q = numOrNull(row.quantity);
+  const p = numOrNull(row.unitPrice);
+  const val = q != null && p != null ? q * p : numOrNull(row.totalAmount);
+  return val == null ? '' : money(val);
+}
+const draftTotalDisplay = (draft: Record<string, unknown> | null) =>
+  draft ? totalDisplay(draft as { quantity: unknown; unitPrice: unknown; totalAmount: unknown }) : '';
+
+function rowProps({ item }: { item: CostWithMaterial }) {
+  return editor.isEditing(item) ? { class: 'cp-inline-editing' } : {};
 }
 
-// --------------------------------------------------------------------------
-// Map grid values → cost API payloads. Editing quantity OR unitPrice always
-// sends the pair so the backend recomputes the total; an explicit total is
-// only sent when the pair can't derive one.
-// --------------------------------------------------------------------------
-function mergedPatch(
-  existing: CostWithMaterial | undefined,
-  values: Record<string, unknown>,
-): UpdateCostInput {
-  const patch: UpdateCostInput = {};
-  if ('category' in values) patch.category = values.category as CostCategory;
-  if ('description' in values) patch.description = String(values.description ?? '').trim();
-  if ('date' in values && values.date) patch.date = String(values.date);
-  const touchesQty = 'quantity' in values;
-  const touchesPrice = 'unitPrice' in values;
-  const touchesTotal = 'totalAmount' in values;
-  if (touchesQty || touchesPrice) {
-    const q = numOrNull(touchesQty ? values.quantity : existing?.quantity);
-    const p = numOrNull(touchesPrice ? values.unitPrice : existing?.unitPrice);
-    patch.quantity = q;
-    patch.unitPrice = p;
-    if ((q == null || p == null) && touchesTotal) {
-      const tot = numOrNull(values.totalAmount);
-      if (tot != null) patch.totalAmount = tot;
-    }
-  } else if (touchesTotal) {
-    const tot = numOrNull(values.totalAmount);
+function validate(draft: Record<string, unknown>): Record<string, string> {
+  const errs: Record<string, string> = {};
+  if (!String(draft.description ?? '').trim()) errs.description = t('inline.required');
+  if (!draft.date) errs.date = t('inline.required');
+  if (!draft.category) errs.category = t('inline.required');
+  const q = numOrNull(draft.quantity);
+  const p = numOrNull(draft.unitPrice);
+  const tot = numOrNull(draft.totalAmount);
+  if (!(q != null && p != null) && tot == null) errs.totalAmount = t('projects.costs.quickAddInvalid');
+  return errs;
+}
+
+function toPatch(draft: Record<string, unknown>): UpdateCostInput {
+  const patch: UpdateCostInput = {
+    category: draft.category as CostCategory,
+    description: String(draft.description ?? '').trim(),
+    date: String(draft.date),
+  };
+  const q = numOrNull(draft.quantity);
+  const p = numOrNull(draft.unitPrice);
+  patch.quantity = q;
+  patch.unitPrice = p;
+  if (q == null || p == null) {
+    const tot = numOrNull(draft.totalAmount);
     if (tot != null) patch.totalAmount = tot;
   }
   return patch;
 }
-
-function buildCreate(values: Record<string, unknown>): CreateCostInput | null {
-  const description = String(values.description ?? '').trim();
-  const q = numOrNull(values.quantity);
-  const p = numOrNull(values.unitPrice);
-  const tot = numOrNull(values.totalAmount);
+function toCreate(draft: Record<string, unknown>): CreateCostInput {
+  const q = numOrNull(draft.quantity);
+  const p = numOrNull(draft.unitPrice);
+  const tot = numOrNull(draft.totalAmount);
   const hasPair = q != null && p != null;
-  if (!description || (!hasPair && tot == null)) return null;
   return {
     projectId: props.projectId,
-    category: (values.category as CostCategory) ?? CostCategory.MATERIAL,
-    description,
+    category: (draft.category as CostCategory) ?? CostCategory.MATERIAL,
+    description: String(draft.description ?? '').trim(),
     quantity: q,
     unit: null,
     unitPrice: p,
     ...(!hasPair && tot != null ? { totalAmount: tot } : {}),
-    date: values.date ? String(values.date) : todayIso(),
+    date: draft.date ? String(draft.date) : todayIso(),
     notes: null,
   };
 }
 
-// --------------------------------------------------------------------------
-// Grid events
-// --------------------------------------------------------------------------
-async function onCellCommit(payload: GridCellCommit) {
-  const existing = costs.value.find((c) => c.id === payload.id);
-  try {
-    await costsApi.update(payload.id, mergedPatch(existing, { [payload.field]: payload.value }));
-    await refresh();
-    emit('changed');
-  } catch (e) {
-    handle(e);
-    await refresh(); // revert the optimistic cell to the server truth
-  }
-}
-
-async function onNewCommit(values: Record<string, unknown>) {
-  const payload = buildCreate(values);
-  if (!payload) {
-    toast.error(t('projects.costs.quickAddInvalid'));
-    return;
-  }
-  try {
-    await costsApi.create(payload);
-    toast.success(t('projects.costs.costCreated'));
-    await refresh();
-    emit('changed');
-  } catch (e) {
-    handle(e);
-  }
-}
-
-async function onPaste(payload: GridPastePayload) {
-  try {
-    for (const u of payload.updates) {
-      const existing = costs.value.find((c) => c.id === u.id);
-      await costsApi.update(u.id, mergedPatch(existing, u.values));
+async function saveCreate() {
+  const draft = editor.creatingDraft.value;
+  if (!draft) return;
+  const errs = validate(draft);
+  if (Object.keys(errs).length) return editor.setErrors(errs);
+  const ok = await editor.runSave(async () => {
+    try {
+      await costsApi.create(toCreate(draft));
+      toast.success(t('projects.costs.costCreated'));
+      await refresh();
+      emit('changed');
+    } catch (e) {
+      handle(e);
+      throw e;
     }
-    let created = 0;
-    let skipped = 0;
-    for (const row of payload.creates) {
-      const create = buildCreate(row);
-      if (create) {
-        await costsApi.create(create);
-        created++;
-      } else {
-        skipped++;
-      }
-    }
-    toast.success(t('datagrid.pasteApplied'));
-    if (skipped > 0) toast.error(t('datagrid.pasteSkipped'));
-    await refresh();
-    emit('changed');
-  } catch (e) {
-    handle(e);
-    await refresh();
-  }
+  });
+  if (ok) editor.cancelCreate();
 }
 
-async function onDeleteRows(ids: string[]) {
+async function saveEdit() {
+  const draft = editor.editingDraft.value;
+  const id = editor.editingId.value;
+  if (!draft || id == null) return;
+  const errs = validate(draft);
+  if (Object.keys(errs).length) return editor.setErrors(errs);
+  const ok = await editor.runSave(async () => {
+    try {
+      await costsApi.update(String(id), toPatch(draft));
+      await refresh();
+      emit('changed');
+    } catch (e) {
+      handle(e);
+      throw e;
+    }
+  });
+  if (ok) editor.cancelEdit();
+}
+
+async function remove(row: CostWithMaterial) {
   const ok = await confirm({
     title: t('projects.costs.deleteTitle'),
-    message: t('projects.costs.deleteManyMsg').replace('{n}', String(ids.length)),
-    destructive: true,
+    message: t('projects.costs.deleteMsg', { name: row.description }),
     confirmText: t('common.delete'),
+    destructive: true,
   });
   if (!ok) return;
   try {
-    for (const id of ids) await costsApi.remove(id);
+    await costsApi.remove(row.id);
     toast.success(t('common.deleted'));
     await refresh();
     emit('changed');
   } catch (e) {
     handle(e);
-    await refresh();
   }
-}
-
-function rowActions(row: GridRow): GridRowAction[] {
-  const actions: GridRowAction[] = [];
-  if (canDelete.value) {
-    actions.push({
-      label: t('datagrid.deleteRow'),
-      icon: 'mdi-delete',
-      danger: true,
-      perform: () => void onDeleteRows([String(row.id)]),
-    });
-  }
-  return actions;
 }
 
 // Detailed add dialog (kept for material link / unit / notes).
@@ -306,32 +281,195 @@ async function onCreated() {
 
       <div class="flex items-center justify-between mb-2 gap-2 flex-wrap">
         <span class="text-h6">{{ t('projects.costs.latest') }}</span>
-        <span v-if="canAdd || canEdit" class="text-caption text-medium-emphasis">
-          {{ t('datagrid.hint') }}
-        </span>
+        <RoleGate :permissions="ADD_PERMS" :roles="ADD_ROLES">
+          <v-btn
+            size="small"
+            variant="tonal"
+            prepend-icon="mdi-plus"
+            :disabled="editor.busy.value"
+            @click="editor.startCreate()"
+          >
+            {{ t('projects.costs.quickAdd') }}
+          </v-btn>
+        </RoleGate>
       </div>
 
-      <DataGrid
-        :rows="gridRows"
-        :columns="columns"
-        :editable="canEdit"
-        :show-new-row="canAdd"
-        :new-row-factory="newRowFactory"
-        :selectable="canDelete"
-        :row-actions="rowActions"
-        :enable-csv="true"
-        export-name="costs"
+      <DataTable
+        :server="false"
+        :items="costs"
+        :items-length="costs.length"
+        :headers="headers"
         :loading="loading"
-        height="440px"
-        @cell-commit="onCellCommit"
-        @new-commit="onNewCommit"
-        @paste="onPaste"
-        @delete-rows="onDeleteRows"
-      />
+        item-value="id"
+        :items-per-page="25"
+        :items-per-page-options="[25, 50, 100]"
+        :row-props="rowProps"
+        :aria-label="t('projects.costs.title')"
+      >
+        <template #body.prepend>
+          <tr v-if="editor.isCreating.value" class="cp-inline-add">
+            <td>
+              <InlineTextField
+                field="date"
+                kind="date"
+                :model-value="editor.createValue('date')"
+                :error="editor.errorFor('date')"
+                @update:model-value="editor.setCreateValue('date', $event)"
+              />
+            </td>
+            <td>
+              <InlineSelect
+                field="category"
+                :model-value="editor.createValue('category')"
+                :items="categories"
+                :error="editor.errorFor('category')"
+                @update:model-value="editor.setCreateValue('category', $event)"
+              />
+            </td>
+            <td>
+              <InlineTextField
+                field="description"
+                :model-value="editor.createValue('description')"
+                :placeholder="t('projects.costs.fields.description')"
+                :error="editor.errorFor('description')"
+                autofocus
+                @update:model-value="editor.setCreateValue('description', $event)"
+              />
+            </td>
+            <td>
+              <InlineTextField
+                field="quantity"
+                kind="number"
+                :model-value="editor.createValue('quantity')"
+                :step="0.001"
+                :min="0"
+                @update:model-value="editor.setCreateValue('quantity', $event)"
+              />
+            </td>
+            <td>
+              <InlineTextField
+                field="unitPrice"
+                kind="money"
+                :model-value="editor.createValue('unitPrice')"
+                :step="0.01"
+                :min="0"
+                @update:model-value="editor.setCreateValue('unitPrice', $event)"
+              />
+            </td>
+            <td>
+              <InlineTextField
+                v-if="totalEditable(editor.creatingDraft.value)"
+                field="totalAmount"
+                kind="money"
+                :model-value="editor.createValue('totalAmount')"
+                :step="0.01"
+                :min="0"
+                :error="editor.errorFor('totalAmount')"
+                @update:model-value="editor.setCreateValue('totalAmount', $event)"
+              />
+              <span v-else class="cp-num">{{ draftTotalDisplay(editor.creatingDraft.value) }}</span>
+            </td>
+            <td>
+              <InlineTableActions editing :saving="editor.saving.value" @save="saveCreate" @cancel="editor.cancelCreate()" />
+            </td>
+          </tr>
+        </template>
 
-      <p v-if="total > costs.length" class="text-caption text-medium-emphasis mt-2">
-        {{ t('datagrid.truncated').replace('{shown}', String(costs.length)).replace('{total}', String(total)) }}
-      </p>
+        <template #[`item.date`]="{ item }">
+          <InlineTextField
+            v-if="editor.isEditing(item)"
+            field="date"
+            kind="date"
+            :model-value="editor.editValue('date')"
+            :error="editor.errorFor('date')"
+            @update:model-value="editor.setEditValue('date', $event)"
+          />
+          <span v-else>{{ String(item.date).slice(0, 10) }}</span>
+        </template>
+
+        <template #[`item.category`]="{ item }">
+          <InlineSelect
+            v-if="editor.isEditing(item)"
+            field="category"
+            :model-value="editor.editValue('category')"
+            :items="categories"
+            :error="editor.errorFor('category')"
+            @update:model-value="editor.setEditValue('category', $event)"
+          />
+          <span v-else>{{ t('costs.category.' + String(item.category)) }}</span>
+        </template>
+
+        <template #[`item.description`]="{ item }">
+          <InlineTextField
+            v-if="editor.isEditing(item)"
+            field="description"
+            :model-value="editor.editValue('description')"
+            :error="editor.errorFor('description')"
+            @update:model-value="editor.setEditValue('description', $event)"
+          />
+          <span v-else>{{ item.description }}</span>
+        </template>
+
+        <template #[`item.quantity`]="{ item }">
+          <InlineTextField
+            v-if="editor.isEditing(item)"
+            field="quantity"
+            kind="number"
+            :model-value="editor.editValue('quantity')"
+            :step="0.001"
+            :min="0"
+            @update:model-value="editor.setEditValue('quantity', $event)"
+          />
+          <span v-else class="cp-num">{{ item.quantity ?? '' }}</span>
+        </template>
+
+        <template #[`item.unitPrice`]="{ item }">
+          <InlineTextField
+            v-if="editor.isEditing(item)"
+            field="unitPrice"
+            kind="money"
+            :model-value="editor.editValue('unitPrice')"
+            :step="0.01"
+            :min="0"
+            @update:model-value="editor.setEditValue('unitPrice', $event)"
+          />
+          <span v-else class="cp-num">{{ item.unitPrice != null ? money(Number(item.unitPrice)) : '' }}</span>
+        </template>
+
+        <template #[`item.totalAmount`]="{ item }">
+          <template v-if="editor.isEditing(item)">
+            <InlineTextField
+              v-if="totalEditable(editor.editingDraft.value)"
+              field="totalAmount"
+              kind="money"
+              :model-value="editor.editValue('totalAmount')"
+              :step="0.01"
+              :min="0"
+              :error="editor.errorFor('totalAmount')"
+              @update:model-value="editor.setEditValue('totalAmount', $event)"
+            />
+            <span v-else class="cp-num">{{ draftTotalDisplay(editor.editingDraft.value) }}</span>
+          </template>
+          <span v-else class="cp-num">{{ totalDisplay(item) }}</span>
+        </template>
+
+        <template #[`item.actions`]="{ item }">
+          <InlineTableActions
+            :editing="editor.isEditing(item)"
+            :saving="editor.saving.value"
+            :can-edit="canEdit"
+            :can-delete="canDelete"
+            @edit="editor.startEdit(item)"
+            @save="saveEdit"
+            @cancel="editor.cancelEdit()"
+            @delete="remove(item)"
+          />
+        </template>
+
+        <template #no-data>
+          <div class="cp-empty">{{ t('projects.costs.empty') }}</div>
+        </template>
+      </DataTable>
     </template>
 
     <v-progress-linear v-else indeterminate />
@@ -339,3 +477,22 @@ async function onCreated() {
     <AddCostDialog v-model="addOpen" :project-id="projectId" @created="onCreated" />
   </div>
 </template>
+
+<style scoped>
+.cp-num {
+  font-variant-numeric: tabular-nums;
+}
+.cp-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--cp-text-muted);
+}
+.cp-inline-add > td {
+  background: var(--cp-primary-soft);
+  vertical-align: top;
+}
+:deep(tr.cp-inline-editing > td) {
+  background: var(--cp-primary-soft);
+  vertical-align: top;
+}
+</style>

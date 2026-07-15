@@ -13,6 +13,8 @@ const pct = computed(() => {
   if (!Number.isFinite(n)) return 0;
   return Math.max(0, Math.min(100, n));
 });
+// The bar can fill fractionally; the label reads as a whole percent.
+const label = computed(() => Math.round(pct.value));
 </script>
 
 <template>
@@ -22,7 +24,7 @@ const pct = computed(() => {
     :color="color ?? 'primary'"
   >
     <template v-if="showLabel" #default>
-      <span class="text-caption font-medium">{{ pct }}%</span>
+      <span class="text-caption font-medium cp-tnum">{{ label }}%</span>
     </template>
   </v-progress-linear>
 </template>

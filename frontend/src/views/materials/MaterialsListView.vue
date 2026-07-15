@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// Materials catalogue: a native Vuetify data table with inline row creation and
+// whole-row inline editing. The page owns fields, validation, permissions and
+// the API; the table owns only draft/edit state (via useInlineTableEditor).
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { t } from '@/i18n';
@@ -11,18 +14,14 @@ import { useCurrencyFormat } from '@/composables/useCurrencyFormat';
 import { numOrNull } from '@/lib/number';
 import { RoleName } from '@/types/enums';
 import type { CreateMaterialInput, Material, UpdateMaterialInput } from '@/types/material';
-import type {
-  GridCellCommit,
-  GridColumn,
-  GridPastePayload,
-  GridRow,
-  GridRowAction,
-} from '@/components/shared/datagrid/types';
-import DataGrid from '@/components/shared/datagrid/DataGrid.vue';
-import { buildMaterialColumns } from '@/components/features/material/materialGridColumns';
+import DataTable from '@/components/shared/DataTable.vue';
 import ErrorState from '@/components/shared/ErrorState.vue';
 import RoleGate from '@/components/shared/RoleGate.vue';
 import PageHeader from '@/components/shared/PageHeader.vue';
+import SearchBar from '@/components/shared/SearchBar.vue';
+import InlineTextField from '@/components/shared/table/InlineTextField.vue';
+import InlineTableActions from '@/components/shared/table/InlineTableActions.vue';
+import { useInlineTableEditor } from '@/components/shared/table/useInlineTableEditor';
 
 const { handle } = useApiError();
 const toast = useToast();
@@ -32,7 +31,6 @@ const { format: money } = useCurrencyFormat();
 const router = useRouter();
 
 const WRITE_ROLES: RoleName[] = [RoleName.OWNER, RoleName.ADMIN, RoleName.ACCOUNTANT];
-const canCreate = computed(() => canAccess({ permissions: ['materials.create'], roles: WRITE_ROLES }));
 const canEdit = computed(() => canAccess({ permissions: ['materials.update'], roles: WRITE_ROLES }));
 const canDelete = computed(() => canAccess({ permissions: ['materials.delete'], roles: WRITE_ROLES }));
 
@@ -40,10 +38,9 @@ const materials = ref<Material[]>([]);
 const total = ref(0);
 const loading = ref(false);
 const error = ref<unknown>(null);
+const search = ref('');
 
-// The grid is client-paged; pull every material (capped) so sort/filter/export
-// operate over the full catalogue. Virtualization for very large sets is a
-// later optimization.
+// Client-side table: pull the whole catalogue (capped) once.
 const CAP = 1000;
 async function refresh() {
   loading.value = true;
@@ -69,122 +66,128 @@ async function refresh() {
 }
 onMounted(refresh);
 
-const columns = computed<GridColumn[]>(() => buildMaterialColumns({ t, money }));
-const gridRows = computed<GridRow[]>(() => materials.value as unknown as GridRow[]);
+const headers = computed(() => [
+  { title: t('materials.fields.name'), key: 'name', minWidth: 200 },
+  { title: t('materials.fields.unit'), key: 'unit', width: 120 },
+  { title: t('materials.fields.defaultPrice'), key: 'defaultPrice', align: 'end', width: 150 },
+  { title: t('materials.fields.isActive'), key: 'isActive', width: 120 },
+  { title: t('materials.fields.notes'), key: 'notes', minWidth: 180 },
+  { title: '', key: 'actions', align: 'end', sortable: false, width: 108 },
+]);
 
-function newRowFactory(): Record<string, unknown> {
-  return { name: '', unit: '', defaultPrice: null, isActive: true, notes: '' };
+const editor = useInlineTableEditor<Material>({
+  newDraft: () => ({ name: '', unit: '', defaultPrice: null, isActive: true, notes: '' }),
+  toDraft: (row) => ({
+    name: row.name,
+    unit: row.unit,
+    defaultPrice: row.defaultPrice,
+    isActive: row.isActive,
+    notes: row.notes ?? '',
+  }),
+});
+
+function rowProps({ item }: { item: Material }) {
+  return editor.isEditing(item) ? { class: 'cp-inline-editing' } : {};
 }
 
-function materialPatch(values: Record<string, unknown>): UpdateMaterialInput {
-  const patch: UpdateMaterialInput = {};
-  if ('name' in values) patch.name = String(values.name ?? '').trim();
-  if ('unit' in values) patch.unit = String(values.unit ?? '').trim();
-  if ('notes' in values) patch.notes = values.notes == null || values.notes === '' ? null : String(values.notes);
-  if ('defaultPrice' in values) patch.defaultPrice = numOrNull(values.defaultPrice);
-  if ('isActive' in values) patch.isActive = values.isActive === true || values.isActive === 'true';
-  return patch;
+function validate(draft: Record<string, unknown>): Record<string, string> {
+  const errs: Record<string, string> = {};
+  if (!String(draft.name ?? '').trim()) errs.name = t('inline.required');
+  if (!String(draft.unit ?? '').trim()) errs.unit = t('inline.required');
+  return errs;
 }
 
-function buildCreate(values: Record<string, unknown>): CreateMaterialInput | null {
-  const name = String(values.name ?? '').trim();
-  const unit = String(values.unit ?? '').trim();
-  if (!name || !unit) return null;
+function toPatch(draft: Record<string, unknown>): UpdateMaterialInput {
   return {
-    name,
-    unit,
-    defaultPrice: numOrNull(values.defaultPrice),
-    notes: values.notes == null || values.notes === '' ? null : String(values.notes),
-    isActive: !(values.isActive === false || values.isActive === 'false'),
+    name: String(draft.name ?? '').trim(),
+    unit: String(draft.unit ?? '').trim(),
+    defaultPrice: numOrNull(draft.defaultPrice),
+    notes: draft.notes == null || draft.notes === '' ? null : String(draft.notes),
+    isActive: draft.isActive === true,
+  };
+}
+function toCreate(draft: Record<string, unknown>): CreateMaterialInput {
+  return {
+    name: String(draft.name ?? '').trim(),
+    unit: String(draft.unit ?? '').trim(),
+    defaultPrice: numOrNull(draft.defaultPrice),
+    notes: draft.notes == null || draft.notes === '' ? null : String(draft.notes),
+    isActive: draft.isActive !== false,
   };
 }
 
-async function onCellCommit(p: GridCellCommit) {
-  try {
-    await materialsApi.update(p.id, materialPatch({ [p.field]: p.value }));
-    await refresh();
-  } catch (e) {
-    handle(e);
-    await refresh();
-  }
-}
-
-async function onNewCommit(values: Record<string, unknown>) {
-  const payload = buildCreate(values);
-  if (!payload) {
-    toast.error(t('materials.gridAddInvalid'));
-    return;
-  }
-  try {
-    await materialsApi.create(payload);
-    toast.success(t('common.saved'));
-    await refresh();
-  } catch (e) {
-    handle(e);
-  }
-}
-
-async function onPaste(payload: GridPastePayload) {
-  try {
-    for (const u of payload.updates) await materialsApi.update(u.id, materialPatch(u.values));
-    let skipped = 0;
-    for (const row of payload.creates) {
-      const create = buildCreate(row);
-      if (create) await materialsApi.create(create);
-      else skipped++;
+async function saveCreate() {
+  const draft = editor.creatingDraft.value;
+  if (!draft) return;
+  const errs = validate(draft);
+  if (Object.keys(errs).length) return editor.setErrors(errs);
+  const ok = await editor.runSave(async () => {
+    try {
+      await materialsApi.create(toCreate(draft));
+      toast.success(t('common.saved'));
+      await refresh();
+    } catch (e) {
+      handle(e);
+      throw e;
     }
-    toast.success(t('datagrid.pasteApplied'));
-    if (skipped > 0) toast.error(t('datagrid.pasteSkipped'));
-    await refresh();
-  } catch (e) {
-    handle(e);
-    await refresh();
-  }
+  });
+  if (ok) editor.cancelCreate();
 }
 
-function rowActions(row: GridRow): GridRowAction[] {
-  const actions: GridRowAction[] = [
-    {
-      label: t('datagrid.openDetail'),
-      icon: 'mdi-open-in-new',
-      perform: () => void router.push(`/materials/${row.id}`),
-    },
-  ];
-  if (canDelete.value) {
-    actions.push({
-      label: t('datagrid.deleteRow'),
-      icon: 'mdi-delete',
-      danger: true,
-      perform: () => void onDeleteRows([String(row.id)]),
-    });
-  }
-  return actions;
+async function saveEdit() {
+  const draft = editor.editingDraft.value;
+  const id = editor.editingId.value;
+  if (!draft || id == null) return;
+  const errs = validate(draft);
+  if (Object.keys(errs).length) return editor.setErrors(errs);
+  const ok = await editor.runSave(async () => {
+    try {
+      await materialsApi.update(String(id), toPatch(draft));
+      toast.success(t('common.saved'));
+      await refresh();
+    } catch (e) {
+      handle(e);
+      throw e;
+    }
+  });
+  if (ok) editor.cancelEdit();
 }
 
-async function onDeleteRows(ids: string[]) {
+async function remove(row: Material) {
   const ok = await confirm({
-    title: t('materials.deleteManyTitle'),
-    message: t('materials.deleteManyMessage').replace('{n}', String(ids.length)),
+    title: t('materials.deleteConfirmTitle'),
+    message: t('materials.deleteConfirmMessage', { name: row.name }),
     confirmText: t('common.delete'),
     destructive: true,
   });
   if (!ok) return;
   try {
-    for (const id of ids) await materialsApi.remove(id);
+    await materialsApi.remove(row.id);
     toast.success(t('common.deleted'));
     await refresh();
   } catch (e) {
     handle(e);
-    await refresh();
   }
 }
 </script>
 
 <template>
   <div class="cp-fill">
-    <PageHeader :title="t('nav.materials')" icon="mdi-cube-outline" :count="total || null" :hint="t('help.materials')">
+    <PageHeader
+      :title="t('nav.materials')"
+      icon="mdi-cube-outline"
+      :count="total || null"
+      :hint="t('help.materials')"
+    >
       <RoleGate :permissions="['materials.create']" :roles="WRITE_ROLES">
-        <v-btn color="primary" size="small" variant="flat" prepend-icon="mdi-plus" to="/materials/new">
+        <v-btn
+          color="primary"
+          size="small"
+          variant="flat"
+          prepend-icon="mdi-plus"
+          :disabled="editor.busy.value"
+          @click="editor.startCreate()"
+        >
           {{ t('materials.new') }}
         </v-btn>
       </RoleGate>
@@ -192,54 +195,197 @@ async function onDeleteRows(ids: string[]) {
 
     <ErrorState v-if="error" :error="error" class="ma-3" @retry="refresh" />
 
-    <!-- No properties pane here on purpose: this grid edits in place, so a
-         property sheet beside it would be a second, worse editor. The DataGrid
-         *is* the detail view. -->
     <div v-else class="cp-pane">
       <div class="cp-pane__toolbar">
-        <span class="cp-grid-hint">{{ t('datagrid.hint') }}</span>
+        <SearchBar v-model="search" :placeholder="t('materials.searchPlaceholder')" />
       </div>
 
-      <div class="cp-pane__body cp-grid-host">
-        <DataGrid
-          :rows="gridRows"
-          :columns="columns"
-          :editable="canEdit"
-          :show-new-row="canCreate"
-          :new-row-factory="newRowFactory"
-          :selectable="canDelete"
-          :row-actions="rowActions"
-          :enable-csv="true"
-          export-name="materials"
+      <div class="cp-pane__body">
+        <DataTable
+          :server="false"
+          :items="materials"
+          :items-length="materials.length"
+          :headers="headers"
           :loading="loading"
-          height="100%"
-          @cell-commit="onCellCommit"
-          @new-commit="onNewCommit"
-          @paste="onPaste"
-          @delete-rows="onDeleteRows"
-        />
-      </div>
+          :search="search"
+          item-value="id"
+          :items-per-page="25"
+          :items-per-page-options="[25, 50, 100, 200]"
+          :row-props="rowProps"
+          :aria-label="t('nav.materials')"
+        >
+          <!-- Inline create row, pinned above the records. -->
+          <template #body.prepend>
+            <tr v-if="editor.isCreating.value" class="cp-inline-add">
+              <td>
+                <InlineTextField
+                  field="name"
+                  :model-value="editor.createValue('name')"
+                  :placeholder="t('materials.fields.name')"
+                  :error="editor.errorFor('name')"
+                  autofocus
+                  @update:model-value="editor.setCreateValue('name', $event)"
+                />
+              </td>
+              <td>
+                <InlineTextField
+                  field="unit"
+                  :model-value="editor.createValue('unit')"
+                  :placeholder="t('materials.fields.unit')"
+                  :error="editor.errorFor('unit')"
+                  @update:model-value="editor.setCreateValue('unit', $event)"
+                />
+              </td>
+              <td>
+                <InlineTextField
+                  field="defaultPrice"
+                  kind="money"
+                  :model-value="editor.createValue('defaultPrice')"
+                  :step="0.01"
+                  :min="0"
+                  @update:model-value="editor.setCreateValue('defaultPrice', $event)"
+                />
+              </td>
+              <td>
+                <v-switch
+                  :model-value="editor.createValue('isActive') !== false"
+                  color="primary"
+                  density="compact"
+                  hide-details
+                  inset
+                  @update:model-value="editor.setCreateValue('isActive', $event === true)"
+                />
+              </td>
+              <td>
+                <InlineTextField
+                  field="notes"
+                  kind="multiline"
+                  :model-value="editor.createValue('notes')"
+                  :placeholder="t('materials.fields.notes')"
+                  @update:model-value="editor.setCreateValue('notes', $event)"
+                />
+              </td>
+              <td>
+                <InlineTableActions editing :saving="editor.saving.value" @save="saveCreate" @cancel="editor.cancelCreate()" />
+              </td>
+            </tr>
+          </template>
 
-      <div v-if="total > materials.length" class="cp-pane__foot">
-        {{ t('datagrid.truncated').replace('{shown}', String(materials.length)).replace('{total}', String(total)) }}
+          <template #[`item.name`]="{ item }">
+            <InlineTextField
+              v-if="editor.isEditing(item)"
+              field="name"
+              :model-value="editor.editValue('name')"
+              :error="editor.errorFor('name')"
+              @update:model-value="editor.setEditValue('name', $event)"
+            />
+            <span v-else>{{ item.name }}</span>
+          </template>
+
+          <template #[`item.unit`]="{ item }">
+            <InlineTextField
+              v-if="editor.isEditing(item)"
+              field="unit"
+              :model-value="editor.editValue('unit')"
+              :error="editor.errorFor('unit')"
+              @update:model-value="editor.setEditValue('unit', $event)"
+            />
+            <span v-else>{{ item.unit }}</span>
+          </template>
+
+          <template #[`item.defaultPrice`]="{ item }">
+            <InlineTextField
+              v-if="editor.isEditing(item)"
+              field="defaultPrice"
+              kind="money"
+              :model-value="editor.editValue('defaultPrice')"
+              :step="0.01"
+              :min="0"
+              @update:model-value="editor.setEditValue('defaultPrice', $event)"
+            />
+            <span v-else class="cp-num">{{ item.defaultPrice != null ? money(Number(item.defaultPrice)) : '-' }}</span>
+          </template>
+
+          <template #[`item.isActive`]="{ item }">
+            <v-switch
+              v-if="editor.isEditing(item)"
+              :model-value="editor.editValue('isActive') === true"
+              color="primary"
+              density="compact"
+              hide-details
+              inset
+              @update:model-value="editor.setEditValue('isActive', $event === true)"
+            />
+            <v-chip v-else size="x-small" :color="item.isActive ? 'success' : undefined" variant="tonal">
+              {{ item.isActive ? t('materials.status.active') : t('materials.status.inactive') }}
+            </v-chip>
+          </template>
+
+          <template #[`item.notes`]="{ item }">
+            <InlineTextField
+              v-if="editor.isEditing(item)"
+              field="notes"
+              kind="multiline"
+              :model-value="editor.editValue('notes')"
+              @update:model-value="editor.setEditValue('notes', $event)"
+            />
+            <span v-else class="cp-muted">{{ item.notes || '-' }}</span>
+          </template>
+
+          <template #[`item.actions`]="{ item }">
+            <InlineTableActions
+              :editing="editor.isEditing(item)"
+              :saving="editor.saving.value"
+              :can-edit="canEdit"
+              :can-delete="canDelete"
+              @edit="editor.startEdit(item)"
+              @save="saveEdit"
+              @cancel="editor.cancelEdit()"
+              @delete="remove(item)"
+            >
+              <v-tooltip :text="t('materials.openDetail')" location="top">
+                <template #activator="{ props: tip }">
+                  <v-btn
+                    v-bind="tip"
+                    icon="mdi-open-in-new"
+                    size="x-small"
+                    variant="text"
+                    :aria-label="t('materials.openDetail')"
+                    @click="router.push(`/materials/${item.id}`)"
+                  />
+                </template>
+              </v-tooltip>
+            </InlineTableActions>
+          </template>
+
+          <template #no-data>
+            <div class="cp-empty">{{ t('materials.empty') }}</div>
+          </template>
+        </DataTable>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.cp-grid-hint {
-  font-size: 0.72rem;
+.cp-num {
+  font-variant-numeric: tabular-nums;
+}
+.cp-muted {
   color: var(--cp-text-muted);
 }
-/* The grid owns its own scrolling; the pane body just gives it the box. */
-.cp-grid-host {
-  overflow: hidden;
-  display: flex;
-  min-height: 0;
+.cp-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--cp-text-muted);
 }
-.cp-grid-host > :deep(*) {
-  flex: 1;
-  min-height: 0;
+/* The create row and the row being edited get a calm native wash - no stripe. */
+.cp-inline-add > td {
+  background: var(--cp-primary-soft);
+  vertical-align: top;
+}
+:deep(tr.cp-inline-editing > td) {
+  background: var(--cp-primary-soft);
+  vertical-align: top;
 }
 </style>

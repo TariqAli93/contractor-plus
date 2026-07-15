@@ -100,6 +100,19 @@ enum AiOperationType {
   NL_REPORT_QUERY
   MATERIAL_PRICE_SYNC
   CHAT
+  TOOL_ACTION
+}
+
+// Lifecycle of an AI-proposed write. A tool call is PROPOSED (PENDING), the user
+// CONFIRMS it, and only then is it EXECUTED (inside a transaction). REJECTED /
+// EXPIRED / FAILED are terminal. Idempotency + status guard against double runs.
+enum AiPendingActionStatus {
+  PENDING
+  CONFIRMED
+  EXECUTED
+  REJECTED
+  EXPIRED
+  FAILED
 }
 
 // ai-assistant — approval lifecycle of an AI suggestion. NONE for read-only
@@ -175,30 +188,31 @@ model RolePermission {
 }
 
 model User {
-  id            String         @id @default(uuid()) @db.Uuid
+  id                       String                 @id @default(uuid()) @db.Uuid
   // Login identifier. Stored lowercase-normalized; uniqueness enforced here.
-  username      String         @unique
+  username                 String                 @unique
   // Contact info — optional, no longer the login identifier. Unique index
   // treats NULLs as distinct, so multiple users may have no email.
-  email         String?        @unique
-  passwordHash  String
-  fullName      String
-  phone         String?
-  isActive      Boolean        @default(true)
-  lastLoginAt   DateTime?
-  roleId        String         @db.Uuid
-  role          Role           @relation(fields: [roleId], references: [id])
-  refreshTokens RefreshToken[]
-  auditLogs     AuditLog[]
-  aiRequestLogs AiRequestLog[]
-  aiCredentialsCreated AiProviderCredential[] @relation("AiCredentialCreator")
-  aiSettingsUpdated    AiSetting[]            @relation("AiSettingUpdater")
-  aiChatThreads        AiChatThread[]         @relation("AiChatThreadOwner")
-  documentTemplatesCreated DocumentTemplate[] @relation("DocumentTemplateCreator")
-  documentsGenerated       GeneratedDocument[] @relation("GeneratedDocumentCreator")
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  deletedAt     DateTime?
+  email                    String?                @unique
+  passwordHash             String
+  fullName                 String
+  phone                    String?
+  isActive                 Boolean                @default(true)
+  lastLoginAt              DateTime?
+  roleId                   String                 @db.Uuid
+  role                     Role                   @relation(fields: [roleId], references: [id])
+  refreshTokens            RefreshToken[]
+  auditLogs                AuditLog[]
+  aiRequestLogs            AiRequestLog[]
+  aiCredentialsCreated     AiProviderCredential[] @relation("AiCredentialCreator")
+  aiSettingsUpdated        AiSetting[]            @relation("AiSettingUpdater")
+  aiChatThreads            AiChatThread[]         @relation("AiChatThreadOwner")
+  aiPendingActions         AiPendingAction[]      @relation("AiPendingActionOwner")
+  documentTemplatesCreated DocumentTemplate[]     @relation("DocumentTemplateCreator")
+  documentsGenerated       GeneratedDocument[]    @relation("GeneratedDocumentCreator")
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  deletedAt                DateTime?
 
   @@index([roleId])
   @@index([isActive])
@@ -229,17 +243,17 @@ model RefreshToken {
 // ============================================================
 
 model Customer {
-  id        String     @id @default(uuid()) @db.Uuid
-  name      String
-  phone     String?
-  email     String?
-  address   String?
-  notes     String?
-  contracts Contract[]
+  id                 String              @id @default(uuid()) @db.Uuid
+  name               String
+  phone              String?
+  email              String?
+  address            String?
+  notes              String?
+  contracts          Contract[]
   generatedDocuments GeneratedDocument[] @relation("GeneratedFromCustomer")
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  deletedAt DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  deletedAt          DateTime?
 
   @@index([name])
   @@index([phone])
@@ -252,19 +266,19 @@ model Customer {
 // ============================================================
 
 model Material {
-  id            String                 @id @default(uuid()) @db.Uuid
-  name          String
-  unit          String
-  defaultPrice  Decimal?               @db.Decimal(14, 2)
-  notes         String?
-  isActive      Boolean                @default(true)
-  contractItems ContractItem[]
-  templateItems BuildingTemplateItem[]
-  projectCosts  ProjectCost[]
+  id              String                   @id @default(uuid()) @db.Uuid
+  name            String
+  unit            String
+  defaultPrice    Decimal?                 @db.Decimal(14, 2)
+  notes           String?
+  isActive        Boolean                  @default(true)
+  contractItems   ContractItem[]
+  templateItems   BuildingTemplateItem[]
+  projectCosts    ProjectCost[]
   referencePrices MaterialReferencePrice[]
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
-  deletedAt     DateTime?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  deletedAt       DateTime?
 
   @@index([name])
   @@index([isActive])
@@ -335,26 +349,26 @@ model BuildingTemplateStep {
 // ============================================================
 
 model Contract {
-  id                   String            @id @default(uuid()) @db.Uuid
-  contractNumber       String            @unique
-  customerId           String            @db.Uuid
-  customer             Customer          @relation(fields: [customerId], references: [id])
-  templateId           String?           @db.Uuid
-  template             BuildingTemplate? @relation(fields: [templateId], references: [id])
-  buildingArea         Decimal           @db.Decimal(10, 2)
-  floors               Int               @default(1)
-  meterPrice           Decimal           @db.Decimal(14, 2)
-  totalPrice           Decimal           @db.Decimal(14, 2)
-  expectedProfitMargin Decimal?          @db.Decimal(5, 2)
-  status               ContractStatus    @default(DRAFT)
+  id                   String              @id @default(uuid()) @db.Uuid
+  contractNumber       String              @unique
+  customerId           String              @db.Uuid
+  customer             Customer            @relation(fields: [customerId], references: [id])
+  templateId           String?             @db.Uuid
+  template             BuildingTemplate?   @relation(fields: [templateId], references: [id])
+  buildingArea         Decimal             @db.Decimal(10, 2)
+  floors               Int                 @default(1)
+  meterPrice           Decimal             @db.Decimal(14, 2)
+  totalPrice           Decimal             @db.Decimal(14, 2)
+  expectedProfitMargin Decimal?            @db.Decimal(5, 2)
+  status               ContractStatus      @default(DRAFT)
   signedAt             DateTime?
   notes                String?
   items                ContractItem[]
   project              Project?
   generatedDocuments   GeneratedDocument[] @relation("GeneratedFromContract")
   changeOrders         ChangeOrder[]
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
   deletedAt            DateTime?
 
   @@index([customerId])
@@ -411,21 +425,21 @@ model ChangeOrder {
 // ============================================================
 
 model Project {
-  id                 String             @id @default(uuid()) @db.Uuid
-  contractId         String?            @unique @db.Uuid
-  contract           Contract?          @relation(fields: [contractId], references: [id])
+  id                 String              @id @default(uuid()) @db.Uuid
+  contractId         String?             @unique @db.Uuid
+  contract           Contract?           @relation(fields: [contractId], references: [id])
   name               String
   startDate          DateTime?
   deliveryDate       DateTime?
-  progressPercentage Decimal            @default(0) @db.Decimal(5, 2)
-  status             ProjectStatus      @default(PLANNED)
+  progressPercentage Decimal             @default(0) @db.Decimal(5, 2)
+  status             ProjectStatus       @default(PLANNED)
   notes              String?
   costs              ProjectCost[]
   payments           Payment[]
   steps              ConstructionStep[]
   generatedDocuments GeneratedDocument[] @relation("GeneratedFromProject")
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
   deletedAt          DateTime?
 
   @@index([status])
@@ -545,8 +559,8 @@ model SystemSetting {
 model Currency {
   id                String                 @id @default(uuid()) @db.Uuid
   code              String                 @unique // ISO-ish, e.g. "USD", "SAR" — uppercased on write
-  name              String                 // e.g. "US Dollar"
-  symbol            String                 // e.g. "$", "ر.س"
+  name              String // e.g. "US Dollar"
+  symbol            String // e.g. "$", "ر.س"
   symbolPosition    CurrencySymbolPosition @default(BEFORE)
   decimalPrecision  Int                    @default(2)
   thousandSeparator String                 @default(",")
@@ -634,22 +648,22 @@ model DocumentTemplate {
 // The on-disk file lives under <storage-root>/private/contracts/<uuid>.docx
 // (or another private bucket once non-contract generation is wired).
 model GeneratedDocument {
-  id           String           @id @default(uuid()) @db.Uuid
-  templateId   String           @db.Uuid
-  template     DocumentTemplate @relation(fields: [templateId], references: [id])
-  contractId   String?          @db.Uuid
-  contract     Contract?        @relation("GeneratedFromContract", fields: [contractId], references: [id])
-  projectId    String?          @db.Uuid
-  project      Project?         @relation("GeneratedFromProject", fields: [projectId], references: [id])
-  customerId   String?          @db.Uuid
-  customer     Customer?        @relation("GeneratedFromCustomer", fields: [customerId], references: [id])
-  filename     String
-  filePath     String
-  mimeType     String
-  size         Int
-  generatedBy  String?          @db.Uuid
-  generatedByUser User?         @relation("GeneratedDocumentCreator", fields: [generatedBy], references: [id])
-  createdAt    DateTime         @default(now())
+  id              String           @id @default(uuid()) @db.Uuid
+  templateId      String           @db.Uuid
+  template        DocumentTemplate @relation(fields: [templateId], references: [id])
+  contractId      String?          @db.Uuid
+  contract        Contract?        @relation("GeneratedFromContract", fields: [contractId], references: [id])
+  projectId       String?          @db.Uuid
+  project         Project?         @relation("GeneratedFromProject", fields: [projectId], references: [id])
+  customerId      String?          @db.Uuid
+  customer        Customer?        @relation("GeneratedFromCustomer", fields: [customerId], references: [id])
+  filename        String
+  filePath        String
+  mimeType        String
+  size            Int
+  generatedBy     String?          @db.Uuid
+  generatedByUser User?            @relation("GeneratedDocumentCreator", fields: [generatedBy], references: [id])
+  createdAt       DateTime         @default(now())
 
   @@index([templateId])
   @@index([contractId])
@@ -741,22 +755,22 @@ model AiRequestLog {
 // the GCM nonce/tag, and the last 4 chars for masked display. Decryptable only
 // with ENCRYPTION_KEY (never in the DB). See lib/crypto/secret-cipher.ts.
 model AiProviderCredential {
-  id          String    @id @default("default")
-  ciphertext  String
-  iv          String
-  authTag     String
+  id                  String    @id @default("default")
+  ciphertext          String
+  iv                  String
+  authTag             String
   // Last 4 chars of the raw key, for `••••••{lastFour}` display ONLY.
-  lastFour    String
-  isActive    Boolean   @default(true)
+  lastFour            String
+  isActive            Boolean   @default(true)
   // Set once a live OpenRouter check confirmed the key before it was stored.
-  validatedAt DateTime?
+  validatedAt         DateTime?
   // Number of models the key could reach at validation time — drives the
   // "N models available" panel hint without a live call. Null on legacy rows.
   validatedModelCount Int?
-  createdById String?   @db.Uuid
-  createdBy   User?     @relation("AiCredentialCreator", fields: [createdById], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdById         String?   @db.Uuid
+  createdBy           User?     @relation("AiCredentialCreator", fields: [createdById], references: [id])
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@map("ai_provider_credentials")
 }
@@ -766,17 +780,17 @@ model AiProviderCredential {
 // sources. DB values WIN over env/service.json (except the API key). A missing
 // row means "all defaults" (system enabled, every feature on, env models).
 model AiSetting {
-  id                   String    @id @default("default")
-  systemEnabled        Boolean   @default(true)
+  id                   String   @id @default("default")
+  systemEnabled        Boolean  @default(true)
   // { report_narrative: bool, nl_query: bool, save_guard: bool, ... }
   features             Json?
   modelDefault         String?
   modelHeavy           String?
   monthlyTokenBudget   Int?
   materialPriceSources Json?
-  updatedById          String?   @db.Uuid
-  updatedBy            User?     @relation("AiSettingUpdater", fields: [updatedById], references: [id])
-  updatedAt            DateTime  @default(now()) @updatedAt
+  updatedById          String?  @db.Uuid
+  updatedBy            User?    @relation("AiSettingUpdater", fields: [updatedById], references: [id])
+  updatedAt            DateTime @default(now()) @updatedAt
 
   @@map("ai_settings")
 }
@@ -815,4 +829,35 @@ model AiChatMessage {
 
   @@index([threadId, createdAt])
   @@map("ai_chat_messages")
+}
+
+// A write the assistant proposed and is waiting for the user to confirm. The
+// tool call NEVER executes off the model's text — only through an explicit
+// confirm of THIS row's id, once, before it expires. `argumentsJson` holds the
+// validated, normalized arguments (NEVER a secret — e.g. a new user's password
+// is supplied at confirm time, never stored). `previewJson` is what the
+// confirmation dialog renders. `idempotencyKey` + the status guard make a second
+// execution impossible.
+model AiPendingAction {
+  id             String                @id @default(uuid()) @db.Uuid
+  userId         String                @db.Uuid
+  user           User                  @relation("AiPendingActionOwner", fields: [userId], references: [id], onDelete: Cascade)
+  toolName       String
+  argumentsJson  Json
+  previewJson    Json
+  status         AiPendingActionStatus @default(PENDING)
+  idempotencyKey String                @unique
+  // The id of the record created on EXECUTED (traceability, never content).
+  resultRecordId String?
+  // App error code on FAILED (never a stack trace or raw DB message).
+  errorCode      String?
+  expiresAt      DateTime
+  confirmedAt    DateTime?
+  executedAt     DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@map("ai_pending_actions")
 }

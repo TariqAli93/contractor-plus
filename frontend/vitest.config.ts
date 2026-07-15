@@ -1,14 +1,20 @@
 import { defineConfig } from 'vitest/config';
+import vue from '@vitejs/plugin-vue';
 import { fileURLToPath, URL } from 'node:url';
 
-// Minimal Vitest config — deliberately does NOT load the Vue/Vuetify plugins, so
-// unit tests over plain modules (router config, stores, pure helpers) run fast
-// and without a full component runtime. It mirrors vite.config.ts's `@` alias so
-// `@/…` imports resolve identically.
+// Vue SFCs are transformed so component specs can mount real components; plain
+// unit tests over modules (router config, stores, pure helpers) are unaffected
+// since the transform only touches `.vue` files. Vuetify components must be
+// registered per-test (its plugin is not installed here). Mirrors
+// vite.config.ts's `@` alias so `@/…` imports resolve identically.
 export default defineConfig({
+  plugins: [vue()],
   test: {
     environment: 'jsdom',
     include: ['test/**/*.spec.ts'],
+    server: {
+      deps: { inline: ['vuetify'] },
+    },
   },
   resolve: {
     alias: {

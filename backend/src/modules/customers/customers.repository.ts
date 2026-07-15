@@ -38,6 +38,14 @@ export class CustomersRepository {
     });
   }
 
+  // Exact phone match among live customers — the duplicate-detection lookup.
+  findByPhone(phone: string, client: DbClient = this.prisma): Promise<Customer[]> {
+    return client.customer.findMany({
+      where: { phone, deletedAt: null },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
   update(
     id: string,
     data: Prisma.CustomerUpdateInput,
