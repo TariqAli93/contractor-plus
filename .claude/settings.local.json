@@ -36,7 +36,10 @@
       "Bash(pnpm dev:frontend)",
       "PowerShell(Remove-Item *)",
       "PowerShell(Test-NetConnection *)",
-      "PowerShell($body = $null; try { $r = Invoke-WebRequest -Uri \"http://localhost:5173/api/v1/materials?pageSize=1000&isActive=true&sortBy=name&sortDir=asc\" -UseBasicParsing -TimeoutSec 10; Write-Output \"STATUS via vite proxy: $\\($r.StatusCode\\)\" } catch { Write-Output \"vite proxy err: $\\($_.Exception.Message\\)\" })"
+      "PowerShell($body = $null; try { $r = Invoke-WebRequest -Uri \"http://localhost:5173/api/v1/materials?pageSize=1000&isActive=true&sortBy=name&sortDir=asc\" -UseBasicParsing -TimeoutSec 10; Write-Output \"STATUS via vite proxy: $\\($r.StatusCode\\)\" } catch { Write-Output \"vite proxy err: $\\($_.Exception.Message\\)\" })",
+      "Bash(node --check electron/main/main.js)",
+      "Bash(node --test electron/scripts/*.test.mjs)",
+      "PowerShell($cfg = Join-Path $env:ProgramData 'ContractorPlus\\\\config\\\\service.json'; Write-Output \"path: $cfg\"; if \\(Test-Path $cfg\\) { $raw = \\(Get-Content $cfg -Raw\\) -replace '^﻿',''; $j = $raw | ConvertFrom-Json; Write-Output \"port = $\\($j.port\\)\"; Write-Output \"keys = $\\($j.PSObject.Properties.Name -join ', '\\)\" } else { Write-Output 'service.json NOT FOUND — no provisioned backend/service on this dev machine' })"
     ]
   },
   "hooks": {

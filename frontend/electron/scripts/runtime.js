@@ -110,7 +110,25 @@ export function logsDir() {
   return cfg.getLogsDir(programDataHome());
 }
 
+/**
+ * The backend HTTP port the DESKTOP must talk to. service.json is the single
+ * source of truth — the backend binds `backendPort` FROM it — so the desktop
+ * has to health-check the SAME port, not a hardcoded guess.
+ *
+ * Why this matters: a packaged install reuses whatever service.json already
+ * exists (setup is skipped when it does). If that file was written by a DEV run
+ * of the wizard it carries port 3000; the packaged desktop would then poll
+ * 31734 forever while the backend listens on 3000, and the window would never
+ * load (the exact "works in dev, fails after install" failure).
+ *
+ * Falls back to the fixed per-mode port ONLY when the config can't be read — a
+ * packaged, ACL-locked config, which the packaged wizard wrote with PROD_PORT.
+ */
 export function backendPort() {
+  const resolved = cfg.tryLoadServiceConfig({ home: programDataHome() });
+  if (resolved && Number.isInteger(resolved.port) && resolved.port > 0) {
+    return resolved.port;
+  }
   return isPackaged() ? PROD_PORT : DEV_PORT;
 }
 export function healthUrl(port = backendPort()) {

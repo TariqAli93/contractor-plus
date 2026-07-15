@@ -58,7 +58,10 @@ function startDevBackend() {
       ...process.env,
       ...rt.nodeSpawnEnvExtra(),
       NODE_ENV: 'development',
-      PORT: String(rt.DEV_PORT),
+      // Bind the SAME port the desktop will health-check (rt.backendPort() reads
+      // it from service.json — the single source of truth — falling back to
+      // DEV_PORT). Keeps the dev child and the health check from ever drifting.
+      PORT: String(rt.backendPort()),
       // Explicit → wins over backend/.env (dotenv does not override an already
       // set var). CONTRACTOR_PLUS_EXPECTED_DB arms the backend mismatch guard.
       DATABASE_URL: databaseUrl,

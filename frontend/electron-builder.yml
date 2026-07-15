@@ -10,6 +10,14 @@ electronVersion: 31.7.7
 # Electron app code (main/preload/scripts) is shipped raw in the asar; the Vue
 # SPA is NOT in the asar — it ships as extraResources and is served by the
 # backend service (single origin) and via the app:// protocol during setup.
+#
+# NOTE: asarUnpack is intentionally NOT used here. electron-builder's unpack
+# matcher resolves every packaged file's path relative to the app dir, and the
+# pnpm workspace symlink (@contractor-plus/shared → ../../packages/shared, outside
+# frontend/) makes that resolution throw ("must be under …/frontend"). The .mjs
+# preload therefore stays inside the asar (Electron 31 supports ESM preload with
+# sandbox disabled); the preload-error listener in main.js surfaces any load
+# failure to the log if that assumption ever breaks on a user's machine.
 asar: true
 
 directories:

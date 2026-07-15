@@ -18,6 +18,9 @@ electronVersion: 31.7.7
 
 asar: true
 
+# See electron-builder.yml — asarUnpack is intentionally avoided (pnpm workspace
+# symlink breaks electron-builder's unpack path matcher).
+
 directories:
   buildResources: build
   output: ../release-client

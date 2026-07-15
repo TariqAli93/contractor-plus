@@ -25,7 +25,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { app, BrowserWindow, ipcMain, Menu, protocol, net, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, protocol, net, dialog, screen } from 'electron';
 
 import * as rt from '../scripts/runtime.js';
 import * as logger from '../scripts/logger.js';
@@ -37,6 +37,40 @@ import * as versionManager from '../scripts/versionManager.js';
 import { setupAutoUpdater } from '../scripts/autoUpdater.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// ── Global safety net ────────────────────────────────────────────────────────
+// In DEV a crash prints to the terminal; in a PACKAGED build there is no console,
+// so anything uncaught vanishes and the process lingers in Task Manager with no
+// window. Capture EVERYTHING to the on-disk log (<userData>/logs) so a
+// production failure is diagnosable, and never let a stray rejection be silent.
+function stringifyErr(v) {
+  if (v instanceof Error) return v.stack || v.message;
+  try {
+    return typeof v === 'string' ? v : JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
+}
+process.on('uncaughtException', (err) => {
+  try {
+    logger.error('[main] uncaughtException: ' + stringifyErr(err));
+  } catch {
+    /* logging must never throw */
+  }
+});
+process.on('unhandledRejection', (reason) => {
+  try {
+    logger.error('[main] unhandledRejection: ' + stringifyErr(reason));
+  } catch {
+    /* ignore */
+  }
+});
+app.on('child-process-gone', (_event, details) =>
+  logger.error('[main] child-process-gone: ' + stringifyErr(details)),
+);
+app.on('render-process-gone', (_event, _wc, details) =>
+  logger.error('[main] render-process-gone: ' + stringifyErr(details)),
+);
 
 const APP_TITLE = 'إدارة المقاولات';
 let mainWindow = null;
@@ -84,6 +118,141 @@ const OVERLAY_SUPPORTED = process.platform === 'win32' || process.platform === '
 // Mirrors the one approved desktop surface in frontend/src/assets/styles/main.css.
 const OVERLAY_OPTIONS = { color: '#FFFFFF', symbolColor: '#1A202C', height: OVERLAY_HEIGHT };
 
+// ── Never leave the app invisible in Task Manager ────────────────────────────
+// The window is created hidden (show:false) to avoid a white flash and only
+// revealed once content paints (ready-to-show). If the initial load ever fails
+// — a broken app:// resolve, the service origin being down, a renderer crash —
+// ready-to-show never fires and, without this, the process would run with no
+// window and no error. showMainWindow() is idempotent and reached from FOUR
+// independent paths (ready-to-show, did-finish-load, a hard timeout, and the
+// failure page) so the window is guaranteed to appear.
+let windowShown = false;
+let failurePageShown = false;
+const WINDOW_SHOW_FALLBACK_MS = 8000;
+
+function showMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed() || windowShown) return;
+  windowShown = true;
+  try {
+    ensureWindowOnScreen();
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+    logger.info('[main] window shown');
+  } catch (err) {
+    logger.error('[main] show failed: ' + stringifyErr(err));
+  }
+}
+
+/** Guard against a window positioned on a display that is no longer connected. */
+function ensureWindowOnScreen() {
+  try {
+    const b = mainWindow.getBounds();
+    const onSomeDisplay = screen.getAllDisplays().some((d) => {
+      const wa = d.workArea;
+      return (
+        b.x < wa.x + wa.width && b.x + b.width > wa.x && b.y < wa.y + wa.height && b.y + b.height > wa.y
+      );
+    });
+    if (!onSomeDisplay) mainWindow.center();
+  } catch {
+    /* best-effort */
+  }
+}
+
+function dataUrl(html) {
+  return 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+}
+
+/** A self-contained in-window page (no external assets — safe over data:). */
+function shellPage({ message, spinner = false, error = false }) {
+  const accent = error ? '#C0392B' : '#1A202C';
+  const spin = spinner
+    ? `<div style="width:34px;height:34px;border:3px solid #d7dde3;border-top-color:#1A202C;border-radius:50%;margin:0 auto 18px;animation:s 0.9s linear infinite"></div>`
+    : `<div style="font-size:34px;margin-bottom:10px">⚠️</div>`;
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<style>@keyframes s{to{transform:rotate(360deg)}}
+html,body{margin:0;height:100%}
+body{background:#F3F5F7;color:${accent};display:flex;align-items:center;justify-content:center;
+font-family:'Segoe UI',Tahoma,sans-serif;text-align:center;padding:24px;box-sizing:border-box}
+.msg{max-width:520px;font-size:15px;line-height:1.9;word-break:break-word}</style></head>
+<body><div><div>${spin}</div><div class="msg">${message}</div></div></body></html>`;
+}
+
+function showLoadingPage(message) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow
+    .loadURL(dataUrl(shellPage({ message, spinner: true })))
+    .catch((err) => logger.warn('[main] loading page: ' + stringifyErr(err)));
+}
+
+/**
+ * Render a VISIBLE failure page inside the window (a dialog on a hidden parent
+ * can go unnoticed). Points the user at the on-disk log and reveals the window.
+ */
+function showLoadFailurePage(detail) {
+  if (!mainWindow || mainWindow.isDestroyed() || failurePageShown) return;
+  failurePageShown = true;
+  let logPath = '';
+  try {
+    logPath = logger.logDir();
+  } catch {
+    /* ignore */
+  }
+  const message =
+    'تعذّر تحميل واجهة التطبيق.<br><br>' +
+    `<span style="color:#5a6470">${detail}</span>` +
+    (logPath ? `<br><br><small style="color:#8a94a0">سجل التشخيص:<br>${logPath}</small>` : '');
+  mainWindow.loadURL(dataUrl(shellPage({ message, error: true }))).catch(() => {});
+  showMainWindow();
+}
+
+function safeCall(fn) {
+  try {
+    return fn();
+  } catch (err) {
+    return 'ERR:' + (err && err.message);
+  }
+}
+
+/**
+ * One-line, content-free snapshot of every path/flag that differs between DEV
+ * and a packaged install — the fastest way to spot a missing renderer, an
+ * unresolved preload, or a wrong resourcesPath from the user's log alone.
+ */
+function logStartupDiagnostics() {
+  const preloadPath = path.join(__dirname, '..', 'preload', 'preload.mjs');
+  const indexHtml = safeCall(() => path.join(rt.frontendDist(), 'index.html'));
+  logger.info(
+    '[diag] ' +
+      JSON.stringify({
+        isPackaged: safeCall(() => rt.isPackaged()),
+        platform: process.platform,
+        arch: process.arch,
+        execPath: process.execPath,
+        cwd: safeCall(() => process.cwd()),
+        resourcesPath: process.resourcesPath,
+        appPath: safeCall(() => app.getAppPath()),
+        userData: safeCall(() => app.getPath('userData')),
+        dirname: __dirname,
+        preload: preloadPath,
+        preloadExists: fs.existsSync(preloadPath),
+        frontendDist: safeCall(() => rt.frontendDist()),
+        indexHtml,
+        indexExists: typeof indexHtml === 'string' && fs.existsSync(indexHtml),
+        // The port the desktop will health-check — resolved from service.json,
+        // NOT assumed. A value that isn't PROD_PORT on a packaged build means a
+        // stale/foreign config (e.g. a dev-written service.json) is in use.
+        backendPort: safeCall(() => rt.backendPort()),
+        backendDir: safeCall(() => rt.backendDir()),
+        serviceExe: safeCall(() => rt.serviceExe()),
+        serviceExeExists: safeCall(() => fs.existsSync(rt.serviceExe())),
+        configFile: safeCall(() => rt.configFile()),
+        logDir: safeCall(() => logger.logDir()),
+      }),
+  );
+}
+
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -117,10 +286,42 @@ function createMainWindow() {
 
   // The SPA sets its own <title>; force the Arabic product name.
   mainWindow.on('page-title-updated', (e) => e.preventDefault());
-  mainWindow.once('ready-to-show', () => mainWindow.show());
+  mainWindow.once('ready-to-show', showMainWindow);
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+
+  // Renderer lifecycle → the on-disk log, and a guaranteed reveal.
+  const wc = mainWindow.webContents;
+  wc.on('did-start-loading', () => logger.info('[renderer] did-start-loading'));
+  wc.on('dom-ready', () => logger.info('[renderer] dom-ready'));
+  wc.on('did-finish-load', () => {
+    logger.info('[renderer] did-finish-load');
+    showMainWindow(); // belt to ready-to-show
+  });
+  wc.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    // -3 = ERR_ABORTED: a superseded navigation (e.g. loading page → real URL). Benign.
+    if (errorCode === -3 || !isMainFrame) return;
+    if (validatedURL && validatedURL.startsWith('data:')) return; // our own diagnostic page
+    logger.error(
+      `[renderer] did-fail-load code=${errorCode} desc=${errorDescription} url=${validatedURL}`,
+    );
+    showLoadFailurePage(`${errorDescription} (${errorCode})<br>${validatedURL}`);
+  });
+  wc.on('render-process-gone', (_event, details) => {
+    logger.error('[renderer] render-process-gone: ' + stringifyErr(details));
+    showLoadFailurePage('توقّف عارض الواجهة: ' + (details && details.reason));
+  });
+  wc.on('preload-error', (_event, preloadPath, error) => {
+    logger.error(`[preload] error at ${preloadPath}: ` + stringifyErr(error));
+  });
+  mainWindow.on('unresponsive', () => logger.error('[main] window unresponsive'));
+  mainWindow.on('responsive', () => logger.info('[main] window responsive again'));
+
+  // Last-resort reveal: if nothing has painted (a hard load failure that somehow
+  // fired no event), show the window anyway so the app is never a headless process.
+  setTimeout(showMainWindow, WINDOW_SHOW_FALLBACK_MS);
+
   return mainWindow;
 }
 
@@ -137,7 +338,16 @@ function loadWizard() {
 }
 
 function loadApp() {
-  const url = rt.isPackaged() ? `http://127.0.0.1:${rt.PROD_PORT}` : rt.DEV_RENDERER_URL;
+  // Single origin: the backend service serves the SPA + API, so the window must
+  // load the port the backend ACTUALLY bound — which is service.json's `port`
+  // (rt.backendPort()), the SAME value the health check + version gate already
+  // used to declare the backend ready. Using a hardcoded PROD_PORT here is the
+  // one place that could drift from that source of truth: if service.json
+  // carries any other port (e.g. a dev-written :3000 inherited by a packaged
+  // install), the backend listens there, health passes there, and this window
+  // would load an empty PROD_PORT → ERR_CONNECTION_REFUSED even though every log
+  // says the backend is up. Read the port from the one source, never assume it.
+  const url = rt.isPackaged() ? `http://127.0.0.1:${rt.backendPort()}` : rt.DEV_RENDERER_URL;
   logger.info('[main] loading app: ' + url);
   return mainWindow.loadURL(url).catch((err) => logger.warn('[main] app load: ' + (err && err.message)));
 }
@@ -266,8 +476,13 @@ async function showFatalConfigError(diag) {
 }
 
 async function boot() {
+  logStartupDiagnostics();
   registerAppProtocol();
   createMainWindow();
+  // Reveal the window immediately with a loading state — the backend handshake
+  // and service checks below can take many seconds, and the user must never
+  // stare at an empty desktop. The real content replaces this in-place.
+  showLoadingPage('جارٍ تشغيل التطبيق، يرجى الانتظار…');
 
   setup.registerSetupIpc({
     getWindow,
