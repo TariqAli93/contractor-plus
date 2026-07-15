@@ -130,7 +130,14 @@ export class AiAssistantController {
 
   chatSend = async (request: FastifyRequest, reply: FastifyReply) => {
     const { text, threadId } = chatSendBodySchema.parse(request.body ?? {});
-    const result = await this.service.chat.send(text, threadId, this.actor(request));
+    // Pass the caller (with role) so the chat model may propose write tools,
+    // each gated by the caller's own permissions in the executor.
+    const result = await this.service.chat.send(
+      text,
+      threadId,
+      this.actor(request),
+      this.caller(request),
+    );
     return reply.code(200).send(result);
   };
 

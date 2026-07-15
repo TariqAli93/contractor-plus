@@ -2,18 +2,24 @@ import { ref } from 'vue';
 import { aiApi } from '@/services/api/ai.api';
 import { ApiError } from '@/types/api';
 import type { ChatMessage, ChatThreadSummary } from '@/types/ai';
+import type { PendingAction } from '@/types/aiActions';
 
 /**
- * Chat state for the assistant drawer (Phase 7). Owner-scoped on the server;
- * the client only holds the current thread's messages + the thread list.
+ * Chat state for the assistant drawer (Phase 7 + Phase 8). Owner-scoped on the
+ * server; the client holds the current thread's messages, the thread list, and
+ * any pending write actions the assistant proposed this session. A write NEVER
+ * runs on send — only through an explicit confirmAction(actionId).
  */
 export function useAiChat() {
   const threads = ref<ChatThreadSummary[]>([]);
   const activeThreadId = ref<string | null>(null);
   const messages = ref<ChatMessage[]>([]);
+  const pendingActions = ref<PendingAction[]>([]);
   const sending = ref(false);
   const loading = ref(false);
   const error = ref<string | null>(null);
+  /** 'idle' | 'executing' — the confirm dialog disables its button while executing. */
+  const toolExecutionState = ref<'idle' | 'executing'>('idle');
 
   async function loadThreads(): Promise<void> {
     try {
@@ -31,6 +37,8 @@ export function useAiChat() {
       const thread = await aiApi.chatThread(threadId);
       activeThreadId.value = thread.id;
       messages.value = thread.messages;
+      // Pending actions are session-scoped (not persisted per thread).
+      pendingActions.value = [];
     } catch (e) {
       error.value = errMsg(e);
     } finally {
@@ -41,6 +49,7 @@ export function useAiChat() {
   function newThread(): void {
     activeThreadId.value = null;
     messages.value = [];
+    pendingActions.value = [];
     error.value = null;
   }
 
@@ -61,11 +70,54 @@ export function useAiChat() {
       const isNew = activeThreadId.value === null;
       activeThreadId.value = res.threadId;
       messages.value.push(res.message);
+      // Surface any proposed writes for explicit confirmation.
+      for (const p of res.pendingActions ?? []) pendingActions.value.push(p);
       if (isNew) await loadThreads();
     } catch (e) {
       error.value = errMsg(e);
     } finally {
       sending.value = false;
+    }
+  }
+
+  /**
+   * Confirm a proposed write by its actionId. The backend re-validates, executes
+   * ONCE (idempotent claim), and returns a result summary. Guarded against a
+   * double click while a confirmation is in flight.
+   */
+  async function confirmAction(
+    actionId: string,
+    secrets?: Record<string, string>,
+  ): Promise<boolean> {
+    if (toolExecutionState.value === 'executing') return false;
+    toolExecutionState.value = 'executing';
+    error.value = null;
+    try {
+      const result = await aiApi.confirmAction(actionId, secrets);
+      pendingActions.value = pendingActions.value.filter((p) => p.actionId !== actionId);
+      // Echo the outcome as an assistant turn so the thread reads coherently.
+      messages.value.push({
+        id: `local-${Date.now()}`,
+        role: 'assistant',
+        content: result.summary,
+        createdAt: new Date().toISOString(),
+      });
+      return true;
+    } catch (e) {
+      error.value = errMsg(e);
+      return false;
+    } finally {
+      toolExecutionState.value = 'idle';
+    }
+  }
+
+  async function rejectAction(actionId: string): Promise<void> {
+    try {
+      await aiApi.rejectAction(actionId);
+    } catch (e) {
+      error.value = errMsg(e);
+    } finally {
+      pendingActions.value = pendingActions.value.filter((p) => p.actionId !== actionId);
     }
   }
 
@@ -80,8 +132,10 @@ export function useAiChat() {
   }
 
   return {
-    threads, activeThreadId, messages, sending, loading, error,
+    threads, activeThreadId, messages, pendingActions, sending, loading, error,
+    toolExecutionState,
     loadThreads, openThread, newThread, send, remove,
+    confirmAction, rejectAction,
   };
 }
 

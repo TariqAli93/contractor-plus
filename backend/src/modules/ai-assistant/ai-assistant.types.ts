@@ -2,6 +2,7 @@ import type { AiApprovalState, AiOperationType } from '@prisma/client';
 import type { AiFeature, AiModelListItem } from '@contractor-plus/shared';
 import type { AiDisabledReason } from '../../lib/ai/ai-config.js';
 import type { MaterialPriceSource } from '../../config/app-config.js';
+import type { PendingActionDto } from './tools/ai-tool.types.js';
 
 /**
  * Payload of GET /ai/status — safe to expose to the SPA. Never carries the
@@ -160,6 +161,12 @@ export interface ChatSendResult {
   threadId: string;
   title: string;
   message: ChatMessageDto;
+  /**
+   * Writes the assistant proposed this turn (create_*, update_app_settings).
+   * Empty unless the model called a write tool. A write NEVER runs here — each
+   * pending action is executed only through an explicit POST /ai/actions/:id/confirm.
+   */
+  pendingActions: PendingActionDto[];
 }
 
 /**

@@ -15,6 +15,11 @@ import {
   CHAT_QUERY_TOOL_NAME,
   chatSystemPrompt,
 } from '../prompts/chat-system.js';
+import type { AiToolDefinition } from '../../../lib/ai/ai-provider.interface.js';
+import { getTool, isRegisteredTool, listTools } from '../tools/ai-tool.registry.js';
+import type { AiToolExecutorService } from '../tools/ai-tool-executor.service.js';
+import type { AiToolConfirmationService } from '../tools/ai-tool-confirmation.service.js';
+import type { PendingActionDto, ToolActor } from '../tools/ai-tool.types.js';
 import type {
   ChatMessageDto,
   ChatSendResult,
@@ -35,6 +40,12 @@ const CHAT_MAX_TOKENS = 1200;
 const TITLE_MAX = 60;
 const SUMMARY_LIMIT = 160;
 
+/** The authenticated caller with their role — needed to resolve tool permissions. */
+export interface ChatCaller {
+  id: string;
+  role: string;
+}
+
 export interface AiChatServiceDeps {
   settings: AiSettingsService;
   budget: AiBudgetService;
@@ -42,6 +53,12 @@ export interface AiChatServiceDeps {
   audit: AuditService;
   reports: ReportsService;
   validation: AiValidationService;
+  // Optional write-tool wiring. When both are present AND the caller's role is
+  // known, the chat model may also PROPOSE write tools (create_*, update_app_settings)
+  // — routed through the shared confirm→execute lifecycle. When absent, the chat
+  // stays read-only (query_report only), which is exactly the Phase-7 behavior.
+  executor?: AiToolExecutorService;
+  confirmation?: AiToolConfirmationService;
 }
 
 export class AiChatService {
@@ -82,6 +99,7 @@ export class AiChatService {
     text: string,
     threadId: string | null,
     actor: AuditActor,
+    caller?: ChatCaller,
   ): Promise<ChatSendResult> {
     const { provider, config } = await this.deps.settings.requireProviderForFeature('chat');
     // Chat leans on tool-calling — refuse a model known not to support tools
@@ -89,6 +107,13 @@ export class AiChatService {
     await this.deps.settings.assertModelSupportsTools(config.modelDefault);
     await this.deps.budget.assertWithinBudget();
     const userId = requireUserId(actor);
+
+    // Write tools are offered only when the lifecycle is wired AND we know the
+    // caller's role (to resolve their permissions). Otherwise chat is read-only.
+    const writeCapable = Boolean(this.deps.executor && this.deps.confirmation && caller);
+    const toolDefs: AiToolDefinition[] = writeCapable
+      ? [CHAT_QUERY_TOOL, ...writeToolDefinitions()]
+      : [CHAT_QUERY_TOOL];
 
     // Resolve the thread (owner-scoped) or open a new one.
     let title: string;
@@ -113,13 +138,14 @@ export class AiChatService {
     const usage = { prompt: 0, completion: 0 };
     let modelUsed = config.modelDefault;
 
-    // Round 1 — the model may answer directly or call the read-only tool.
+    // Round 1 — the model may answer directly, call the read-only report tool,
+    // or (when write-capable) call a write tool that becomes a pending action.
     const first = await provider.complete({
       model: config.modelDefault,
       messages,
       temperature: CHAT_TEMPERATURE,
       maxTokens: CHAT_MAX_TOKENS,
-      tools: [CHAT_QUERY_TOOL],
+      tools: toolDefs,
       toolChoice: 'auto',
     });
     accumulate(usage, first);
@@ -128,15 +154,27 @@ export class AiChatService {
     let answer = first.content;
     let toolReportType: string | undefined;
     let toolResultForStore: unknown;
+    const pendingActions: PendingActionDto[] = [];
 
     if (first.toolCalls && first.toolCalls.length > 0) {
-      // Execute each tool call through THE gate, collect results.
+      // A write tool needs a permission-scoped actor; resolve it once, lazily.
+      let toolActor: ToolActor | null = null;
+      // Execute each tool call, collect results (reads run now; writes propose).
       const toolMessages: AiMessage[] = [];
       for (const call of first.toolCalls) {
-        const { content, reportType } = await this.runQueryTool(call.name, call.argumentsJson);
-        if (reportType && !toolReportType) {
-          toolReportType = reportType;
-          toolResultForStore = safeParse(content);
+        let content: string;
+        if (call.name === CHAT_QUERY_TOOL_NAME) {
+          const r = await this.runQueryTool(call.name, call.argumentsJson);
+          content = r.content;
+          if (r.reportType && !toolReportType) {
+            toolReportType = r.reportType;
+            toolResultForStore = safeParse(r.content);
+          }
+        } else if (writeCapable) {
+          toolActor ??= await this.deps.executor!.resolveActor(caller!, actor);
+          content = await this.proposeWriteTool(call.name, call.argumentsJson, toolActor, pendingActions);
+        } else {
+          content = JSON.stringify({ error: 'unknown tool', code: 'AI_TOOL_UNKNOWN' });
         }
         toolMessages.push({ role: 'tool', toolCallId: call.id, name: call.name, content });
       }
@@ -159,7 +197,9 @@ export class AiChatService {
     }
 
     if (!answer || answer.trim().length === 0) {
-      answer = 'تعذّر توليد رد. حاول إعادة صياغة سؤالك.';
+      answer = pendingActions.length
+        ? 'جهّزت العملية للمراجعة. راجع التفاصيل ثم اضغط تأكيد للمتابعة.'
+        : 'تعذّر توليد رد. حاول إعادة صياغة سؤالك.';
     }
 
     // Persist the turn: one user row + one assistant row (final answer, with
@@ -174,15 +214,61 @@ export class AiChatService {
     });
     await this.deps.repo.touchThread(threadId);
 
-    // Governance: content-free summary only.
+    // Governance: content-free summary only. Each proposed write ALSO records
+    // its own AI_TOOL_PROPOSED audit event inside the confirmation service.
     await this.logGovernance(actor, {
       modelUsed,
       usage,
       toolReportType,
+      proposed: pendingActions.length,
       sourceModules: toolReportType ? ['reports'] : [],
     });
 
-    return { threadId, title, message: toMessageDto(assistantRow) };
+    return { threadId, title, message: toMessageDto(assistantRow), pendingActions };
+  }
+
+  /**
+   * Route a write tool call into the shared confirm→execute lifecycle: PROPOSE
+   * only (validate + preview + persist PENDING). NEVER executes here. Any
+   * problem (unknown tool, bad args, missing permission) becomes a tool-result
+   * error string the model apologises for — it never throws to the user.
+   */
+  private async proposeWriteTool(
+    name: string,
+    argumentsJson: string,
+    actor: ToolActor,
+    pendingActions: PendingActionDto[],
+  ): Promise<string> {
+    if (!isRegisteredTool(name)) {
+      return JSON.stringify({ error: 'أداة غير مدعومة', code: 'AI_TOOL_UNKNOWN' });
+    }
+    const tool = getTool(name)!;
+    // Chat offers only write tools alongside query_report; a read-only registry
+    // tool (generate_report) is not on the chat menu — reject it cleanly.
+    if (!tool.requiresConfirmation) {
+      return JSON.stringify({ error: 'استخدم query_report للتقارير', code: 'AI_TOOL_UNSUPPORTED' });
+    }
+    let args: unknown;
+    try {
+      args = JSON.parse(extractJsonObject(argumentsJson));
+    } catch {
+      return JSON.stringify({ error: 'وسائط غير صالحة', code: 'AI_TOOL_BAD_ARGS' });
+    }
+    try {
+      // propose() re-checks the tool's permissions, validates, previews, and
+      // persists a PENDING action — it does not execute.
+      const pending = await this.deps.confirmation!.propose(name, args, actor);
+      pendingActions.push(pending);
+      return JSON.stringify({
+        status: 'pending_confirmation',
+        actionId: pending.actionId,
+        title: pending.title,
+      });
+    } catch (err) {
+      const code = err instanceof AppError ? err.code : 'AI_TOOL_FAILED';
+      const message = err instanceof AppError ? err.message : 'تعذّرت العملية';
+      return JSON.stringify({ error: message, code });
+    }
   }
 
   // ---------- private ----------
@@ -222,12 +308,15 @@ export class AiChatService {
       modelUsed: string;
       usage: { prompt: number; completion: number };
       toolReportType?: string;
+      proposed?: number;
       sourceModules: string[];
     },
   ): Promise<void> {
     const summary = input.toolReportType
       ? `chat: query ${input.toolReportType}`
-      : 'chat: conversation';
+      : input.proposed
+        ? `chat: ${input.proposed} proposed`
+        : 'chat: conversation';
     const log = await this.deps.repo.createRequestLog({
       userId: requireUserId(actor),
       operationType: 'CHAT',
@@ -254,6 +343,19 @@ export class AiChatService {
 }
 
 // ---------- pure helpers ----------
+
+/** The WRITE tools the chat model may propose (create_*, update_app_settings),
+ *  in the OpenRouter wire shape. Reads stay on the closed query_report tool, so
+ *  the read-only generate_report tool is intentionally excluded here. */
+function writeToolDefinitions(): AiToolDefinition[] {
+  return listTools()
+    .filter((tool) => tool.requiresConfirmation)
+    .map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parametersSchema,
+    }));
+}
 
 function deriveTitle(text: string): string {
   const t = text.trim().replace(/\s+/g, ' ');

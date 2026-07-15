@@ -11,6 +11,9 @@ import test from 'node:test';
 import { AiChatService } from '../../src/modules/ai-assistant/services/ai-chat.service.js';
 import { AiValidationService } from '../../src/modules/ai-assistant/services/ai-validation.service.js';
 import { CHAT_QUERY_TOOL_NAME } from '../../src/modules/ai-assistant/prompts/chat-system.js';
+import type { AiToolExecutorService } from '../../src/modules/ai-assistant/tools/ai-tool-executor.service.js';
+import type { AiToolConfirmationService } from '../../src/modules/ai-assistant/tools/ai-tool-confirmation.service.js';
+import type { PendingActionDto, ToolActor } from '../../src/modules/ai-assistant/tools/ai-tool.types.js';
 import type { AiSettingsService } from '../../src/modules/ai-assistant/services/ai-settings.service.js';
 import type { AiBudgetService } from '../../src/modules/ai-assistant/services/ai-budget.service.js';
 import type { AiAssistantRepository } from '../../src/modules/ai-assistant/ai-assistant.repository.js';
@@ -115,11 +118,48 @@ function fakeReports() {
   return { reports, calls };
 }
 
+// Optional write-tool wiring: an executor that resolves a super-admin actor and
+// a confirmation service that only PROPOSES (never executes) — so a test can
+// prove the chat routes a write tool_call into the confirm lifecycle without
+// touching real domain services.
+function fakeToolWiring() {
+  const proposed: Array<{ name: string; args: unknown }> = [];
+  const executor = {
+    resolveActor: async (
+      caller: { id: string; role: string },
+      audit: AuditActor,
+    ): Promise<ToolActor> => ({
+      userId: caller.id,
+      role: caller.role,
+      isOwner: true,
+      permissions: new Set<string>(),
+      audit,
+    }),
+  } as unknown as AiToolExecutorService;
+  const confirmation = {
+    propose: async (name: string, args: unknown): Promise<PendingActionDto> => {
+      proposed.push({ name, args });
+      return {
+        actionId: 'pa-1',
+        toolName: name as PendingActionDto['toolName'],
+        title: 'إنشاء عميل جديد',
+        normalizedArguments: args as Record<string, unknown>,
+        preview: { title: 'إنشاء عميل جديد', summary: 'معاينة', fields: [], warnings: [] },
+        warnings: [],
+        requiredSecrets: [],
+        expiresAt: new Date(Date.now() + 600_000).toISOString(),
+      };
+    },
+  } as unknown as AiToolConfirmationService;
+  return { executor, confirmation, proposed };
+}
+
 function makeService(opts: {
   provider: AiProvider;
   featureEnabled?: boolean;
   overBudget?: boolean;
   repoSeed?: Parameters<typeof fakeRepo>[0];
+  withTools?: boolean;
 }) {
   const enabled = opts.featureEnabled ?? true;
   const settings = {
@@ -138,11 +178,15 @@ function makeService(opts: {
   const { repo, threads, messages, logs } = fakeRepo(opts.repoSeed);
   const { audit, logged } = fakeAudit();
   const { reports, calls: reportCalls } = fakeReports();
+  const wiring = opts.withTools ? fakeToolWiring() : null;
   const service = new AiChatService({
     settings, budget, repo, audit, reports, validation: new AiValidationService(),
+    ...(wiring ? { executor: wiring.executor, confirmation: wiring.confirmation } : {}),
   });
-  return { service, threads, messages, logs, logged, reportCalls };
+  return { service, threads, messages, logs, logged, reportCalls, proposed: wiring?.proposed ?? [] };
 }
+
+const CALLER = { id: 'user-1', role: 'OWNER' };
 
 const toolCall = (args: unknown): AiToolCall[] => [
   { id: 'call-1', name: CHAT_QUERY_TOOL_NAME, argumentsJson: JSON.stringify(args) },
@@ -283,4 +327,97 @@ test('continuing an owned thread includes prior turns as context', async () => {
   const roles = provider.calls[0]!.messages.map((m) => m.role);
   assert.deepEqual(roles, ['system', 'user', 'assistant', 'user']);
   assert.equal(messages.filter((m) => m.threadId === 't-1' && m.role === 'user').length, 2);
+});
+
+// ---------- Phase 8: write tools proposed through the chat surface ----------
+// These prove the fix for "the assistant says it cannot create data": the chat
+// endpoint now OFFERS the write tools to the model and routes a write tool_call
+// into the confirm lifecycle (PROPOSED, never executed on send). The genuine
+// no-execute-before-confirm / double-execute guards live in ai-tools.test.ts.
+
+test('write-capable chat OFFERS the write tools to the provider (create_customer among them)', async () => {
+  const provider = new ScriptedProvider([{ content: 'مرحبًا، كيف أساعدك؟' }]);
+  const { service } = makeService({ provider, withTools: true });
+  await service.send('مرحبا', null, ACTOR, CALLER);
+  const toolNames = (provider.calls[0]!.tools ?? []).map((tl) => tl.name);
+  assert.ok(toolNames.includes(CHAT_QUERY_TOOL_NAME));
+  assert.ok(toolNames.includes('create_customer'));
+  // The read-only generate_report tool is NOT on the chat menu (query_report covers reads).
+  assert.ok(!toolNames.includes('generate_report'));
+});
+
+test('read-only chat (no tool wiring) offers ONLY query_report — Phase-7 behavior intact', async () => {
+  const provider = new ScriptedProvider([{ content: 'أهلًا' }]);
+  const { service } = makeService({ provider }); // no withTools
+  await service.send('مرحبا', null, ACTOR); // no caller
+  const toolNames = (provider.calls[0]!.tools ?? []).map((tl) => tl.name);
+  assert.deepEqual(toolNames, [CHAT_QUERY_TOOL_NAME]);
+});
+
+test('"أنشئ عميلًا باسم خلدون" → model calls create_customer → PROPOSED, returned as a pending action (not executed)', async () => {
+  const provider = new ScriptedProvider([
+    {
+      toolCalls: [
+        {
+          id: 'c1',
+          name: 'create_customer',
+          argumentsJson: JSON.stringify({ name: 'خلدون', phone: '07700000000' }),
+        },
+      ],
+    },
+    { content: 'جهّزت إنشاء العميل «خلدون» للمراجعة، اضغط تأكيد.' },
+  ]);
+  const { service, proposed, messages } = makeService({ provider, withTools: true });
+
+  const res = await service.send('أنشئ عميلًا باسم خلدون ورقمه 07700000000', null, ACTOR, CALLER);
+
+  // A pending action came back — the write was PROPOSED, not performed.
+  assert.equal(res.pendingActions.length, 1);
+  assert.equal(res.pendingActions[0]!.toolName, 'create_customer');
+  assert.equal(proposed.length, 1); // propose() called exactly once
+  assert.equal(proposed[0]!.name, 'create_customer');
+  // The model's write tool_call was fed back so round 2 could compose a reply.
+  const toolMsg = provider.calls[1]!.messages.find((m) => m.role === 'tool');
+  assert.ok(toolMsg);
+  assert.match(toolMsg!.content, /pending_confirmation|pa-1/);
+  // The assistant turn was persisted; the reply does NOT claim completion.
+  assert.equal(messages.filter((m) => m.role === 'assistant').length, 1);
+});
+
+test('a permission/validation failure in propose becomes a graceful tool-result (no throw, no pending action)', async () => {
+  const provider = new ScriptedProvider([
+    {
+      toolCalls: [
+        { id: 'c1', name: 'create_customer', argumentsJson: JSON.stringify({ name: 'خلدون' }) },
+      ],
+    },
+    { content: 'عذرًا، تعذّر تجهيز العملية.' },
+  ]);
+  // A confirmation whose propose() rejects (e.g. missing permission).
+  const executor = {
+    resolveActor: async (): Promise<ToolActor> => ({
+      userId: 'user-1', role: 'VIEWER', isOwner: false, permissions: new Set<string>(), audit: ACTOR,
+    }),
+  } as unknown as AiToolExecutorService;
+  const confirmation = {
+    propose: async () => {
+      throw new AppError(403, 'AI_TOOL_FORBIDDEN', 'لا تملك صلاحية.');
+    },
+  } as unknown as AiToolConfirmationService;
+  const { repo } = fakeRepo();
+  const { audit } = fakeAudit();
+  const { reports } = fakeReports();
+  const settings = {
+    requireProviderForFeature: async () => ({ provider, config: CONFIG }),
+    assertModelSupportsTools: async () => {},
+  } as unknown as AiSettingsService;
+  const budget = { assertWithinBudget: async () => {} } as unknown as AiBudgetService;
+  const service = new AiChatService({ settings, budget, repo, audit, reports, validation: new AiValidationService(), executor, confirmation });
+
+  const res = await service.send('أنشئ عميلًا', null, ACTOR, CALLER);
+
+  assert.equal(res.pendingActions.length, 0); // nothing proposed
+  const toolMsg = provider.calls[1]!.messages.find((m) => m.role === 'tool');
+  assert.match(toolMsg!.content, /AI_TOOL_FORBIDDEN/); // error fed back, model apologises
+  assert.match(res.message.content, /عذرًا/);
 });

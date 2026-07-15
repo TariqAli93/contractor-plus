@@ -1,4 +1,5 @@
 // ai-assistant module DTOs (Phase 1: status, Phase 2: report narratives).
+import type { PendingAction } from './aiActions';
 
 export type AiDisabledReason = 'NOT_CONFIGURED' | 'NO_DEFAULT_MODEL' | 'SYSTEM_DISABLED';
 
@@ -251,4 +252,6 @@ export interface ChatSendResult {
   threadId: string;
   title: string;
   message: ChatMessage;
+  /** Writes the assistant proposed this turn — executed only via confirmAction. */
+  pendingActions: PendingAction[];
 }

@@ -73,6 +73,17 @@ export class AiToolsService {
     });
   }
 
+  // Shared with the conversational chat surface (ai-chat.service): a chat turn
+  // reuses these to propose write tools through the SAME confirm→execute
+  // lifecycle, so there is one write path, not two.
+  get toolExecutor(): AiToolExecutorService {
+    return this.executor;
+  }
+
+  get toolConfirmation(): AiToolConfirmationService {
+    return this.confirmation;
+  }
+
   async message(text: string, caller: ToolCaller, audit: AuditActor): Promise<AgentTurnResult> {
     const actor = await this.executor.resolveActor(caller, audit);
     return this.agent.run(text, actor);

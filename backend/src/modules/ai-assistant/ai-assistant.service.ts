@@ -91,6 +91,16 @@ export class AiAssistantService {
       audit: auditService,
       resolveSources: () => this.settings.getMaterialPriceSources(),
     });
+    // Phase 8 — real write/read tools (create_*, generate_report,
+    // update_app_settings) behind an explicit propose → confirm → execute flow.
+    // Built BEFORE chat so the conversational surface can reuse the very same
+    // executor + confirmation lifecycle for proposing writes (one write path).
+    this.tools = new AiToolsService({
+      prisma,
+      settings: this.settings,
+      budget: this.budget,
+      aiRepo: this.repo,
+    });
     this.chat = new AiChatService({
       settings: this.settings,
       budget: this.budget,
@@ -98,14 +108,10 @@ export class AiAssistantService {
       audit: auditService,
       reports: reportsService,
       validation: this.validation,
-    });
-    // Phase 8 — real write/read tools (create_*, generate_report,
-    // update_app_settings) behind an explicit propose → confirm → execute flow.
-    this.tools = new AiToolsService({
-      prisma,
-      settings: this.settings,
-      budget: this.budget,
-      aiRepo: this.repo,
+      // The chat model may now propose write tools too — routed through the
+      // shared tools lifecycle (a write still runs only via an explicit confirm).
+      executor: this.tools.toolExecutor,
+      confirmation: this.tools.toolConfirmation,
     });
   }
 
